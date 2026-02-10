@@ -1,0 +1,34 @@
+# Java LSP (jdtls)
+.classpath
+.project
+.settings/
+bin/
+.factorypath
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Scala (Metals/Bloop)
+.metals/
+.bloop/
+.bsp/
+project/metals.sbt
+project/.bloop/
+
+# Rust
+target/
+Cargo.lock
+*.rs.bk
+
+# Kotlin
+.gradle/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Nvim
+.nvimlog
