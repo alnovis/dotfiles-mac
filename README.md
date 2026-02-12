@@ -14,7 +14,7 @@ Development environment configuration for MacBook Pro M4 Max, optimized for Scal
 
 ```bash
 # Install dependencies
-brew install neovim fish stow lazygit
+brew install neovim fish stow lazygit bat
 brew install --cask kitty orbstack intellij-idea-ce rustrover
 
 # Clone and apply
@@ -71,6 +71,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - Editor aliases (`v`/`vim` → nvim, `idea`, `rr`)
 - Docker aliases (`d`, `dc`, `dps`)
 - Ollama aliases (`ai`, `ai-chat`, `ai-stop`)
+- `less`/`PAGER` → `bat` (syntax highlighting)
 
 ## Dev Tools
 

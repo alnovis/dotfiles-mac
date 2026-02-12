@@ -54,3 +54,9 @@ set -gx JAVA_HOME (string replace -r '/bin/java$' '' (which java 2>/dev/null); o
 
 # OrbStack
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
+
+# Bat
+#set -x PAGER 'bat --plain'
+#alias less 'bat --plain'
+set -x PAGER bat
+alias less bat
