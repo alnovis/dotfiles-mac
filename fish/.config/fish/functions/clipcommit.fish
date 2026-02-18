@@ -1,5 +1,5 @@
 function clipcommit --description "Git commit with trimmed clipboard as message"
-    argparse 'y/yes' -- $argv; or return 1
+    argparse 'y/yes' 'a/amend' -- $argv; or return 1
 
     set msg (pbpaste | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | string collect)
     if test -z "$msg"
@@ -17,14 +17,26 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
     set -l branch (git branch --show-current)
     set -l staged (git diff --cached --stat)
 
-    if test -z "$staged"
+    if set -q _flag_amend
+        set -l unstaged (git diff --stat)
+        if test -z "$staged" -a -z "$unstaged"
+            echo "Nothing to amend (no staged or unstaged changes)"
+            return 1
+        end
+    else if test -z "$staged"
         echo "Nothing staged to commit"
         return 1
     end
 
     echo "Repository: $repo_name ($branch)"
-    echo "Staged:"
-    echo "$staged"
+    if set -q _flag_amend
+        echo "Mode: AMEND"
+        echo "Previous commit: "(git log --oneline -1)
+    end
+    if test -n "$staged"
+        echo "Staged:"
+        echo "$staged"
+    end
     echo "---"
     echo "Commit message:"
     echo "$msg"
@@ -38,5 +50,9 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
         end
     end
 
-    git commit -m "$msg"
+    if set -q _flag_amend
+        git commit --amend -m "$msg"
+    else
+        git commit -m "$msg"
+    end
 end
