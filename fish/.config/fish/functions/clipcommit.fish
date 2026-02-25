@@ -1,5 +1,18 @@
 function clipcommit --description "Git commit with trimmed clipboard as message"
-    argparse 'y/yes' 'a/amend' 'no-color' -- $argv; or return 1
+    argparse 'h/help' 'y/yes' 'a/amend' 'no-color' -- $argv; or return 1
+
+    if set -q _flag_help
+        echo "Usage: clipcommit [OPTIONS]"
+        echo ""
+        echo "Git commit using clipboard content as commit message."
+        echo ""
+        echo "Options:"
+        echo "  -y, --yes        Skip confirmation prompt"
+        echo "  -a, --amend      Amend previous commit"
+        echo "      --no-color   Disable colored stat output"
+        echo "  -h, --help       Show this help"
+        return 0
+    end
 
     set -l color_flag --color=always
     if set -q _flag_no_color
