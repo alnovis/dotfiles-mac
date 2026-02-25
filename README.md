@@ -46,11 +46,15 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 **Theme:** Kanagawa Dragon
 
 **Language support:**
-- Scala — Metals LSP, sbt build commands (`Space sc/sr/st`)
-- Rust — rust-analyzer, cargo commands (`Space rc/rr/rt`)
-- Java — jdtls, Maven/Gradle commands (`Space mc/mr/mt`, `Space gc/gr/gt`)
-- Kotlin — kotlin-language-server, Gradle commands (`Space kc/kr/kt`)
-- Docker — dockerfile LSP
+
+| Language | LSP | Compile | Run | Test | Package |
+|----------|-----|---------|-----|------|---------|
+| Scala | Metals | `Space sc` | `Space sr` | `Space st` | — |
+| Rust | rust-analyzer | `Space rc` | `Space rr` | `Space rt` | — |
+| Java (Maven) | jdtls | `Space mc` | `Space mr` | `Space mt` | `Space mp` |
+| Java (Gradle) | jdtls | `Space gc` | `Space gr` | `Space gt` | — |
+| Kotlin | kotlin-language-server | `Space kc` | `Space kr` | `Space kt` | — |
+| Docker | dockerfile LSP | — | — | — | — |
 
 **Plugins:**
 - Neo-tree — file explorer with git status
@@ -76,21 +80,42 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 
 ## Kitty
 
-- Japanesque color theme
-- Tabbed interface (`Cmd+T/W`, `Cmd+1-5`)
-- Split panes (`Cmd+D` vertical, `Cmd+Shift+D` horizontal)
-- Copy/paste works on both English and Russian layouts
+- Japanesque color theme (loaded from `current-theme.conf`)
+- Layouts: splits + stack (`enabled_layouts splits,stack`)
+
+**Keybindings:**
+
+| Action | Shortcut |
+|--------|----------|
+| New tab | `Cmd+T` |
+| Close tab | `Cmd+W` |
+| Switch tab 1-5 | `Cmd+1-5` |
+| Next/prev tab | `Cmd+Shift+]/[` |
+| Vertical split | `Cmd+D` |
+| Horizontal split | `Cmd+Shift+D` |
+| Navigate splits | `Ctrl+Shift+H/L/K/J` |
+| Toggle stack layout | `Cmd+Shift+Enter` |
+| Font size +/−/reset | `Cmd+=/−/0` |
+| Copy/paste | `Cmd+C/V` (+ Cyrillic `Cmd+С/М`) |
 
 ## Fish
 
-- Git aliases (`gs`, `gl`, `gp`, `lg`)
-- Editor aliases (`v`/`vim` → nvim, `idea`, `rr`)
-- Docker aliases (`d`, `dc`, `dps`)
-- Ollama aliases (`ai`, `ai-chat`, `ai-stop`)
-- `less`/`PAGER` → `bat` (syntax highlighting)
-- `trim` — trim whitespace from arguments
-- `clipclean` — trim clipboard content in-place
-- `clipcommit` — git commit from clipboard with confirmation (`-y` auto-confirm, `--amend`)
+**Aliases:**
+- Navigation: `..`, `...`, `work` (~/work), `ll` (ls -la), `la` (ls -A)
+- Git: `g`, `gs`, `gl`, `gp`, `gpl`, `gc`, `gca`, `gco`, `gb`, `gd`, `ga`, `gaa`, `lg` (lazygit)
+- Editor: `v`/`vi`/`vim` → nvim, `idea` → IntelliJ, `rr` → RustRover
+- Docker: `d`, `dc`, `dps`
+- Ollama: `ai` (deepseek-coder), `ai-chat` (llama3.1), `ai-stop`
+- Pager: `less`/`PAGER` → `bat`
+
+**Functions:**
+- `trim` — trim leading/trailing whitespace per line (args or stdin)
+- `clipclean` — dedent and trim clipboard (removes common leading indentation)
+- `clipcommit` — git commit using clipboard as message
+  - `-y/--yes` skip confirmation, `-a/--amend` amend previous commit
+  - `-p/--push` push after commit, `-d/--diff` show full diff before committing
+  - `-e/--edit` edit message in nvim, `--no-color` disable colored stat output
+  - `-h/--help` show usage — warns about unstaged changes
 
 ## Dev Tools
 
@@ -117,6 +142,10 @@ ollama pull llama3.1:8b              # general chat
 - [OrbStack](https://orbstack.dev/) — Docker runtime
 - [IntelliJ IDEA CE](https://www.jetbrains.com/idea/) — Scala/Java/Kotlin IDE
 - [RustRover](https://www.jetbrains.com/rust/) — Rust IDE
+
+## Global Gitignore
+
+`.gitignore_global` covers common artifacts for Java (jdtls), Scala (Metals/Bloop), Rust, Kotlin (Gradle), IDEs (IntelliJ, VS Code), and macOS.
 
 ## Uninstall
 

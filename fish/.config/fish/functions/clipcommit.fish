@@ -1,5 +1,5 @@
 function clipcommit --description "Git commit with trimmed clipboard as message"
-    argparse 'h/help' 'y/yes' 'a/amend' 'no-color' -- $argv; or return 1
+    argparse 'h/help' 'y/yes' 'a/amend' 'p/push' 'd/diff' 'e/edit' 'no-color' -- $argv; or return 1
 
     if set -q _flag_help
         echo "Usage: clipcommit [OPTIONS]"
@@ -9,6 +9,9 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
         echo "Options:"
         echo "  -y, --yes        Skip confirmation prompt"
         echo "  -a, --amend      Amend previous commit"
+        echo "  -p, --push       Push to remote after commit"
+        echo "  -d, --diff       Show full diff before committing"
+        echo "  -e, --edit       Edit commit message in nvim before committing"
         echo "      --no-color   Disable colored stat output"
         echo "  -h, --help       Show this help"
         return 0
@@ -23,6 +26,19 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
     if test -z "$msg"
         echo "Clipboard is empty"
         return 1
+    end
+
+    # Edit message in nvim
+    if set -q _flag_edit
+        set -l tmpfile (mktemp /tmp/clipcommit.XXXXXX)
+        echo "$msg" >$tmpfile
+        nvim $tmpfile
+        set msg (cat $tmpfile | string collect)
+        rm -f $tmpfile
+        if test -z "$msg"
+            echo "Empty message after edit, aborted"
+            return 1
+        end
     end
 
     # Repo info
@@ -46,6 +62,18 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
         return 1
     end
 
+    # Warn about unstaged changes
+    set -l unstaged_files (git diff --name-only)
+    if test -n "$unstaged_files"
+        set_color yellow
+        echo "Warning: unstaged changes in:"
+        for f in $unstaged_files
+            echo "  $f"
+        end
+        set_color normal
+        echo ""
+    end
+
     echo "Repository: $repo_name ($branch)"
     if set -q _flag_amend
         echo "Mode: AMEND"
@@ -55,6 +83,19 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
         echo "Staged:"
         echo "$staged"
     end
+
+    # Show full diff
+    if set -q _flag_diff
+        set -l diff_lines (git diff --cached | wc -l | string trim)
+        set -l max_inline 80
+        echo ""
+        if test $diff_lines -gt $max_inline
+            git diff --cached --color=always | bat --style=plain
+        else
+            git diff --cached --color=always
+        end
+    end
+
     echo "---"
     echo "Commit message:"
     echo "$msg"
@@ -72,5 +113,15 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
         git commit --amend -m "$msg"
     else
         git commit -m "$msg"
+    end
+
+    # Push after commit
+    if set -q _flag_push
+        set -l remote (git remote)
+        if test -n "$remote"
+            git push $remote $branch
+        else
+            echo "No remote configured, skipping push"
+        end
     end
 end
