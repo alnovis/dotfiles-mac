@@ -15,10 +15,10 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
     end
     set -l repo_name (basename $repo_root)
     set -l branch (git branch --show-current)
-    set -l staged (git diff --cached --stat=$COLUMNS)
+    set -l staged (git diff --cached --stat=$COLUMNS | string collect)
 
     if set -q _flag_amend
-        set -l unstaged (git diff --stat=$COLUMNS)
+        set -l unstaged (git diff --stat=$COLUMNS | string collect)
         if test -z "$staged" -a -z "$unstaged"
             echo "Nothing to amend (no staged or unstaged changes)"
             return 1
