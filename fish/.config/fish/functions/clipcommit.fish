@@ -1,5 +1,10 @@
 function clipcommit --description "Git commit with trimmed clipboard as message"
-    argparse 'y/yes' 'a/amend' -- $argv; or return 1
+    argparse 'y/yes' 'a/amend' 'no-color' -- $argv; or return 1
+
+    set -l color_flag --color=always
+    if set -q _flag_no_color
+        set color_flag --color=never
+    end
 
     set msg (pbpaste | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | string collect)
     if test -z "$msg"
@@ -15,10 +20,10 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
     end
     set -l repo_name (basename $repo_root)
     set -l branch (git branch --show-current)
-    set -l staged (git diff --cached --stat=$COLUMNS | string collect)
+    set -l staged (git diff --cached $color_flag --stat=$COLUMNS | string collect)
 
     if set -q _flag_amend
-        set -l unstaged (git diff --stat=$COLUMNS | string collect)
+        set -l unstaged (git diff $color_flag --stat=$COLUMNS | string collect)
         if test -z "$staged" -a -z "$unstaged"
             echo "Nothing to amend (no staged or unstaged changes)"
             return 1
