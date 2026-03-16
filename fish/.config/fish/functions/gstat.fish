@@ -46,12 +46,19 @@ function gstat --description "Show git changes summary (staged, unstaged, untrac
         echo "$unstaged"
     end
 
+    set -l untracked_lines 0
     if test -n "$untracked"
         set_color cyan
         echo "Untracked:"
         set_color normal
         for f in $untracked
-            echo "  $f"
+            set -l lines (wc -l <$f 2>/dev/null | string trim)
+            if test -n "$lines" -a "$lines" -gt 0
+                echo "  $f ($lines lines)"
+                set untracked_lines (math $untracked_lines + $lines)
+            else
+                echo "  $f"
+            end
         end
     end
 
@@ -74,18 +81,19 @@ function gstat --description "Show git changes summary (staged, unstaged, untrac
     set -l untracked_count (count $untracked)
 
     echo "---"
-    set -l parts
+    set -l summary
     if test $total_files -gt 0
-        set -a parts "$total_files changed"
+        set -a summary "$total_files changed"
     end
     if test $untracked_count -gt 0
-        set -a parts "$untracked_count untracked"
+        set -a summary "$untracked_count untracked"
     end
-    if test $total_add -gt 0
-        set -a parts (set_color green)"+$total_add"(set_color normal)
+    set -l total_ins (math $total_add + $untracked_lines)
+    if test $total_ins -gt 0
+        set -a summary (set_color green)"+$total_ins"(set_color normal)
     end
     if test $total_del -gt 0
-        set -a parts (set_color red)"-$total_del"(set_color normal)
+        set -a summary (set_color red)"-$total_del"(set_color normal)
     end
-    echo (string join ", " $parts)
+    echo (string join ", " $summary)
 end
