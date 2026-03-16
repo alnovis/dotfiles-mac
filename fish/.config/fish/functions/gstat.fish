@@ -54,4 +54,38 @@ function gstat --description "Show git changes summary (staged, unstaged, untrac
             echo "  $f"
         end
     end
+
+    # Summary
+    set -l staged_nums (git diff --cached --numstat | string match -rv '^\s*$')
+    set -l unstaged_nums (git diff --numstat | string match -rv '^\s*$')
+    set -l total_add 0
+    set -l total_del 0
+    set -l total_files 0
+
+    for line in $staged_nums $unstaged_nums
+        set -l parts (string split \t $line)
+        if test "$parts[1]" != "-"
+            set total_add (math $total_add + $parts[1])
+            set total_del (math $total_del + $parts[2])
+        end
+        set total_files (math $total_files + 1)
+    end
+
+    set -l untracked_count (count $untracked)
+
+    echo "---"
+    set -l parts
+    if test $total_files -gt 0
+        set -a parts "$total_files changed"
+    end
+    if test $untracked_count -gt 0
+        set -a parts "$untracked_count untracked"
+    end
+    if test $total_add -gt 0
+        set -a parts (set_color green)"+$total_add"(set_color normal)
+    end
+    if test $total_del -gt 0
+        set -a parts (set_color red)"-$total_del"(set_color normal)
+    end
+    echo (string join ", " $parts)
 end
