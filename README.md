@@ -116,6 +116,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
   - `-p/--push` push after commit, `-d/--diff` show full diff before committing
   - `-e/--edit` edit message in nvim, `--no-color` disable colored stat output
   - `-h/--help` show usage — warns about unstaged changes
+- `gstat` — colored git changes summary (staged, unstaged, untracked with `--stat`)
 - `registry-login` — docker login to private registry (uses `CI_REGISTRY` + `CI_PERSONAL_TOKEN`)
 - `set-ci-token` — set/update `CI_PERSONAL_TOKEN` or `CI_REGISTRY` (`-r/--registry`)
 
