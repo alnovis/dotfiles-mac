@@ -1,4 +1,12 @@
 function gundo --description "Soft undo last commit, keep changes staged"
+    if contains -- --help $argv; or contains -- -h $argv
+        echo "Usage: gundo"
+        echo ""
+        echo "Soft undo last commit, keep changes staged."
+        echo "Asks for confirmation before undoing."
+        return 0
+    end
+
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
     if test $status -ne 0
         echo "Not a git repository"

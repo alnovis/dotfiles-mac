@@ -1,4 +1,12 @@
 function gunwip --description "Undo last WIP commit, keep changes unstaged"
+    if contains -- --help $argv; or contains -- -h $argv
+        echo "Usage: gunwip"
+        echo ""
+        echo "Undo last WIP commit, keep changes unstaged."
+        echo "Only works if last commit starts with 'WIP:'."
+        return 0
+    end
+
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
     if test $status -ne 0
         echo "Not a git repository"

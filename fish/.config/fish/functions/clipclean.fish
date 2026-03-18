@@ -1,4 +1,13 @@
 function clipclean --description "Dedent and trim trailing whitespace from clipboard"
+    if contains -- --help $argv; or contains -- -h $argv
+        echo "Usage: clipclean"
+        echo ""
+        echo "Dedent and trim trailing whitespace from clipboard."
+        echo "Removes common leading indentation from all lines."
+        echo "Result is copied back to clipboard."
+        return 0
+    end
+
     pbpaste | awk '
     BEGIN { min_indent = -1 }
     {

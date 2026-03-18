@@ -1,4 +1,13 @@
 function gwip --description "Quick WIP commit of all changes"
+    if contains -- --help $argv; or contains -- -h $argv
+        echo "Usage: gwip"
+        echo ""
+        echo "Quick WIP commit of all changes (staged, unstaged, untracked)."
+        echo "Creates commit: WIP: <branch> — HH:MM"
+        echo "Undo with: gunwip"
+        return 0
+    end
+
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
     if test $status -ne 0
         echo "Not a git repository"

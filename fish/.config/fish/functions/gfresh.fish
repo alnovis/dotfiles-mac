@@ -1,4 +1,17 @@
 function gfresh --description "Fetch and rebase current branch onto base branch"
+    if contains -- --help $argv; or contains -- -h $argv
+        echo "Usage: gfresh [BRANCH]"
+        echo ""
+        echo "Fetch and rebase current branch onto base branch."
+        echo "Auto-detects base (develop/main/master) or specify manually."
+        echo "Auto-stashes uncommitted changes before rebase."
+        echo ""
+        echo "Examples:"
+        echo "  gfresh           Rebase onto auto-detected base"
+        echo "  gfresh main      Rebase onto main"
+        return 0
+    end
+
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
     if test $status -ne 0
         echo "Not a git repository"

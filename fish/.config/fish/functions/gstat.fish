@@ -1,5 +1,17 @@
 function gstat --description "Show git changes summary (staged, unstaged, untracked)"
-    argparse 'no-color' 'stat=' -- $argv; or return 1
+    argparse 'h/help' 'no-color' 'stat=' -- $argv; or return 1
+
+    if set -q _flag_help
+        echo "Usage: gstat [OPTIONS]"
+        echo ""
+        echo "Show git changes summary (staged, unstaged, untracked)."
+        echo ""
+        echo "Options:"
+        echo "      --stat=N     Set stat output width (default: terminal width)"
+        echo "      --no-color   Disable colored output"
+        echo "  -h, --help       Show this help"
+        return 0
+    end
 
     set -l color_flag --color=always
     if set -q _flag_no_color

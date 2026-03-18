@@ -1,5 +1,16 @@
 function dclean --description "Clean up Docker: stopped containers, dangling images, unused volumes"
-    argparse 'a/all' -- $argv; or return 1
+    argparse 'h/help' 'a/all' -- $argv; or return 1
+
+    if set -q _flag_help
+        echo "Usage: dclean [OPTIONS]"
+        echo ""
+        echo "Clean up Docker: stopped containers, dangling images, unused volumes."
+        echo ""
+        echo "Options:"
+        echo "  -a, --all    Full prune (all unused images, networks, build cache)"
+        echo "  -h, --help   Show this help"
+        return 0
+    end
 
     echo "Docker cleanup"
 

@@ -1,4 +1,13 @@
 function gclean --description "Delete local branches already merged into base"
+    if contains -- --help $argv; or contains -- -h $argv
+        echo "Usage: gclean"
+        echo ""
+        echo "Delete local branches already merged into base branch."
+        echo "Auto-detects base (main/master/develop). Asks for confirmation."
+        echo "Runs 'git fetch --prune' before checking."
+        return 0
+    end
+
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
     if test $status -ne 0
         echo "Not a git repository"

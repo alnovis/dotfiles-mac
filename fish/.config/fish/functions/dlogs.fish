@@ -1,5 +1,23 @@
 function dlogs --description "Docker compose logs with optional service filter and grep"
-    argparse 'g/grep=' 'n/lines=' -- $argv; or return 1
+    argparse 'h/help' 'g/grep=' 'n/lines=' -- $argv; or return 1
+
+    if set -q _flag_help
+        echo "Usage: dlogs [OPTIONS] [SERVICE]"
+        echo ""
+        echo "Docker compose logs with optional service filter and grep."
+        echo ""
+        echo "Options:"
+        echo "  -g, --grep=PATTERN   Filter output by pattern (case-insensitive)"
+        echo "  -n, --lines=N        Number of tail lines (default: 100)"
+        echo "  -h, --help           Show this help"
+        echo ""
+        echo "Examples:"
+        echo "  dlogs                    All services, last 100 lines"
+        echo "  dlogs api                Only api service"
+        echo "  dlogs api -g ERROR       Filter api logs for ERROR"
+        echo "  dlogs -n 500 -g timeout  Last 500 lines, filter for timeout"
+        return 0
+    end
 
     set -l lines 100
     if set -q _flag_lines
