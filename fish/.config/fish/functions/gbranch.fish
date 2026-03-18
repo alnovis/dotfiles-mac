@@ -79,7 +79,10 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
         set_color yellow
         echo "Files:"
         set_color normal
-        git diff $color_flag $stat_flag origin/$base..HEAD | string collect | echo (cat)
+        set -l diff_stat (git diff $color_flag $stat_flag origin/$base..HEAD | string collect)
+        if test -n "$diff_stat"
+            echo "$diff_stat"
+        end
 
         set -l nums (git diff --numstat origin/$base..HEAD | string match -rv '^\s*$')
         set -l total_add 0
@@ -150,7 +153,10 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
     set_color yellow
     echo "Files:"
     set_color normal
-    git diff $color_flag $stat_flag $merge_base..HEAD | string collect | echo (cat)
+    set -l diff_stat (git diff $color_flag $stat_flag $merge_base..HEAD | string collect)
+    if test -n "$diff_stat"
+        echo "$diff_stat"
+    end
 
     # Summary
     set -l nums (git diff --numstat $merge_base..HEAD | string match -rv '^\s*$')
