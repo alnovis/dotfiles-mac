@@ -105,7 +105,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - Git: `g`, `gs`, `gl`, `gp`, `gpl`, `gc`, `gca`, `gco`, `gb`, `gd`, `ga`, `gaa`, `lg` (lazygit)
 - Editor: `v`/`vi`/`vim` → nvim, `idea` → IntelliJ, `rr` → RustRover
 - Docker: `d`, `dc`, `dps`
-- Ollama: `ai` (deepseek-coder), `ai-chat` (llama3.1), `ai-stop`
+- Ollama: `ai`, `ai-chat`, `ai-stop`, `ai-models`, `ai-pull` (see Functions)
 - Pager: `less`/`PAGER` → `bat`
 
 **Functions:**
@@ -128,6 +128,11 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - `set-ci-token` — set/update `CI_PERSONAL_TOKEN` or `CI_REGISTRY` (`-r/--registry`)
 - `dclean` — remove stopped containers, dangling images, unused volumes (`-a` for full prune)
 - `dlogs` — docker compose logs with service filter and grep (`-g/--grep`, `-n/--lines`)
+- `ai` — run Ollama coding model (default: deepseek-coder-v2:16b, or specify any model)
+- `ai-chat` — run Ollama chat model (default: llama3.1:8b)
+- `ai-stop` — stop Ollama server (shows running models before stopping)
+- `ai-models` — list downloaded and running Ollama models
+- `ai-pull` — download an Ollama model
 
 ## Dev Tools
 

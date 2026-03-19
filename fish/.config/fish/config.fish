@@ -38,10 +38,7 @@ if status is-interactive
     # Быстрые директории
     alias work="cd ~/work"
 
-    # Ollama
-    alias ai="ollama serve & sleep 2; and ollama run deepseek-coder-v2:16b"
-    alias ai-chat="ollama serve & sleep 2; and ollama run llama3.1:8b"
-    alias ai-stop="pkill ollama"
+    # Ollama — see functions: ai, ai-chat, ai-stop, ai-models, ai-pull
 end
 
 # PATH
