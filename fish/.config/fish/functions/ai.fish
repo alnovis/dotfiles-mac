@@ -61,15 +61,14 @@ function ai --description "Run Ollama model interactively or with prompt"
     set -l prompt (string join " " $prompt_args)
 
     if not isatty stdin
-        # Pipe mode: combine prompt + stdin into temp file
-        set -l tmpfile (mktemp /tmp/ai-prompt.XXXXXX)
-        if test -n "$prompt"
-            echo "$prompt" >$tmpfile
-            echo "" >>$tmpfile
-        end
-        cat >>$tmpfile
-        ollama run $think_flag $model <$tmpfile
-        rm -f $tmpfile
+        # Pipe mode: buffer stdin, pipe to ollama
+        begin
+            if test -n "$prompt"
+                echo "$prompt"
+                echo ""
+            end
+            cat
+        end | ollama run $think_flag $model
     else if test -n "$prompt"
         ollama run $think_flag $model "$prompt"
     else
