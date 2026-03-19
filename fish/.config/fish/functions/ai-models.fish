@@ -10,6 +10,9 @@ function ai-models --description "Manage Ollama models: list, install, remove, s
         echo "  install MODEL          Download a model"
         echo "  rm MODEL               Remove an installed model"
         echo "  use MODEL              Set default model for ai/ai-code"
+        echo "  update                 Update all installed models to latest"
+        echo "  info MODEL             Show model details (params, quant, context)"
+        echo "  prune                  Clean up partial downloads and orphaned blobs"
         echo "  running                Show currently running models"
         echo ""
         echo "Examples:"
@@ -19,6 +22,9 @@ function ai-models --description "Manage Ollama models: list, install, remove, s
         echo "  ai-models install qwen3:32b            Download model"
         echo "  ai-models use qwen2.5-coder:32b        Set default"
         echo "  ai-models rm codellama:13b             Remove model"
+        echo "  ai-models update                       Update all models"
+        echo "  ai-models info qwen2.5-coder:32b       Show model details"
+        echo "  ai-models prune                        Clean up disk"
         return 0
     end
 
@@ -39,6 +45,12 @@ function ai-models --description "Manage Ollama models: list, install, remove, s
             _ai_models_use $argv[2..]
         case rm remove
             _ai_models_rm $argv[2..]
+        case update
+            _ai_models_update
+        case info show
+            _ai_models_info $argv[2..]
+        case prune cleanup
+            _ai_models_prune
         case running ps
             _ai_models_running
         case list ''
@@ -482,4 +494,226 @@ function _ai_models_running
     for r in $running
         echo $r
     end
+end
+
+# --- Update ---
+
+function _ai_models_update
+    _ai_ensure_running; or return 1
+
+    set -l installed (_ai_get_installed_names)
+    if test (count $installed) -eq 0
+        echo "No models installed"
+        return 0
+    end
+
+    echo "Updating "(count $installed)" model(s):"
+    set -l updated 0
+    set -l failed 0
+
+    for model in $installed
+        echo ""
+        set_color cyan
+        echo "Pulling: $model"
+        set_color normal
+
+        if ollama pull $model
+            set updated (math $updated + 1)
+        else
+            set_color red
+            echo "Failed: $model"
+            set_color normal
+            set failed (math $failed + 1)
+        end
+    end
+
+    _ai_fetch_local
+
+    echo ""
+    echo "---"
+    set_color green
+    echo "Updated: $updated"
+    set_color normal
+    if test $failed -gt 0
+        set_color red
+        echo "Failed: $failed"
+        set_color normal
+    end
+end
+
+# --- Info ---
+
+function _ai_models_info
+    if test (count $argv) -lt 1
+        set_color red
+        echo "Error: specify model — ai-models info MODEL"
+        set_color normal
+        return 1
+    end
+
+    _ai_ensure_running; or return 1
+
+    set -l model $argv[1]
+    set -l info (curl -s http://localhost:11434/api/show -d "{\"name\": \"$model\", \"verbose\": true}" 2>/dev/null)
+
+    if test -z "$info"; or echo "$info" | jq -e '.error' &>/dev/null
+        set_color red
+        echo "Error: model '$model' not found"
+        set_color normal
+        return 1
+    end
+
+    set -l default_model (set -q AI_DEFAULT_MODEL; and echo $AI_DEFAULT_MODEL; or echo "")
+
+    # Extract details
+    set -l family (echo $info | jq -r '.details.family // "unknown"')
+    set -l params (echo $info | jq -r '.details.parameter_size // "unknown"')
+    set -l quant (echo $info | jq -r '.details.quantization_level // "unknown"')
+    set -l format (echo $info | jq -r '.details.format // "unknown"')
+    set -l context (echo $info | jq -r '.model_info["general.context_length"] // .model_info["llama.context_length"] // "unknown"')
+    set -l license (echo $info | jq -r '.license // empty' | head -1)
+    set -l system (echo $info | jq -r '.system // empty' | head -3)
+
+    # Size from local cache
+    set -l size_str "unknown"
+    if test -f $_AI_LOCAL_CACHE
+        set -l size_bytes (cat $_AI_LOCAL_CACHE | jq -r --arg name "$model" '.models[] | select(.name == $name) | .size' 2>/dev/null)
+        if test -n "$size_bytes"; and test "$size_bytes" != null
+            set size_str (math -s1 "$size_bytes / 1073741824")" GB"
+        end
+    end
+
+    # Display
+    set_color cyan
+    echo "Model: $model"
+    set_color normal
+    if test "$model" = "$default_model"
+        set_color yellow
+        echo "★ default"
+        set_color normal
+    end
+
+    echo ""
+    printf "  %-16s %s\n" "Family:" $family
+    printf "  %-16s %s\n" "Parameters:" $params
+    printf "  %-16s %s\n" "Quantization:" $quant
+    printf "  %-16s %s\n" "Format:" $format
+    printf "  %-16s %s\n" "Context:" $context
+    printf "  %-16s %s\n" "Size:" $size_str
+
+    if test -n "$license"
+        echo ""
+        set_color yellow
+        echo "License:"
+        set_color normal
+        echo "  $license"
+    end
+
+    if test -n "$system"
+        echo ""
+        set_color yellow
+        echo "System prompt:"
+        set_color normal
+        echo "$system" | while read -l line
+            echo "  $line"
+        end
+    end
+end
+
+# --- Prune ---
+
+function _ai_models_prune
+    set -l blobs_dir ~/.ollama/models/blobs
+    set -l manifests_dir ~/.ollama/models/manifests
+
+    if not test -d $blobs_dir
+        echo "No Ollama data found"
+        return 0
+    end
+
+    echo "Scanning $blobs_dir..."
+
+    # Find partial downloads
+    set -l partials (find $blobs_dir -name "*-partial" -o -name "*.partial" -o -name "*.tmp" 2>/dev/null)
+    set -l partial_count (count $partials)
+    set -l partial_size 0
+
+    if test $partial_count -gt 0
+        for f in $partials
+            set -l fsize (stat -f%z "$f" 2>/dev/null; or echo 0)
+            set partial_size (math "$partial_size + $fsize")
+        end
+    end
+
+    # Find orphaned blobs (not referenced by any manifest)
+    set -l referenced_digests
+    if test -d $manifests_dir
+        set referenced_digests (find $manifests_dir -type f -exec cat {} \; 2>/dev/null | jq -r '.. | .digest? // empty' 2>/dev/null | sort -u)
+    end
+
+    set -l orphan_count 0
+    set -l orphan_size 0
+    set -l orphan_files
+
+    for blob in (find $blobs_dir -type f -not -name "*-partial" -not -name "*.partial" -not -name "*.tmp" 2>/dev/null)
+        set -l blob_name (basename $blob)
+        # Convert filename format sha256-xxx to sha256:xxx for matching
+        set -l blob_digest (string replace -a "-" ":" $blob_name)
+
+        if not contains -- $blob_digest $referenced_digests
+            set orphan_count (math $orphan_count + 1)
+            set -l fsize (stat -f%z "$blob" 2>/dev/null; or echo 0)
+            set orphan_size (math "$orphan_size + $fsize")
+            set -a orphan_files $blob
+        end
+    end
+
+    # Report
+    set -l total_size (math "$partial_size + $orphan_size")
+    set -l total_gb (math -s2 "$total_size / 1073741824")
+
+    if test $partial_count -eq 0; and test $orphan_count -eq 0
+        echo "---"
+        set_color green
+        echo "Clean — no orphaned data found"
+        set_color normal
+        return 0
+    end
+
+    if test $partial_count -gt 0
+        set_color yellow
+        echo "Partial downloads: $partial_count"
+        set_color normal
+        for f in $partials
+            echo "  "(basename $f)
+        end
+    end
+
+    if test $orphan_count -gt 0
+        set_color yellow
+        echo "Orphaned blobs: $orphan_count"
+        set_color normal
+    end
+
+    echo ""
+    echo "Reclaimable: $total_gb GB"
+    echo ""
+
+    read -l -P "Clean up? (y/N) " confirm
+    if test "$confirm" != y -a "$confirm" != Y
+        echo "Aborted"
+        return 1
+    end
+
+    # Delete
+    set -l deleted 0
+    for f in $partials $orphan_files
+        rm -f $f
+        set deleted (math $deleted + 1)
+    end
+
+    echo "---"
+    set_color green
+    echo "Removed $deleted file(s), freed $total_gb GB"
+    set_color normal
 end
