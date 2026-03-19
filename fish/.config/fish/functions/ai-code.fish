@@ -16,7 +16,7 @@ function ai-code --description "Run aider with Ollama for AI-assisted coding"
         echo "  ai-code -e src/main/                 Edit mode"
         echo "  ai-code --model ollama/qwen2.5:32b   Use different model"
         echo ""
-        echo "See also: ai, ai-models, ollama-stop"
+        echo "See also: ai, ai-models, ai-stop"
         return 0
     end
 

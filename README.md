@@ -105,7 +105,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - Git: `g`, `gs`, `gl`, `gp`, `gpl`, `gc`, `gca`, `gco`, `gb`, `gd`, `ga`, `gaa`, `lg` (lazygit)
 - Editor: `v`/`vi`/`vim` → nvim, `idea` → IntelliJ, `rr` → RustRover
 - Docker: `d`, `dc`, `dps`
-- Ollama: `ai`, `ai-chat`, `ai-code`, `ai-models`, `ollama-stop` (see Functions)
+- Ollama: `ai`, `ai-chat`, `ai-code`, `ai-models`, `ai-stop` (see Functions)
 - Pager: `less`/`PAGER` → `bat`
 
 **Functions:**
@@ -132,7 +132,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - `ai-chat` — run Ollama chat model (default: llama3.1:8b)
 - `ai-code` — aider with Ollama for AI-assisted coding (dark mode, no auto-commits)
 - `ai-models` — model manager: `list` catalog, `install`/`rm` models, `use` set default
-- `ollama-stop` — stop Ollama server (shows running models before stopping)
+- `ai-stop` — stop Ollama server (shows running models before stopping)
 
 ## Dev Tools
 

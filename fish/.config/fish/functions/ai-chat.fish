@@ -9,7 +9,7 @@ function ai-chat --description "Run Ollama chat model interactively"
         echo "  ai-chat                     Run default chat model"
         echo "  ai-chat gemma2:9b           Run specific model"
         echo ""
-        echo "See also: ai, ai-code, ai-models, ollama-stop"
+        echo "See also: ai, ai-code, ai-models, ai-stop"
         return 0
     end
 

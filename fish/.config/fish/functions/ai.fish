@@ -9,7 +9,7 @@ function ai --description "Run Ollama model interactively"
         echo "  ai                          Run default model"
         echo "  ai llama3.1:8b              Run specific model"
         echo ""
-        echo "See also: ai-code, ai-chat, ai-models, ollama-stop"
+        echo "See also: ai-code, ai-chat, ai-models, ai-stop"
         return 0
     end
 
