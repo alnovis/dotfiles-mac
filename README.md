@@ -117,10 +117,13 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
   - `-e/--edit` edit message in nvim, `--no-color` disable colored stat output
   - `-h/--help` show usage — warns about unstaged changes
 - `gstat` — colored git changes summary (staged, unstaged, untracked with `--stat`)
+- `gbranch` — branch overview: commits and diff stat vs base (`gbranch [BASE]`)
+- `gsquash` — squash commits: `reset --soft` (default) or `merge --squash` (`-m`)
 - `gundo` — soft undo last commit, keep changes staged (with confirmation)
 - `gclean` — delete local branches already merged into base branch
 - `gfresh` — fetch + rebase current branch onto base (auto-stashes changes)
 - `gwip` / `gunwip` — quick WIP commit of all changes / undo WIP commit
+- `cheat` — cheat sheet for a command via cheat.sh (`cheat tar`, `cheat git rebase`)
 - `registry-login` — docker login to private registry (uses `CI_REGISTRY` + `CI_PERSONAL_TOKEN`)
 - `set-ci-token` — set/update `CI_PERSONAL_TOKEN` or `CI_REGISTRY` (`-r/--registry`)
 - `dclean` — remove stopped containers, dangling images, unused volumes (`-a` for full prune)
