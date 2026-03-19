@@ -9,7 +9,8 @@ function ai-review --description "AI code review of branch or commit changes"
         echo "  --model MODEL    Override model"
         echo "  --file FILE      Review only changes in specific file"
         echo "  --brief          Short summary instead of detailed review"
-        echo "  --lang LANG      Response language (default: en). Any language: fr, pl, de, etc."
+        echo "  --lang LANG      Response language (default: en). Thinking stays in English."
+        echo "  --lang-all LANG  Full response + thinking in specified language (slower)"
         echo "  --last [N]       Review last N commit(s) (default: 1)"
         echo "  --commit SHA     Review a specific commit"
         echo "  -h, --help       Show this help"
@@ -22,6 +23,7 @@ function ai-review --description "AI code review of branch or commit changes"
         echo "  ai-review --commit abc1234        Review specific commit"
         echo "  ai-review --file src/Foo.java     Review specific file"
         echo "  ai-review --brief --lang fr       Brief review in French"
+        echo "  ai-review --lang-all de          Full review in German (incl. thinking)"
         return 0
     end
 
@@ -39,6 +41,7 @@ function ai-review --description "AI code review of branch or commit changes"
     set -l file_filter
     set -l brief 0
     set -l lang
+    set -l lang_all 0
     set -l base
     set -l last_n 0
     set -l commit_sha
@@ -56,6 +59,10 @@ function ai-review --description "AI code review of branch or commit changes"
             case --lang
                 set i (math $i + 1)
                 set lang $argv[$i]
+            case --lang-all
+                set i (math $i + 1)
+                set lang $argv[$i]
+                set lang_all 1
             case --last
                 set last_n 1
                 # Check if next arg is a number
@@ -190,29 +197,48 @@ function ai-review --description "AI code review of branch or commit changes"
         set_color normal
     end
     echo "Model: $model"
+    if test -n "$lang"
+        echo "Language: "(_ai_lang_name $lang)
+    end
     echo "---"
 
     # Language instruction
-    set -l lang_instruction ""
+    set -l lang_prefix ""
+    set -l lang_suffix ""
+    set -l lang_full (_ai_lang_name $lang)
     if test -n "$lang"
-        set lang_instruction "Respond in $lang language."
+        if test $lang_all -eq 1
+            set lang_prefix "IMPORTANT: You MUST write your ENTIRE response in $lang_full, including your thinking/reasoning process. All text must be in $lang_full.
+
+"
+            set lang_suffix "
+
+REMINDER: Write EVERYTHING in $lang_full, including thinking."
+        else
+            set lang_prefix "IMPORTANT: Write your final response in $lang_full. You may think in English, but the output must be in $lang_full.
+
+"
+            set lang_suffix "
+
+REMINDER: Final response must be in $lang_full."
+        end
     end
 
     # Build prompt
     set -l prompt
     if test $brief -eq 1
-        set prompt "Give a brief summary of this code change in 3-5 bullet points. Focus on what changed and potential risks. Be concise. $lang_instruction
+        set prompt "$lang_prefix""Give a brief summary of this code change in 3-5 bullet points. Focus on what changed and potential risks. Be concise.$lang_suffix
 
 Diff:
 $diff_content"
     else
-        set prompt "You are a senior code reviewer. Review this git diff and provide:
+        set prompt "$lang_prefix""You are a senior code reviewer. Review this git diff and provide:
 
 1. **Summary**: What does this change do (2-3 sentences)
 2. **Issues**: Bugs, potential problems, security concerns (if any)
 3. **Suggestions**: Improvements, better approaches (if any)
 
-Be specific, reference file names and line numbers. If the code looks good, say so. $lang_instruction
+Be specific, reference file names and line numbers. If the code looks good, say so.$lang_suffix
 
 Diff:
 $diff_content"

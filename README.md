@@ -105,17 +105,19 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - Git: `g`, `gs`, `gl`, `gp`, `gpl`, `gc`, `gca`, `gco`, `gb`, `gd`, `ga`, `gaa`, `lg` (lazygit)
 - Editor: `v`/`vi`/`vim` → nvim, `idea` → IntelliJ, `rr` → RustRover
 - Docker: `d`, `dc`, `dps`
-- Ollama: `ai`, `ai-chat`, `ai-code`, `ai-models`, `ai-stop` (see Functions)
 - Pager: `less`/`PAGER` → `bat`
 
 **Functions:**
+
+All functions support `-h/--help`.
+
+*Text:*
 - `trim` — trim leading/trailing whitespace per line (args or stdin)
 - `clipclean` — dedent and trim clipboard (removes common leading indentation)
-- `clipcommit` — git commit using clipboard as message
-  - `-y/--yes` skip confirmation, `-a/--amend` amend previous commit
-  - `-p/--push` push after commit, `-d/--diff` show full diff before committing
-  - `-e/--edit` edit message in nvim, `--no-color` disable colored stat output
-  - `-h/--help` show usage — warns about unstaged changes
+- `cheat` — cheat sheet for a command via cheat.sh (`cheat tar`, `cheat git rebase`)
+
+*Git:*
+- `clipcommit` — git commit using clipboard as message (`-y -a -p -d -e --no-color`)
 - `gstat` — colored git changes summary (staged, unstaged, untracked with `--stat`)
 - `gbranch` — branch overview: commits and diff stat vs base (`gbranch [BASE]`)
 - `gsquash` — squash commits: `reset --soft` (default) or `merge --squash` (`-m`)
@@ -123,16 +125,29 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - `gclean` — delete local branches already merged into base branch
 - `gfresh` — fetch + rebase current branch onto base (auto-stashes changes)
 - `gwip` / `gunwip` — quick WIP commit of all changes / undo WIP commit
-- `cheat` — cheat sheet for a command via cheat.sh (`cheat tar`, `cheat git rebase`)
+
+*Docker:*
 - `registry-login` — docker login to private registry (uses `CI_REGISTRY` + `CI_PERSONAL_TOKEN`)
 - `set-ci-token` — set/update `CI_PERSONAL_TOKEN` or `CI_REGISTRY` (`-r/--registry`)
 - `dclean` — remove stopped containers, dangling images, unused volumes (`-a` for full prune)
 - `dlogs` — docker compose logs with service filter and grep (`-g/--grep`, `-n/--lines`)
-- `ai` — run Ollama model interactively (uses `AI_DEFAULT_MODEL` or deepseek-coder-v2:16b)
-- `ai-chat` — run Ollama chat model (default: llama3.1:8b)
-- `ai-code` — aider with Ollama for AI-assisted coding (dark mode, no auto-commits)
-- `ai-models` — model manager: `list` catalog, `install`/`rm` models, `use` set default
-- `ai-stop` — stop Ollama server (shows running models before stopping)
+
+*AI (Ollama):*
+- `ai` — run model interactively or with prompt (`ai "question"`, `git diff | ai "review"`)
+  - `-m/--model` override model, `-t/--think` enable thinking mode
+- `ai-chat` — run chat model (default: llama3.1:8b)
+- `ai-code` — aider in ask mode by default, `-e/--edit` for code editing
+- `ai-review` — AI code review of branch, last commits, or specific commit
+  - `--last [N]` review last N commits, `--commit SHA` specific commit
+  - `--file FILE` review specific file, `--brief` short summary
+  - `--lang LANG` response language, `--lang-all LANG` full response + thinking
+- `ai-models` — model manager (dynamic catalog from ollama.com, offline cache)
+  - `list [FILTER]` show models filtered by RAM, `--all` show all
+  - `install MODEL` / `rm MODEL` / `use MODEL` set default
+  - `update` re-pull all installed, `info MODEL` show details, `prune` cleanup
+  - `running` show loaded models
+- `ai-stop` — stop running models, `--server` to kill Ollama entirely
+- `opencode` — run OpenCode TUI with Ollama auto-start
 
 ## Dev Tools
 
@@ -145,12 +160,15 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 | Scala | `brew install sbt coursier/formulas/coursier && cs setup` |
 | Rust | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | Ollama | `brew install ollama` |
+| Aider | `brew install aider` |
+| OpenCode | `brew install opencode` |
 
 **AI Models:**
 
 ```bash
-ollama pull deepseek-coder-v2:16b   # coding assistant
-ollama pull llama3.1:8b              # general chat
+ai-models                           # browse available models
+ai-models install qwen3:14b         # install a model
+ai-models use qwen3:14b             # set as default
 ```
 
 ## macOS Apps
