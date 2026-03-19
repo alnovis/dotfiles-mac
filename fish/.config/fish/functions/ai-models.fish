@@ -481,7 +481,7 @@ function _ai_models_running
         return 0
     end
 
-    set -l running (curl -s http://localhost:11434/api/ps 2>/dev/null | jq -r '.models[]? | "  \(.name)\t\(.size / 1073741824 | . * 10 | round / 10) GB"' 2>/dev/null)
+    set -l running (ollama ps 2>/dev/null | tail -n +2)
 
     if test -z "$running"
         echo "No models running"
@@ -491,9 +491,7 @@ function _ai_models_running
     set_color green
     echo "Running:"
     set_color normal
-    for r in $running
-        echo $r
-    end
+    ollama ps 2>/dev/null
 end
 
 # --- Update ---
