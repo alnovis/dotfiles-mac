@@ -1,22 +1,27 @@
-function ai-review --description "AI code review of branch changes"
+function ai-review --description "AI code review of branch or commit changes"
     if contains -- --help $argv; or contains -- -h $argv
         echo "Usage: ai-review [OPTIONS] [BASE]"
         echo ""
-        echo "AI code review of current branch vs base branch."
+        echo "AI code review. Reviews branch vs base by default."
         echo "Uses AI_DEFAULT_MODEL if set, otherwise deepseek-coder-v2:16b."
         echo ""
         echo "Options:"
         echo "  --model MODEL    Override model"
         echo "  --file FILE      Review only changes in specific file"
         echo "  --brief          Short summary instead of detailed review"
+        echo "  --lang LANG      Response language (default: en). Any language: fr, pl, de, etc."
+        echo "  --last [N]       Review last N commit(s) (default: 1)"
+        echo "  --commit SHA     Review a specific commit"
         echo "  -h, --help       Show this help"
         echo ""
         echo "Examples:"
-        echo "  ai-review                        Review vs auto-detected base"
+        echo "  ai-review                        Review branch vs base"
         echo "  ai-review develop                 Review vs develop"
+        echo "  ai-review --last                  Review last commit"
+        echo "  ai-review --last 3                Review last 3 commits"
+        echo "  ai-review --commit abc1234        Review specific commit"
         echo "  ai-review --file src/Foo.java     Review specific file"
-        echo "  ai-review --brief                 Quick summary"
-        echo "  ai-review --model qwen2.5-coder:32b"
+        echo "  ai-review --brief --lang fr       Brief review in French"
         return 0
     end
 
@@ -33,7 +38,10 @@ function ai-review --description "AI code review of branch changes"
     set -l model
     set -l file_filter
     set -l brief 0
+    set -l lang
     set -l base
+    set -l last_n 0
+    set -l commit_sha
     set -l i 1
     while test $i -le (count $argv)
         switch $argv[$i]
@@ -45,6 +53,22 @@ function ai-review --description "AI code review of branch changes"
                 set file_filter $argv[$i]
             case --brief
                 set brief 1
+            case --lang
+                set i (math $i + 1)
+                set lang $argv[$i]
+            case --last
+                set last_n 1
+                # Check if next arg is a number
+                if test $i -lt (count $argv)
+                    set -l next $argv[(math $i + 1)]
+                    if string match -qr '^\d+$' $next
+                        set last_n $next
+                        set i (math $i + 1)
+                    end
+                end
+            case --commit
+                set i (math $i + 1)
+                set commit_sha $argv[$i]
             case '*'
                 set base $argv[$i]
         end
@@ -60,53 +84,84 @@ function ai-review --description "AI code review of branch changes"
         end
     end
 
-    # Auto-detect base
-    if test -z "$base"
-        if git show-ref --verify --quiet refs/heads/develop
-            set base develop
-        else if git show-ref --verify --quiet refs/heads/main
-            set base main
-        else if git show-ref --verify --quiet refs/heads/master
-            set base master
-        else
-            echo "No base branch found, specify manually: ai-review <branch>"
-            return 1
-        end
-    end
+    # Get diff based on mode
+    set -l diff_content
+    set -l header_info
 
-    if test "$branch" = "$base"
-        echo "Already on $base, nothing to review"
-        return 1
-    end
-
-    # Find merge base
-    set -l merge_base (git merge-base origin/$base HEAD 2>/dev/null)
-    if test -z "$merge_base"
-        set merge_base (git merge-base $base HEAD 2>/dev/null)
-        if test -z "$merge_base"
+    if test -n "$commit_sha"
+        # Specific commit
+        set -l commit_msg (git log --oneline -1 $commit_sha 2>/dev/null)
+        if test -z "$commit_msg"
             set_color red
-            echo "Error: cannot find common ancestor with $base"
+            echo "Error: commit '$commit_sha' not found"
             set_color normal
             return 1
         end
-    end
+        if test -n "$file_filter"
+            set diff_content (git show $commit_sha -- $file_filter)
+        else
+            set diff_content (git diff $commit_sha~1..$commit_sha)
+        end
+        set header_info "Commit: $commit_msg"
 
-    set -l commits (git rev-list --count $merge_base..HEAD)
-    if test "$commits" -eq 0
-        echo "No commits to review"
-        return 0
-    end
+    else if test $last_n -gt 0
+        # Last N commits
+        if test -n "$file_filter"
+            set diff_content (git diff HEAD~$last_n..HEAD -- $file_filter)
+        else
+            set diff_content (git diff HEAD~$last_n..HEAD)
+        end
+        set header_info "Last $last_n commit(s) on $branch"
 
-    # Get diff
-    set -l diff_content
-    if test -n "$file_filter"
-        set diff_content (git diff $merge_base..HEAD -- $file_filter)
-        if test -z "$diff_content"
-            echo "No changes in $file_filter"
+    else
+        # Branch vs base
+        if test -z "$base"
+            if git show-ref --verify --quiet refs/heads/develop
+                set base develop
+            else if git show-ref --verify --quiet refs/heads/main
+                set base main
+            else if git show-ref --verify --quiet refs/heads/master
+                set base master
+            else
+                echo "No base branch found, specify manually: ai-review <branch>"
+                return 1
+            end
+        end
+
+        if test "$branch" = "$base"
+            echo "Already on $base — use --last or --commit to review"
+            return 1
+        end
+
+        set -l merge_base (git merge-base origin/$base HEAD 2>/dev/null)
+        if test -z "$merge_base"
+            set merge_base (git merge-base $base HEAD 2>/dev/null)
+            if test -z "$merge_base"
+                set_color red
+                echo "Error: cannot find common ancestor with $base"
+                set_color normal
+                return 1
+            end
+        end
+
+        set -l commits (git rev-list --count $merge_base..HEAD)
+        if test "$commits" -eq 0
+            echo "No commits to review"
             return 0
         end
-    else
-        set diff_content (git diff $merge_base..HEAD)
+
+        if test -n "$file_filter"
+            set diff_content (git diff $merge_base..HEAD -- $file_filter)
+        else
+            set diff_content (git diff $merge_base..HEAD)
+        end
+        set header_info "Base: $base ($commits commit(s))"
+    end
+
+    # Validate diff
+    if test -z "$diff_content"
+        echo "No changes to review"
+        return 0
     end
 
     # Check diff size
@@ -127,7 +182,7 @@ function ai-review --description "AI code review of branch changes"
     # Header
     echo "Repository: $repo_name ($branch)"
     set_color cyan
-    echo "Base: $base ($commits commit(s))"
+    echo "$header_info"
     set_color normal
     if test -n "$file_filter"
         set_color yellow
@@ -137,10 +192,16 @@ function ai-review --description "AI code review of branch changes"
     echo "Model: $model"
     echo "---"
 
+    # Language instruction
+    set -l lang_instruction ""
+    if test -n "$lang"
+        set lang_instruction "Respond in $lang language."
+    end
+
     # Build prompt
     set -l prompt
     if test $brief -eq 1
-        set prompt "Give a brief summary of this code change in 3-5 bullet points. Focus on what changed and potential risks. Be concise.
+        set prompt "Give a brief summary of this code change in 3-5 bullet points. Focus on what changed and potential risks. Be concise. $lang_instruction
 
 Diff:
 $diff_content"
@@ -151,7 +212,7 @@ $diff_content"
 2. **Issues**: Bugs, potential problems, security concerns (if any)
 3. **Suggestions**: Improvements, better approaches (if any)
 
-Be specific, reference file names and line numbers. If the code looks good, say so.
+Be specific, reference file names and line numbers. If the code looks good, say so. $lang_instruction
 
 Diff:
 $diff_content"
