@@ -1,6 +1,6 @@
-function ai-stop --description "Stop Ollama server"
+function ollama-stop --description "Stop Ollama server"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: ai-stop"
+        echo "Usage: ollama-stop"
         echo ""
         echo "Stop Ollama server gracefully."
         echo "Shows running models before stopping."

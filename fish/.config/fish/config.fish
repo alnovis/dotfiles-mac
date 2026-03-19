@@ -38,7 +38,7 @@ if status is-interactive
     # Быстрые директории
     alias work="cd ~/work"
 
-    # Ollama — see functions: ai, ai-chat, ai-stop, ai-models, ai-pull
+    # Ollama — see functions: ai, ai-chat, ai-code, ai-models, ollama-stop
 end
 
 # PATH

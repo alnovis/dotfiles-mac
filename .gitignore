@@ -4,3 +4,4 @@ kitty/.config/kitty/theme.conf
 nvim/.config/nvim/LICENSE
 nvim/.config/nvim/README.md
 .DS_Store
+.aider*

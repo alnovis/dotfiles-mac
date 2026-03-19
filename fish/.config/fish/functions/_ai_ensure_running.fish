@@ -13,7 +13,7 @@ function _ai_ensure_running --description "Ensure Ollama server is running"
     set_color yellow
     echo "Starting Ollama..."
     set_color normal
-    ollama serve &>/dev/null &
+    ollama serve >/dev/null 2>&1 &
     disown
 
     # Wait for server to be ready (up to 10s)
