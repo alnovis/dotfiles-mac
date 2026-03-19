@@ -130,14 +130,31 @@ function _gsquash_reset
     set_color normal
 
     echo ""
-    set_color yellow
+    set_color green
     echo "Commits:"
     set_color normal
     git log --oneline $color_flag $merge_base..HEAD | while read -l line
         echo "  $line"
     end
 
-    # Diff stats
+    # Diff stat
+    set -l stat_flag --stat
+    if set -q _flag_stat
+        set stat_flag --stat=$_flag_stat
+    else if test -n "$COLUMNS"
+        set stat_flag --stat=$COLUMNS
+    end
+
+    echo ""
+    set_color yellow
+    echo "Files:"
+    set_color normal
+    set -l diff_stat (git diff $color_flag $stat_flag $merge_base..HEAD | string collect)
+    if test -n "$diff_stat"
+        echo "$diff_stat"
+    end
+
+    # Summary stats
     set -l nums (git diff --numstat $merge_base..HEAD | string match -rv '^\s*$')
     set -l total_add 0
     set -l total_del 0
@@ -150,16 +167,6 @@ function _gsquash_reset
         end
         set total_files (math $total_files + 1)
     end
-
-    echo ""
-    set -l stat_summary "$total_files file(s)"
-    if test $total_add -gt 0
-        set stat_summary "$stat_summary, "(set_color green)"+$total_add"(set_color normal)
-    end
-    if test $total_del -gt 0
-        set stat_summary "$stat_summary, "(set_color red)"-$total_del"(set_color normal)
-    end
-    echo $stat_summary
 
     # Commit message
     if test -z "$msg"
@@ -261,14 +268,29 @@ function _gsquash_merge
     end
 
     echo ""
-    set_color yellow
+    set_color green
     echo "Commits from $source_branch:"
     set_color normal
     git log --oneline $color_flag $merge_base..$source_branch | while read -l line
         echo "  $line"
     end
 
-    # Diff stats
+    # Diff stat
+    set -l stat_flag --stat
+    if test -n "$COLUMNS"
+        set stat_flag --stat=$COLUMNS
+    end
+
+    echo ""
+    set_color yellow
+    echo "Files:"
+    set_color normal
+    set -l diff_stat (git diff $color_flag $stat_flag $merge_base..$source_branch | string collect)
+    if test -n "$diff_stat"
+        echo "$diff_stat"
+    end
+
+    # Summary stats
     set -l nums (git diff --numstat $merge_base..$source_branch | string match -rv '^\s*$')
     set -l total_add 0
     set -l total_del 0
@@ -280,15 +302,6 @@ function _gsquash_merge
             set total_del (math $total_del + $parts[2])
         end
         set total_files (math $total_files + 1)
-    end
-
-    echo ""
-    set -l stat_summary "$total_files file(s)"
-    if test $total_add -gt 0
-        set stat_summary "$stat_summary, "(set_color green)"+$total_add"(set_color normal)
-    end
-    if test $total_del -gt 0
-        set stat_summary "$stat_summary, "(set_color red)"-$total_del"(set_color normal)
     end
     echo $stat_summary
 
