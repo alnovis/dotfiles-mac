@@ -1,6 +1,6 @@
-function ai-models --description "Manage Ollama models: list, install, remove, set default"
+function _ai_models --description "Manage Ollama models: list, install, remove, set default"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: ai-models [COMMAND] [ARGS]"
+        echo "Usage: ai models [COMMAND] [ARGS]"
         echo ""
         echo "Manage Ollama models."
         echo ""
@@ -9,22 +9,22 @@ function ai-models --description "Manage Ollama models: list, install, remove, s
         echo "  list --all [FILTER]    Show all models including oversized"
         echo "  install MODEL          Download a model"
         echo "  rm MODEL               Remove an installed model"
-        echo "  use MODEL              Set default model for ai/ai-code"
+        echo "  use MODEL              Set default model for ai/ai code"
         echo "  update                 Update all installed models to latest"
         echo "  info MODEL             Show model details (params, quant, context)"
         echo "  prune                  Clean up partial downloads and orphaned blobs"
         echo "  running                Show currently running models"
         echo ""
         echo "Examples:"
-        echo "  ai-models                              Show models that fit"
-        echo "  ai-models list --all                   Show all"
-        echo "  ai-models list coder                   Filter by 'coder'"
-        echo "  ai-models install qwen3:32b            Download model"
-        echo "  ai-models use qwen2.5-coder:32b        Set default"
-        echo "  ai-models rm codellama:13b             Remove model"
-        echo "  ai-models update                       Update all models"
-        echo "  ai-models info qwen2.5-coder:32b       Show model details"
-        echo "  ai-models prune                        Clean up disk"
+        echo "  ai models                              Show models that fit"
+        echo "  ai models list --all                   Show all"
+        echo "  ai models list coder                   Filter by 'coder'"
+        echo "  ai models install qwen3:32b            Download model"
+        echo "  ai models use qwen2.5-coder:32b        Set default"
+        echo "  ai models rm codellama:13b             Remove model"
+        echo "  ai models update                       Update all models"
+        echo "  ai models info qwen2.5-coder:32b       Show model details"
+        echo "  ai models prune                        Clean up disk"
         return 0
     end
 
@@ -296,7 +296,7 @@ function _ai_models_list
         echo " Filter: $filter"
     end
     echo ""
-    echo " Install: ai-models install MODEL"
+    echo " Install: ai models install MODEL"
     echo " Browse:  https://ollama.com/library"
 end
 
@@ -374,7 +374,7 @@ end
 function _ai_models_install
     if test (count $argv) -lt 1
         set_color red
-        echo "Error: specify model — ai-models install MODEL"
+        echo "Error: specify model — ai models install MODEL"
         set_color normal
         return 1
     end
@@ -405,7 +405,7 @@ end
 function _ai_models_use
     if test (count $argv) -lt 1
         set_color red
-        echo "Error: specify model — ai-models use MODEL"
+        echo "Error: specify model — ai models use MODEL"
         set_color normal
         return 1
     end
@@ -417,7 +417,7 @@ function _ai_models_use
         set_color red
         echo "Error: model '$argv[1]' is not installed"
         set_color normal
-        echo "Install first: ai-models install $argv[1]"
+        echo "Install first: ai models install $argv[1]"
         return 1
     end
 
@@ -433,7 +433,7 @@ end
 function _ai_models_rm
     if test (count $argv) -lt 1
         set_color red
-        echo "Error: specify model — ai-models rm MODEL"
+        echo "Error: specify model — ai models rm MODEL"
         set_color normal
         return 1
     end
@@ -544,7 +544,7 @@ end
 function _ai_models_info
     if test (count $argv) -lt 1
         set_color red
-        echo "Error: specify model — ai-models info MODEL"
+        echo "Error: specify model — ai models info MODEL"
         set_color normal
         return 1
     end

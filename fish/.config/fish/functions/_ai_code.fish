@@ -1,6 +1,6 @@
-function ai-code --description "Run aider with Ollama for AI-assisted coding"
+function _ai_code --description "Run aider with Ollama for AI-assisted coding"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: ai-code [OPTIONS] [FILES...]"
+        echo "Usage: ai code [OPTIONS] [FILES...]"
         echo ""
         echo "Run aider with Ollama in current repository."
         echo "Default: ask mode (read-only). Use -e/--edit to allow edits."
@@ -12,11 +12,11 @@ function ai-code --description "Run aider with Ollama for AI-assisted coding"
         echo "  Any other aider flags are passed through."
         echo ""
         echo "Examples:"
-        echo "  ai-code src/main/                    Analyze code (read-only)"
-        echo "  ai-code -e src/main/                 Edit mode"
-        echo "  ai-code --model ollama/qwen2.5:32b   Use different model"
+        echo "  ai code src/main/                    Analyze code (read-only)"
+        echo "  ai code -e src/main/                 Edit mode"
+        echo "  ai code --model ollama/qwen2.5:32b   Use different model"
         echo ""
-        echo "See also: ai, ai-models, ai-stop"
+        echo "See also: ai code, ai models, ai stop"
         return 0
     end
 

@@ -38,7 +38,7 @@ if status is-interactive
     # Быстрые директории
     alias work="cd ~/work"
 
-    # AI — see functions: ai, ai-chat, ai-code, ai-review, ai-models, ai-stop, opencode
+    # AI — unified: ai [models|review|code|chat|stop], opencode
 end
 
 # PATH

@@ -1,6 +1,6 @@
-function ai-stop --description "Stop running models or Ollama server"
+function _ai_stop --description "Stop running models or Ollama server"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: ai-stop [OPTIONS] [MODEL]"
+        echo "Usage: ai stop [OPTIONS] [MODEL]"
         echo ""
         echo "Stop running Ollama models or the server."
         echo ""
@@ -10,9 +10,9 @@ function ai-stop --description "Stop running models or Ollama server"
         echo "  --server         Stop Ollama server entirely"
         echo ""
         echo "Examples:"
-        echo "  ai-stop                     Stop all models"
-        echo "  ai-stop deepseek-coder-v2   Stop specific model"
-        echo "  ai-stop --server            Kill Ollama server"
+        echo "  ai stop                     Stop all models"
+        echo "  ai stop deepseek-coder-v2   Stop specific model"
+        echo "  ai stop --server            Kill Ollama server"
         return 0
     end
 

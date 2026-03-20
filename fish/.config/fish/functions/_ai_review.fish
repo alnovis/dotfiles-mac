@@ -1,6 +1,6 @@
-function ai-review --description "AI code review of branch or commit changes"
+function _ai_review --description "AI code review of branch or commit changes"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: ai-review [OPTIONS] [BASE]"
+        echo "Usage: ai review [OPTIONS] [BASE]"
         echo ""
         echo "AI code review. Reviews branch vs base by default."
         echo "Uses AI_DEFAULT_MODEL if set, otherwise deepseek-coder-v2:16b."
@@ -16,14 +16,14 @@ function ai-review --description "AI code review of branch or commit changes"
         echo "  -h, --help       Show this help"
         echo ""
         echo "Examples:"
-        echo "  ai-review                        Review branch vs base"
-        echo "  ai-review develop                 Review vs develop"
-        echo "  ai-review --last                  Review last commit"
-        echo "  ai-review --last 3                Review last 3 commits"
-        echo "  ai-review --commit abc1234        Review specific commit"
-        echo "  ai-review --file src/Foo.java     Review specific file"
-        echo "  ai-review --brief --lang fr       Brief review in French"
-        echo "  ai-review --lang-all de          Full review in German (incl. thinking)"
+        echo "  ai review                        Review branch vs base"
+        echo "  ai review develop                 Review vs develop"
+        echo "  ai review --last                  Review last commit"
+        echo "  ai review --last 3                Review last 3 commits"
+        echo "  ai review --commit abc1234        Review specific commit"
+        echo "  ai review --file src/Foo.java     Review specific file"
+        echo "  ai review --brief --lang fr       Brief review in French"
+        echo "  ai review --lang-all de          Full review in German (incl. thinking)"
         return 0
     end
 
@@ -130,7 +130,7 @@ function ai-review --description "AI code review of branch or commit changes"
             else if git show-ref --verify --quiet refs/heads/master
                 set base master
             else
-                echo "No base branch found, specify manually: ai-review <branch>"
+                echo "No base branch found, specify manually: ai review <branch>"
                 return 1
             end
         end

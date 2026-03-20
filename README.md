@@ -132,21 +132,21 @@ All functions support `-h/--help`.
 - `dclean` — remove stopped containers, dangling images, unused volumes (`-a` for full prune)
 - `dlogs` — docker compose logs with service filter and grep (`-g/--grep`, `-n/--lines`)
 
-*AI (Ollama):*
-- `ai` — run model interactively or with prompt (`ai "question"`, `git diff | ai "review"`)
+*AI (Ollama) — unified `ai` command with subcommands and Tab-completion:*
+- `ai [PROMPT]` — interactive chat or one-shot prompt (`ai "question"`, `git diff | ai "review"`)
   - `-m/--model` override model, `-t/--think` enable thinking mode
-- `ai-chat` — run chat model (default: llama3.1:8b)
-- `ai-code` — aider in ask mode by default, `-e/--edit` for code editing
-- `ai-review` — AI code review of branch, last commits, or specific commit
+- `ai chat` — chat model (default: llama3.1:8b)
+- `ai code` — aider in ask mode by default, `-e/--edit` for code editing
+- `ai review` — AI code review of branch, last commits, or specific commit
   - `--last [N]` review last N commits, `--commit SHA` specific commit
   - `--file FILE` review specific file, `--brief` short summary
   - `--lang LANG` response language, `--lang-all LANG` full response + thinking
-- `ai-models` — model manager (dynamic catalog from ollama.com, offline cache)
+- `ai models` — model manager (dynamic catalog from ollama.com, offline cache)
   - `list [FILTER]` show models filtered by RAM, `--all` show all
   - `install MODEL` / `rm MODEL` / `use MODEL` set default
   - `update` re-pull all installed, `info MODEL` show details, `prune` cleanup
   - `running` show loaded models
-- `ai-stop` — stop running models, `--server` to kill Ollama entirely
+- `ai stop` — stop running models, `--server` to kill Ollama entirely
 - `opencode` — run OpenCode TUI with Ollama auto-start
 
 ## Dev Tools
@@ -166,9 +166,9 @@ All functions support `-h/--help`.
 **AI Models:**
 
 ```bash
-ai-models                           # browse available models
-ai-models install qwen3:14b         # install a model
-ai-models use qwen3:14b             # set as default
+ai models                           # browse available models
+ai models install qwen3.5:9b       # install a model
+ai models use qwen3.5:9b           # set as default
 ```
 
 ## macOS Apps

@@ -1,15 +1,15 @@
-function ai-chat --description "Run Ollama chat model interactively"
+function _ai_chat --description "Run Ollama chat model interactively"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: ai-chat [MODEL]"
+        echo "Usage: ai chat [MODEL]"
         echo ""
         echo "Start Ollama (if needed) and run a chat model."
         echo "Default model: llama3.1:8b"
         echo ""
         echo "Examples:"
-        echo "  ai-chat                     Run default chat model"
-        echo "  ai-chat gemma2:9b           Run specific model"
+        echo "  ai chat                     Run default chat model"
+        echo "  ai chat gemma2:9b           Run specific model"
         echo ""
-        echo "See also: ai, ai-code, ai-models, ai-stop"
+        echo "See also: ai chat, ai code, ai models, ai stop"
         return 0
     end
 
