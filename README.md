@@ -14,7 +14,7 @@ Development environment configuration for MacBook Pro M4 Max, optimized for Scal
 
 ```bash
 # Install dependencies
-brew install neovim fish stow lazygit bat jq
+brew install neovim fish stow lazygit bat jq ollama aider opencode
 brew install --cask kitty orbstack intellij-idea-ce rustrover
 
 # Clone and apply
