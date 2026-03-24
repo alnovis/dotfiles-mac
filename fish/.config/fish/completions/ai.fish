@@ -36,7 +36,7 @@ complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcomman
 
 # --- ai review ---
 complete -c ai -n "__fish_seen_subcommand_from review" -l model -d "Override model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
-complete -c ai -n "__fish_seen_subcommand_from review" -l file -d "Review specific file" -r
+complete -c ai -n "__fish_seen_subcommand_from review" -l file -d "Review specific file" -rF
 complete -c ai -n "__fish_seen_subcommand_from review" -l brief -d "Short summary"
 complete -c ai -n "__fish_seen_subcommand_from review" -l lang -d "Response language" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"
 complete -c ai -n "__fish_seen_subcommand_from review" -l lang-all -d "Full response + thinking in language" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"
@@ -44,6 +44,7 @@ complete -c ai -n "__fish_seen_subcommand_from review" -l last -d "Review last N
 complete -c ai -n "__fish_seen_subcommand_from review" -l commit -d "Review specific commit"
 
 # --- ai code ---
+complete -c ai -n "__fish_seen_subcommand_from code" -F
 complete -c ai -n "__fish_seen_subcommand_from code" -s e -l edit -d "Allow code editing"
 complete -c ai -n "__fish_seen_subcommand_from code" -l model -d "Override model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
 
