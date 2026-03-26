@@ -239,3 +239,16 @@ map("n", "<leader>ле", function()
   vim.cmd("botright split | resize 15 | terminal gradle test")
   vim.cmd("startinsert")
 end, { desc = "kotlin test (ru)" })
+
+-- LeetCode
+map("n", "<leader>lr", function()
+  local file = vim.fn.expand("%:p")
+  vim.cmd("botright split | resize 15 | terminal lc-run " .. file)
+  vim.cmd("startinsert")
+end, { desc = "LeetCode run tests" })
+
+map("n", "<leader>дк", function()
+  local file = vim.fn.expand("%:p")
+  vim.cmd("botright split | resize 15 | terminal lc-run " .. file)
+  vim.cmd("startinsert")
+end, { desc = "LeetCode run tests (ru)" })

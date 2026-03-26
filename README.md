@@ -1,6 +1,6 @@
 # Dotfiles (macOS)
 
-Development environment configuration for MacBook Pro M4 Max, optimized for Scala, Rust, Java, and Kotlin development.
+Development environment configuration for MacBook Pro M4 Max (36GB), optimized for Scala, Rust, Java, and Kotlin development.
 
 ## Components
 
@@ -9,12 +9,13 @@ Development environment configuration for MacBook Pro M4 Max, optimized for Scal
 | **nvim** | Neovim (LazyVim) with LSP for Scala, Rust, Java, Kotlin |
 | **kitty** | Kitty terminal with Japanesque theme |
 | **fish** | Fish shell with dev aliases and SDKMAN integration |
+| **leetcode** | Offline LeetCode runner for Scala 3 and Rust |
 
 ## Quick Install
 
 ```bash
 # Install dependencies
-brew install neovim fish stow lazygit bat jq ollama aider opencode
+brew install neovim fish stow lazygit bat jq ollama aider opencode pi-coding-agent
 brew install --cask kitty orbstack intellij-idea-ce rustrover
 
 # Clone and apply
@@ -43,7 +44,7 @@ rustup component add rustfmt
 
 Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 
-**Theme:** Kanagawa Dragon
+**Theme:** Kanagawa Wave
 
 **Language support:**
 
@@ -63,7 +64,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - Lazygit — terminal UI for git (`Space gg`)
 - Spectre — project-wide search and replace (`Space sr`)
 - Hardtime — vim motion trainer (`Space uh` to toggle)
-- gen.nvim — local AI via Ollama (`Space ac/ag`)
+- CodeCompanion — local AI via Ollama (`Space ac/ag/ai`)
 - Diffview — git diff viewer (`Space gd/gh`)
 - conform.nvim — auto-format on save (scalafmt, rustfmt, ktlint, google-java-format)
 
@@ -77,6 +78,9 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - `Space ff` — find file
 - `Space fg` — live grep
 - `Space gg` — lazygit
+- `Space lr` — run LeetCode tests
+
+> Full keymaps reference: [docs/nvim-keymaps.md](docs/nvim-keymaps.md)
 
 ## Kitty
 
@@ -149,6 +153,11 @@ All functions support `-h/--help`.
 - `ai stop` — stop running models, `--server` to kill Ollama entirely
 - `opencode` — run OpenCode TUI with Ollama auto-start
 
+*LeetCode:*
+- `lc-run` — run LeetCode solution with `@test` cases (Scala 3, Rust)
+
+> LeetCode runner docs: [docs/leetcode.md](docs/leetcode.md)
+
 ## Dev Tools
 
 | Tool | Install |
@@ -162,6 +171,7 @@ All functions support `-h/--help`.
 | Ollama | `brew install ollama` |
 | Aider | `brew install aider` |
 | OpenCode | `brew install opencode` |
+| Pi | `brew install pi-coding-agent` |
 
 **AI Models:**
 
@@ -171,12 +181,28 @@ ai models install qwen3.5:9b       # install a model
 ai models use qwen3.5:9b           # set as default
 ```
 
+**AI Tools:**
+
+| Tool | Purpose | Usage |
+|------|---------|-------|
+| `ai` | Local AI chat/review via Ollama | `ai "question"`, `ai review` |
+| `ai code` | AI-assisted coding (aider + Ollama) | `ai code src/` |
+| `pi` | Coding agent (multi-provider, Ollama) | `pi --model ollama/qwen3.5:9b` |
+| `claude` | Cloud AI coding agent (Anthropic) | `claude "analyze project"` |
+
 ## macOS Apps
 
 - [Rectangle](https://rectangleapp.com/) — window management
 - [OrbStack](https://orbstack.dev/) — Docker runtime
 - [IntelliJ IDEA CE](https://www.jetbrains.com/idea/) — Scala/Java/Kotlin IDE
 - [RustRover](https://www.jetbrains.com/rust/) — Rust IDE
+
+## Docs
+
+| Document | Description |
+|----------|-------------|
+| [nvim-keymaps.md](docs/nvim-keymaps.md) | Full Neovim keymaps reference |
+| [leetcode.md](docs/leetcode.md) | LeetCode offline runner guide |
 
 ## Global Gitignore
 

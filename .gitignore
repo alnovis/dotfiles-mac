@@ -5,3 +5,13 @@ nvim/.config/nvim/LICENSE
 nvim/.config/nvim/README.md
 .DS_Store
 .aider*
+
+# Scala build artifacts
+.scala-build/
+.bsp/
+.metals/
+*.class
+*.tasty
+
+# Leetcode build cache
+leetcode/.scala-build/
