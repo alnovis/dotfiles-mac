@@ -6,7 +6,12 @@ return {
       commentStyle = { italic = true },
       keywordStyle = { italic = true },
       statementStyle = { bold = true },
-      dimInactive = true, -- затемнять неактивные окна
+      dimInactive = true,
+      overrides = function(colors)
+        return {
+          Visual = { bg = "#54546D" },
+        }
+      end,
     },
   },
   {

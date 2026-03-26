@@ -33,7 +33,8 @@ return {
       "nvim-lua/plenary.nvim",
       "nvim-treesitter/nvim-treesitter",
     },
-    init = function()
+    config = function(_, opts)
+      require("codecompanion").setup(opts)
       ensure_ollama()
     end,
     opts = {
