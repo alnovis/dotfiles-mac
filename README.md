@@ -129,6 +129,7 @@ All functions support `-h/--help`.
 - `gclean` — delete local branches already merged into base branch
 - `gfresh` — fetch + rebase current branch onto base (auto-stashes changes)
 - `gwip` / `gunwip` — quick WIP commit of all changes / undo WIP commit
+- `grelease` — create or re-release a git tag: commit + tag + push (`grelease [patch|minor|major|VERSION] [MESSAGE]`)
 
 *Docker:*
 - `registry-login` — docker login to private registry (uses `CI_REGISTRY` + `CI_PERSONAL_TOKEN`)
