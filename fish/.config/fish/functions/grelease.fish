@@ -54,41 +54,41 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
     end
 
     # Parse: [VERSION] [MESSAGE]
-    set -l version
+    set -l tag
     set -l message
 
     if test (count $argv) -ge 1
         switch $argv[1]
             case patch
-                set version "v$cur_major.$cur_minor."(math $cur_patch + 1)
+                set tag "v$cur_major.$cur_minor."(math $cur_patch + 1)
             case minor
-                set version "v$cur_major."(math $cur_minor + 1)".0"
+                set tag "v$cur_major."(math $cur_minor + 1)".0"
             case major
-                set version "v"(math $cur_major + 1)".0.0"
+                set tag "v"(math $cur_major + 1)".0.0"
             case '*'
-                set version $argv[1]
-                if not string match -q 'v*' $version
-                    set version "v$version"
+                set tag $argv[1]
+                if not string match -q 'v*' $tag
+                    set tag "v$tag"
                 end
         end
         if test (count $argv) -ge 2
             set message $argv[2]
         end
     else
-        set version "v$cur_major.$cur_minor."(math $cur_patch + 1)
+        set tag "v$cur_major.$cur_minor."(math $cur_patch + 1)
     end
 
     # Validate version format
-    if not string match -rq '^v\d+\.\d+\.\d+$' $version
+    if not string match -rq '^v\d+\.\d+\.\d+$' $tag
         set_color red
-        echo "Invalid version format: $version (expected: v1.2.3)"
+        echo "Invalid version format: $tag (expected: v1.2.3)"
         set_color normal
         return 1
     end
 
     # Check if tag already exists (re-release)
     set -l is_rerelease false
-    if git rev-parse "$version" >/dev/null 2>&1
+    if git rev-parse "$tag" >/dev/null 2>&1
         set is_rerelease true
     end
 
@@ -108,9 +108,9 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
     # Nothing to do check
     if test "$has_changes" = false -a "$is_rerelease" = false
         set -l head_tags (git tag --points-at HEAD 2>/dev/null)
-        if string match -q "$version" $head_tags
+        if string match -q "$tag" $head_tags
             echo "Repository: $repo_name ($branch)"
-            echo "HEAD is already tagged $version"
+            echo "HEAD is already tagged $tag"
             return 0
         end
     end
@@ -127,9 +127,9 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
     end
 
     # Build commit message
-    set -l commit_msg "$version"
+    set -l commit_msg "$tag"
     if test -n "$message"
-        set commit_msg "$version: $message"
+        set commit_msg "$tag: $message"
     end
 
     # --- Show plan ---
@@ -142,12 +142,12 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
     end
 
     set_color cyan
-    echo "Release: $version"
+    echo "Release: $tag"
     set_color normal
 
     if test "$is_rerelease" = true
         set_color yellow
-        echo "Re-release: tag $version will be deleted and recreated"
+        echo "Re-release: tag $tag will be deleted and recreated"
         set_color normal
     end
 
@@ -179,9 +179,9 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
 
     # 1. Delete old tag if re-release
     if test "$is_rerelease" = true
-        echo "Deleting old tag $version..."
-        git tag -d $version
-        git push origin :refs/tags/$version 2>/dev/null
+        echo "Deleting old tag $tag..."
+        git tag -d $tag
+        git push origin :refs/tags/$tag 2>/dev/null
     end
 
     # 2. Commit if needed
@@ -196,9 +196,9 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
     end
 
     # 3. Create tag
-    if not git tag $version
+    if not git tag $tag
         set_color red
-        echo "Error: failed to create tag $version"
+        echo "Error: failed to create tag $tag"
         set_color normal
         return 1
     end
@@ -222,7 +222,7 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
 
     echo "---"
     set_color green
-    echo "Released $version"
+    echo "Released $tag"
     set_color normal
     if set -q _flag_no_push
         echo "Push skipped — run: git push && git push --tags"
