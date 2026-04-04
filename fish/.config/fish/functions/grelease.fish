@@ -1,5 +1,5 @@
 function grelease --description "Tag a release: commit, tag, push (with re-release support)"
-    argparse 'h/help' 'no-commit' 'no-push' -- $argv; or return 1
+    argparse 'h/help' 'e/edit' 'no-commit' 'no-push' -- $argv; or return 1
 
     if set -q _flag_help
         echo "Usage: grelease [OPTIONS] [VERSION] [MESSAGE]"
@@ -8,23 +8,31 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
         echo "creates tag, and pushes."
         echo ""
         echo "VERSION can be:"
-        echo "  v1.2.3 / 1.2.3    Explicit version"
-        echo "  patch              Bump patch (default if omitted)"
-        echo "  minor              Bump minor version"
-        echo "  major              Bump major version"
+        echo "  v1.2.3 / 1.2.3          Explicit version"
+        echo "  v2.0.0-alpha.1           Prerelease version"
+        echo "  patch                    Bump patch (default if omitted)"
+        echo "  minor                    Bump minor version"
+        echo "  major                    Bump major version"
         echo ""
         echo "Options:"
-        echo "      --no-commit   Skip commit (tag current HEAD)"
-        echo "      --no-push     Skip push to remote"
-        echo "  -h, --help        Show this help"
+        echo "  -e, --edit       Edit release message in \$EDITOR before proceeding"
+        echo "      --no-commit  Skip commit (tag current HEAD)"
+        echo "      --no-push    Skip push to remote"
+        echo "  -h, --help       Show this help"
+        echo ""
+        echo "If MESSAGE is omitted, editor opens automatically."
         echo ""
         echo "Examples:"
         echo "  grelease v0.2.37 \"analytics fixes\"   Commit + tag + push"
         echo "  grelease v0.2.36 \"hotfix\"             Re-release (deletes old tag)"
+        echo "  grelease v2.0.0-alpha.1               Prerelease tag"
         echo "  grelease                              Auto-bump patch"
         echo "  grelease minor \"new feature\"          Bump minor version"
+        echo "  grelease -e v0.2.37 \"draft msg\"       Edit message before release"
         return 0
     end
+
+    # --- Validation (fail fast, before editor) ---
 
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
     if test $status -ne 0
@@ -35,7 +43,7 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
     set -l repo_name (basename $repo_root)
     set -l branch (git branch --show-current)
 
-    # Find latest semver tag
+    # Find latest stable semver tag (for auto-bump)
     set -l all_tags (git tag --sort=-v:refname | string match -r '^v\d+\.\d+\.\d+$')
     set -l latest_tag ""
     if test (count $all_tags) -gt 0
@@ -78,10 +86,10 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
         set tag "v$cur_major.$cur_minor."(math $cur_patch + 1)
     end
 
-    # Validate version format
-    if not string match -rq '^v\d+\.\d+\.\d+$' $tag
+    # Validate version format (semver + optional prerelease suffix)
+    if not string match -rq '^v\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$' $tag
         set_color red
-        echo "Invalid version format: $tag (expected: v1.2.3)"
+        echo "Invalid version format: $tag (expected: v1.2.3 or v1.2.3-alpha.1)"
         set_color normal
         return 1
     end
@@ -115,15 +123,26 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
         end
     end
 
-    # Ask for commit message interactively if not provided
-    if test "$will_commit" = true -a -z "$message"
-        echo "Repository: $repo_name ($branch)"
-        echo ""
-        git -c color.status=always status --short | while read -l line
-            echo "  $line"
+    # --- Editor (only after all validation passes) ---
+
+    if set -q _flag_edit; or test "$will_commit" = true -a -z "$message"
+        # Show changes before opening editor
+        if test "$has_changes" = true
+            echo "Repository: $repo_name ($branch)"
+            echo ""
+            git -c color.status=always status --short | while read -l line
+                echo "  $line"
+            end
+            echo ""
         end
-        echo ""
-        read -l -P "Release description (optional): " message
+
+        set -l tmpfile (mktemp /tmp/grelease.XXXXXX)
+        if test -n "$message"
+            echo "$message" >$tmpfile
+        end
+        eval (set -q EDITOR; and echo $EDITOR; or echo nvim) $tmpfile
+        set message (cat $tmpfile | string collect | string trim)
+        rm -f $tmpfile
     end
 
     # Build commit message
@@ -160,7 +179,11 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
             echo "  $line"
         end
         echo ""
-        echo "Commit: $commit_msg"
+        if test -n "$message"
+            echo "Commit: $tag: "(set_color yellow)"$message"(set_color normal)
+        else
+            echo "Commit: $tag"
+        end
     else if set -q _flag_no_commit
         echo "Tagging current HEAD (no commit)"
     else if test "$has_changes" = false
@@ -222,8 +245,11 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
 
     echo "---"
     set_color green
-    echo "Released $tag"
-    set_color normal
+    if test -n "$message"
+        echo "Released $tag: "(set_color yellow)"$message"(set_color normal)
+    else
+        echo "Released $tag"(set_color normal)
+    end
     if set -q _flag_no_push
         echo "Push skipped — run: git push && git push --tags"
     end
