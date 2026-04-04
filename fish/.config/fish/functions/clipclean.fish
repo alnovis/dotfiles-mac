@@ -18,13 +18,26 @@ function clipclean --description "Dedent and trim trailing whitespace from clipb
         }
     }
     END {
+        # If min is 0 but some lines are indented, recompute from indented only
+        if (min_indent == 0) {
+            min_indent = -1
+            for (i = 1; i <= NR; i++) {
+                if (lines[i] ~ /[^[:space:]]/) {
+                    match(lines[i], /^[[:space:]]*/)
+                    if (RLENGTH > 0 && (min_indent == -1 || RLENGTH < min_indent))
+                        min_indent = RLENGTH
+                }
+            }
+        }
         if (min_indent < 1) min_indent = 0
         for (i = 1; i <= NR; i++) {
             line = lines[i]
-            if (length(line) > min_indent) {
-                line = substr(line, min_indent + 1)
-            } else if (line ~ /^[[:space:]]*$/) {
+            if (line ~ /^[[:space:]]*$/) {
                 line = ""
+            } else {
+                match(line, /^[[:space:]]*/)
+                if (RLENGTH >= min_indent)
+                    line = substr(line, min_indent + 1)
             }
             sub(/[[:space:]]+$/, "", line)
             print line

@@ -170,6 +170,10 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
         set_color normal
     end
 
+    if test -n "$message"
+        echo "Message: "(set_color yellow)"$message"(set_color normal)
+    end
+
     if test "$will_commit" = true
         echo ""
         set_color green
@@ -179,11 +183,7 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
             echo "  $line"
         end
         echo ""
-        if test -n "$message"
-            echo "Commit: $tag: "(set_color yellow)"$message"(set_color normal)
-        else
-            echo "Commit: $tag"
-        end
+        echo "Commit: $commit_msg"
     else if set -q _flag_no_commit
         echo "Tagging current HEAD (no commit)"
     else if test "$has_changes" = false
@@ -218,12 +218,21 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
         end
     end
 
-    # 3. Create tag
-    if not git tag $tag
-        set_color red
-        echo "Error: failed to create tag $tag"
-        set_color normal
-        return 1
+    # 3. Create tag (annotated if message provided, lightweight otherwise)
+    if test -n "$message"
+        if not git tag -a $tag -m "$message"
+            set_color red
+            echo "Error: failed to create tag $tag"
+            set_color normal
+            return 1
+        end
+    else
+        if not git tag $tag
+            set_color red
+            echo "Error: failed to create tag $tag"
+            set_color normal
+            return 1
+        end
     end
 
     # 4. Push
