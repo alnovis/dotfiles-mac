@@ -98,7 +98,9 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
 
     echo "---"
     echo "Commit message:"
+    set_color yellow
     echo "$msg"
+    set_color normal
     echo "---"
 
     if not set -q _flag_yes

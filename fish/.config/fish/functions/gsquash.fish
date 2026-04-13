@@ -206,7 +206,9 @@ function _gsquash_reset
 
     echo "---"
     set_color green
-    echo "Squashed $commits commits into: $msg"
+    echo "Squashed $commits commits into:"
+    set_color yellow
+    echo "$msg"
     set_color normal
 end
 
@@ -339,6 +341,8 @@ function _gsquash_merge
 
     echo "---"
     set_color green
-    echo "Merged $source_branch into $branch as: $msg"
+    echo "Merged $source_branch into $branch:"
+    set_color yellow
+    echo "$msg"
     set_color normal
 end

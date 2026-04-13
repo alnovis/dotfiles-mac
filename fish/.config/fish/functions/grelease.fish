@@ -172,10 +172,10 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
 
     if test -n "$message"
         echo ""
-        set_color yellow
         echo "Message:"
-        set_color normal
+        set_color yellow
         echo "$message"
+        set_color normal
     end
 
     if test "$will_commit" = true
