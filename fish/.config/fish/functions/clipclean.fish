@@ -1,48 +1,60 @@
 function clipclean --description "Dedent and trim trailing whitespace from clipboard"
-    if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: clipclean"
+    argparse 'h/help' 'f/flat' -- $argv; or return 1
+
+    if set -q _flag_help
+        echo "Usage: clipclean [OPTIONS]"
         echo ""
-        echo "Dedent and trim trailing whitespace from clipboard."
-        echo "Removes common leading indentation from all lines."
-        echo "Result is copied back to clipboard."
+        echo "Clean up clipboard text."
+        echo ""
+        echo "Default: remove common indentation (dedent) + trim trailing spaces."
+        echo "Preserves relative indentation for code/YAML."
+        echo ""
+        echo "Options:"
+        echo "  -f, --flat    Strip all leading whitespace from every line"
+        echo "  -h, --help    Show this help"
         return 0
     end
 
-    pbpaste | awk '
-    BEGIN { min_indent = -1 }
-    {
-        lines[NR] = $0
-        if ($0 ~ /[^[:space:]]/) {
-            match($0, /^[[:space:]]*/)
-            if (min_indent == -1 || RLENGTH < min_indent) min_indent = RLENGTH
-        }
-    }
-    END {
-        # If min is 0 but some lines are indented, recompute from indented only
-        if (min_indent == 0) {
-            min_indent = -1
-            for (i = 1; i <= NR; i++) {
-                if (lines[i] ~ /[^[:space:]]/) {
-                    match(lines[i], /^[[:space:]]*/)
-                    if (RLENGTH > 0 && (min_indent == -1 || RLENGTH < min_indent))
-                        min_indent = RLENGTH
-                }
-            }
-        }
-        if (min_indent < 1) min_indent = 0
-        for (i = 1; i <= NR; i++) {
-            line = lines[i]
-            if (line ~ /^[[:space:]]*$/) {
-                line = ""
-            } else {
-                match(line, /^[[:space:]]*/)
-                if (RLENGTH >= min_indent)
-                    line = substr(line, min_indent + 1)
-            }
-            sub(/[[:space:]]+$/, "", line)
-            print line
-        }
-    }
-    ' | pbcopy
-    echo "Clipboard dedented"
+    # --flat: strip all leading + trailing whitespace per line
+    if set -q _flag_flat
+        pbpaste | tr '\r' '\n' | string trim | pbcopy
+        echo "Clipboard cleaned (flat)"
+        return 0
+    end
+
+    # Dedent mode
+    set -l text (pbpaste | tr '\r' '\n' | string collect)
+    if test -z "$text"
+        echo "Clipboard is empty"
+        return 1
+    end
+
+    set -l lines (string split \n -- $text)
+
+    # Find minimum indent among non-empty lines
+    set -l min_indent -1
+    for line in $lines
+        if string match -rq '\S' -- $line
+            set -l indent (string match -r '^\s*' -- $line)
+            set -l len (string length -- $indent)
+            if test $min_indent -eq -1; or test $len -lt $min_indent
+                set min_indent $len
+            end
+        end
+    end
+
+    # Strip common indent
+    if test $min_indent -gt 0
+        for i in (seq (count $lines))
+            set lines[$i] (string sub -s (math $min_indent + 1) -- $lines[$i])
+        end
+    end
+
+    # Trim trailing whitespace per line
+    for i in (seq (count $lines))
+        set lines[$i] (string replace -r '\s+$' '' -- $lines[$i])
+    end
+
+    printf '%s\n' $lines | pbcopy
+    echo "Clipboard cleaned (dedent)"
 end

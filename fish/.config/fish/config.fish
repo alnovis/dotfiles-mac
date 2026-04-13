@@ -42,6 +42,7 @@ if status is-interactive
 end
 
 # PATH
+fish_add_path -p /opt/homebrew/opt/bind/bin
 fish_add_path ~/.cargo/bin
 fish_add_path ~/.local/share/coursier/bin
 fish_add_path "/Users/alnovis/Library/Application Support/Coursier/bin"

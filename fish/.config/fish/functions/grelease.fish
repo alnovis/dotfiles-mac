@@ -141,7 +141,7 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
             echo "$message" >$tmpfile
         end
         eval (set -q EDITOR; and echo $EDITOR; or echo nvim) $tmpfile
-        set message (cat $tmpfile | string collect | string trim)
+        set message (cat $tmpfile | string collect)
         rm -f $tmpfile
     end
 
@@ -171,7 +171,11 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
     end
 
     if test -n "$message"
-        echo "Message: "(set_color yellow)"$message"(set_color normal)
+        echo ""
+        set_color yellow
+        echo "Message:"
+        set_color normal
+        echo "$message"
     end
 
     if test "$will_commit" = true
@@ -182,8 +186,6 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
         git -c color.status=always status --short | while read -l line
             echo "  $line"
         end
-        echo ""
-        echo "Commit: $commit_msg"
     else if set -q _flag_no_commit
         echo "Tagging current HEAD (no commit)"
     else if test "$has_changes" = false
@@ -254,11 +256,8 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
 
     echo "---"
     set_color green
-    if test -n "$message"
-        echo "Released $tag: "(set_color yellow)"$message"(set_color normal)
-    else
-        echo "Released $tag"(set_color normal)
-    end
+    echo "Released $tag"
+    set_color normal
     if set -q _flag_no_push
         echo "Push skipped — run: git push && git push --tags"
     end
