@@ -1,8 +1,12 @@
-function ai --description "AI toolkit: chat, code, review, models, stop"
+function ai --description "AI toolkit: chat, code, review, gen, config, models, stop"
     set -l subcmd $argv[1]
 
     # Route subcommands
     switch "$subcmd"
+        case gen
+            _ai_gen $argv[2..]
+        case config
+            _ai_config $argv[2..]
         case models
             _ai_models $argv[2..]
         case review
@@ -16,10 +20,12 @@ function ai --description "AI toolkit: chat, code, review, models, stop"
         case --help -h help
             echo "Usage: ai [COMMAND] [OPTIONS] [PROMPT]"
             echo ""
-            echo "AI toolkit powered by Ollama."
+            echo "AI toolkit — local (Ollama) and cloud (Claude) providers."
             echo ""
             echo "Commands:"
             echo "  (none) [PROMPT]      Interactive chat or one-shot prompt"
+            echo "  gen                  Generate: review, commit, summary"
+            echo "  config               View or set AI config (provider, etc.)"
             echo "  models               Manage models (list, install, rm, use, update, info, prune)"
             echo "  review               AI code review of branch or commits"
             echo "  code                 AI-assisted coding with aider"
@@ -27,22 +33,24 @@ function ai --description "AI toolkit: chat, code, review, models, stop"
             echo "  stop                 Stop running models or server"
             echo ""
             echo "Options (for chat mode):"
-            echo "  -m, --model MODEL    Use specific model"
-            echo "  -t, --think          Enable thinking mode"
+            echo "  -m, --model MODEL       Use specific model"
+            echo "  -t, --think             Enable thinking mode (ollama only)"
+            echo "  --provider PROVIDER     Override provider (ollama, claude)"
             echo ""
             echo "Examples:"
             echo "  ai                               Interactive chat"
             echo "  ai \"explain this code\"            One-shot question"
+            echo "  ai --provider claude \"question\"   Use Claude"
             echo "  ai -t \"solve this problem\"        With thinking"
             echo "  git diff | ai \"review this\"       Pipe input as context"
+            echo "  ai gen review                     Project review"
+            echo "  ai gen commit                     Generate commit message"
+            echo "  ai gen summary                    Generate project summary"
+            echo "  ai config provider claude         Set default provider"
             echo "  ai models list coder              List coding models"
-            echo "  ai models install qwen3.5:9b      Install model"
-            echo "  ai models use qwen3.5:9b          Set default"
             echo "  ai review --last 3                Review last 3 commits"
-            echo "  ai review --lang fr               Review in French"
             echo "  ai code -e src/main/              Edit code with aider"
             echo "  ai stop                           Stop all models"
-            echo "  ai stop --server                  Kill Ollama server"
             return 0
         case '*'
             # No subcommand → chat/prompt mode
@@ -50,58 +58,19 @@ function ai --description "AI toolkit: chat, code, review, models, stop"
     end
 end
 
-function _ai_run --description "Run Ollama model interactively or with prompt"
-    # Parse flags
-    set -l model
-    set -l think 0
-    set -l prompt_args
+function _ai_run --description "Run AI model interactively or with prompt"
+    argparse 'm/model=' 't/think' 'provider=' -- $argv; or return 1
 
-    set -l i 1
-    while test $i -le (count $argv)
-        switch $argv[$i]
-            case -m --model
-                set i (math $i + 1)
-                set model $argv[$i]
-            case -t --think
-                set think 1
-            case '*'
-                set -a prompt_args $argv[$i]
-        end
-        set i (math $i + 1)
+    set -l provider_args
+    if set -q _flag_provider
+        set -a provider_args --provider $_flag_provider
+    end
+    if set -q _flag_model
+        set -a provider_args --model $_flag_model
+    end
+    if set -q _flag_think
+        set -a provider_args --think
     end
 
-    # Default model
-    if test -z "$model"
-        if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"
-            set model $AI_DEFAULT_MODEL
-        else
-            set model deepseek-coder-v2:16b
-        end
-    end
-
-    _ai_ensure_running; or return 1
-
-    # Think flag
-    set -l think_flag --think=false
-    if test $think -eq 1
-        set think_flag --think=true
-    end
-
-    # Build prompt from args + stdin
-    set -l prompt (string join " " $prompt_args)
-
-    if not isatty stdin
-        # Pipe mode: buffer stdin, pipe to ollama
-        begin
-            if test -n "$prompt"
-                echo "$prompt"
-                echo ""
-            end
-            cat
-        end | ollama run $think_flag $model
-    else if test -n "$prompt"
-        ollama run $think_flag $model "$prompt"
-    else
-        ollama run $think_flag $model
-    end
+    _ai_provider_run $provider_args $argv
 end

@@ -1,5 +1,7 @@
 function _ai_review --description "AI code review of branch or commit changes"
-    if contains -- --help $argv; or contains -- -h $argv
+    argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' -- $argv; or return 1
+
+    if set -q _flag_help
         echo "Usage: ai review [OPTIONS] [BASE]"
         echo ""
         echo "AI code review. Reviews branch vs base by default."
@@ -13,6 +15,7 @@ function _ai_review --description "AI code review of branch or commit changes"
         echo "  --lang-all LANG  Full response + thinking in specified language (slower)"
         echo "  --last [N]       Review last N commit(s) (default: 1)"
         echo "  --commit SHA     Review a specific commit"
+        echo "  --provider P     Override provider (ollama, claude)"
         echo "  -h, --help       Show this help"
         echo ""
         echo "Examples:"
@@ -36,60 +39,44 @@ function _ai_review --description "AI code review of branch or commit changes"
     set -l repo_name (basename $repo_root)
     set -l branch (git branch --show-current)
 
-    # Parse args
-    set -l model
-    set -l file_filter
-    set -l brief 0
-    set -l lang
-    set -l lang_all 0
-    set -l base
-    set -l last_n 0
-    set -l commit_sha
-    set -l i 1
-    while test $i -le (count $argv)
-        switch $argv[$i]
-            case --model
-                set i (math $i + 1)
-                set model $argv[$i]
-            case --file
-                set i (math $i + 1)
-                set file_filter $argv[$i]
-            case --brief
-                set brief 1
-            case --lang
-                set i (math $i + 1)
-                set lang $argv[$i]
-            case --lang-all
-                set i (math $i + 1)
-                set lang $argv[$i]
-                set lang_all 1
-            case --last
-                set last_n 1
-                # Check if next arg is a number
-                if test $i -lt (count $argv)
-                    set -l next $argv[(math $i + 1)]
-                    if string match -qr '^\d+$' $next
-                        set last_n $next
-                        set i (math $i + 1)
-                    end
-                end
-            case --commit
-                set i (math $i + 1)
-                set commit_sha $argv[$i]
-            case '*'
-                set base $argv[$i]
-        end
-        set i (math $i + 1)
+    # Resolve flags
+    set -l provider
+    if set -q _flag_provider
+        set provider $_flag_provider
+    else
+        set provider (_ai_config_read provider; or echo ollama)
     end
 
-    # Default model
-    if test -z "$model"
+    set -l model $_flag_model
+    if test -z "$model"; and test "$provider" = ollama
         if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"
             set model $AI_DEFAULT_MODEL
         else
             set model deepseek-coder-v2:16b
         end
     end
+
+    set -l lang en
+    set -l lang_all 0
+    if set -q _flag_lang_all
+        set lang $_flag_lang_all
+        set lang_all 1
+    else if set -q _flag_lang
+        set lang $_flag_lang
+    end
+
+    set -l last_n 0
+    if set -q _flag_last
+        if test -n "$_flag_last"
+            set last_n $_flag_last
+        else
+            set last_n 1
+        end
+    end
+
+    set -l file_filter $_flag_file
+    set -l commit_sha $_flag_commit
+    set -l base $argv[1]
 
     # Get diff based on mode
     set -l diff_content
@@ -184,8 +171,6 @@ function _ai_review --description "AI code review of branch or commit changes"
         set diff_content (echo "$diff_content" | head -n $max_lines)
     end
 
-    _ai_ensure_running; or return 1
-
     # Header
     echo "Repository: $repo_name ($branch)"
     set_color cyan
@@ -196,7 +181,10 @@ function _ai_review --description "AI code review of branch or commit changes"
         echo "File: $file_filter"
         set_color normal
     end
-    echo "Model: $model"
+    echo "Provider: $provider"
+    if test -n "$model"
+        echo "Model: $model"
+    end
     if test -n "$lang"
         echo "Language: "(_ai_lang_name $lang)
     end
@@ -226,7 +214,7 @@ REMINDER: Final response must be in $lang_full."
 
     # Build prompt
     set -l prompt
-    if test $brief -eq 1
+    if set -q _flag_brief
         set prompt "$lang_prefix""Give a brief summary of this code change in 3-5 bullet points. Focus on what changed and potential risks. Be concise.$lang_suffix
 
 Diff:
@@ -245,5 +233,9 @@ $diff_content"
     end
 
     # Run review
-    echo "$prompt" | ollama run $model
+    set -l provider_args --provider $provider
+    if test -n "$model"
+        set -a provider_args --model $model
+    end
+    echo "$prompt" | _ai_provider_run $provider_args
 end

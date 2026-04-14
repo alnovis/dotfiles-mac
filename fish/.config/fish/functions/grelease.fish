@@ -137,12 +137,16 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
         end
 
         set -l tmpfile (mktemp /tmp/grelease.XXXXXX)
+        function _grelease_cleanup --on-event fish_exit --inherit-variable tmpfile
+            rm -f $tmpfile
+        end
         if test -n "$message"
             echo "$message" >$tmpfile
         end
         eval (set -q EDITOR; and echo $EDITOR; or echo nvim) $tmpfile
         set message (cat $tmpfile | string collect)
         rm -f $tmpfile
+        functions -e _grelease_cleanup
     end
 
     # Build commit message

@@ -31,10 +31,14 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
     # Edit message in nvim
     if set -q _flag_edit
         set -l tmpfile (mktemp /tmp/clipcommit.XXXXXX)
+        function _clipcommit_cleanup --on-event fish_exit --inherit-variable tmpfile
+            rm -f $tmpfile
+        end
         echo "$msg" >$tmpfile
         nvim $tmpfile
         set msg (cat $tmpfile | string collect)
         rm -f $tmpfile
+        functions -e _clipcommit_cleanup
         if test -z "$msg"
             echo "Empty message after edit, aborted"
             return 1
