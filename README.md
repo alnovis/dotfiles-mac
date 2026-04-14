@@ -137,15 +137,22 @@ All functions support `-h/--help`.
 - `dclean` — remove stopped containers, dangling images, unused volumes (`-a` for full prune)
 - `dlogs` — docker compose logs with service filter and grep (`-g/--grep`, `-n/--lines`)
 
-*AI (Ollama) — unified `ai` command with subcommands and Tab-completion:*
+*AI — unified `ai` command with multi-provider support (Ollama, Claude) and Tab-completion:*
 - `ai [PROMPT]` — interactive chat or one-shot prompt (`ai "question"`, `git diff | ai "review"`)
-  - `-m/--model` override model, `-t/--think` enable thinking mode
-- `ai chat` — chat model (default: llama3.1:8b)
-- `ai code` — aider in ask mode by default, `-e/--edit` for code editing
+  - `-m/--model` override model, `-t/--think` enable thinking (ollama), `--provider` override provider
+- `ai gen review [DIR]` — project review using meta-prompt (claude explores files, ollama gets tree+README)
+- `ai gen commit` — generate commit message from uncommitted changes (staged or unstaged)
+- `ai gen summary [DIR]` — generate project summary
+  - Common flags: `--provider`, `--model`, `--lang` (default: en), `-o/--output FILE`
+  - Prompt templates: `~/.config/fish/prompts/meta-{review,commit,summary}.md`
+- `ai config` — view/set AI configuration (`ai config provider claude`)
 - `ai review` — AI code review of branch, last commits, or specific commit
   - `--last [N]` review last N commits, `--commit SHA` specific commit
   - `--file FILE` review specific file, `--brief` short summary
   - `--lang LANG` response language, `--lang-all LANG` full response + thinking
+  - `--provider` override provider
+- `ai chat` — chat model (default: llama3.1:8b, ollama only)
+- `ai code` — aider in ask mode by default, `-e/--edit` for code editing (ollama only)
 - `ai models` — model manager (dynamic catalog from ollama.com, offline cache)
   - `list [FILTER]` show models filtered by RAM, `--all` show all
   - `install MODEL` / `rm MODEL` / `use MODEL` set default
@@ -186,7 +193,9 @@ ai models use qwen3.5:9b           # set as default
 
 | Tool | Purpose | Usage |
 |------|---------|-------|
-| `ai` | Local AI chat/review via Ollama | `ai "question"`, `ai review` |
+| `ai` | Multi-provider AI toolkit (Ollama/Claude) | `ai "question"`, `ai gen review` |
+| `ai gen` | Content generation (review, commit, summary) | `ai gen commit`, `ai gen review ~/project` |
+| `ai config` | Provider configuration | `ai config provider claude` |
 | `ai code` | AI-assisted coding (aider + Ollama) | `ai code src/` |
 | `pi` | Coding agent (multi-provider, Ollama) | `pi --model ollama/qwen3.5:9b` |
 | `claude` | Cloud AI coding agent (Anthropic) | `claude "analyze project"` |
