@@ -42,10 +42,11 @@ if status is-interactive
 end
 
 # PATH
+fish_add_path -p /opt/homebrew/bin /opt/homebrew/sbin
 fish_add_path -p /opt/homebrew/opt/bind/bin
 fish_add_path ~/.cargo/bin
 fish_add_path ~/.local/share/coursier/bin
-fish_add_path "/Users/alnovis/Library/Application Support/Coursier/bin"
+fish_add_path ~/Library/"Application Support"/Coursier/bin
 
 # SDKMAN (Java)
 set -gx JAVA_HOME (string replace -r '/bin/java$' '' (which java 2>/dev/null); or echo "")
