@@ -32,6 +32,13 @@ chsh -s /opt/homebrew/bin/fish
 
 ## Post-Install
 
+Fish theme (bobthefish) and Oh My Fish are installed automatically by `install.sh`. If needed manually:
+
+```bash
+curl -sL https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish
+omf install bobthefish
+```
+
 LSP servers (Metals, rust-analyzer, jdtls, kotlin-language-server) are installed automatically by Mason on first Neovim launch.
 
 Formatters (scalafmt, ktlint, google-java-format) are also managed by Mason. The exception is `rustfmt`:
