@@ -27,34 +27,40 @@ function q --description "Quick alias manager: lightweight named commands"
                 return 1
             end
 
+            # Resolve description: -d flag > existing file's desc (on update) > name
             set -l desc "$_flag_description"
             if test -z "$desc"
-                set desc "$name"
+                if test -f $quick_dir/$name
+                    set desc (head -1 $quick_dir/$name)
+                else
+                    set desc "$name"
+                end
             end
 
             set -l cmd $argv[2]
 
             if test -z "$cmd"
-                # No command given — open editor
+                # No command given — open editor with command body only
                 set -l editor (_q_editor); or return 1
                 set -l tmpfile (mktemp /tmp/q-edit-XXXXXX)
-                printf '%s\n' "$desc" >$tmpfile
 
                 # Pre-fill with existing command if updating
                 if test -f $quick_dir/$name
-                    tail -n +2 $quick_dir/$name >>$tmpfile
+                    tail -n +2 $quick_dir/$name >$tmpfile
                 end
 
                 eval $editor $tmpfile
 
-                # Check if user wrote anything beyond the description line
-                if test (wc -l <$tmpfile | string trim) -le 1
+                set -l body (string trim -- (cat $tmpfile | string collect))
+                if test -z "$body"
                     rm $tmpfile
                     echo "Aborted: no command entered."
                     return 1
                 end
 
-                cp $tmpfile $quick_dir/$name
+                # Store: line 1 = description, line 2+ = command
+                printf '%s\n' "$desc" >$quick_dir/$name
+                cat $tmpfile >>$quick_dir/$name
                 rm $tmpfile
 
                 set_color green
