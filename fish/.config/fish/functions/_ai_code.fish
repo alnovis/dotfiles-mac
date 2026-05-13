@@ -4,7 +4,7 @@ function _ai_code --description "Run aider with Ollama for AI-assisted coding"
         echo ""
         echo "Run aider with Ollama in current repository."
         echo "Default: ask mode (read-only). Use -e/--edit to allow edits."
-        echo "Uses AI_DEFAULT_MODEL if set, otherwise deepseek-coder-v2:16b."
+        echo "Uses AI_DEFAULT_MODEL if set, otherwise qwen3.5:9b."
         echo ""
         echo "Options:"
         echo "  -e, --edit       Allow code editing (default: ask-only mode)"
@@ -29,10 +29,7 @@ function _ai_code --description "Run aider with Ollama for AI-assisted coding"
 
     _ai_ensure_running; or return 1
 
-    set -l model deepseek-coder-v2:16b
-    if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"
-        set model $AI_DEFAULT_MODEL
-    end
+    set -l model (_ai_default_model)
 
     # Check for --edit flag
     set -l chat_mode --chat-mode ask

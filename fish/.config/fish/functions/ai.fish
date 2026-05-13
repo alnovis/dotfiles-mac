@@ -29,7 +29,7 @@ function ai --description "AI toolkit: chat, code, review, gen, config, models, 
             echo "  models               Manage models (list, install, rm, use, update, info, prune)"
             echo "  review               AI code review of branch or commits"
             echo "  code                 AI-assisted coding with aider"
-            echo "  chat                 Chat model (default: llama3.1:8b)"
+            echo "  chat                 Chat model (\$AI_DEFAULT_MODEL or qwen3.5:9b)"
             echo "  stop                 Stop running models or server"
             echo ""
             echo "Options (for chat mode):"

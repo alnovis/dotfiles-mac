@@ -21,11 +21,7 @@ function _ai_provider_run --description "Run a prompt through the configured AI 
         case ollama
             # Default model
             if test -z "$model"
-                if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"
-                    set model $AI_DEFAULT_MODEL
-                else
-                    set model deepseek-coder-v2:16b
-                end
+                set model (_ai_default_model)
             end
 
             _ai_ensure_running; or return 1

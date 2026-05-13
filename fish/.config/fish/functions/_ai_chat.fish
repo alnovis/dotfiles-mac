@@ -3,7 +3,7 @@ function _ai_chat --description "Run Ollama chat model interactively"
         echo "Usage: ai chat [MODEL]"
         echo ""
         echo "Start Ollama (if needed) and run a chat model."
-        echo "Default model: llama3.1:8b"
+        echo "Uses AI_DEFAULT_MODEL if set, otherwise qwen3.5:9b."
         echo ""
         echo "Examples:"
         echo "  ai chat                     Run default chat model"
@@ -13,7 +13,7 @@ function _ai_chat --description "Run Ollama chat model interactively"
         return 0
     end
 
-    set -l model llama3.1:8b
+    set -l model (_ai_default_model)
     if test (count $argv) -ge 1
         set model $argv[1]
     end

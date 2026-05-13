@@ -15,7 +15,7 @@ Development environment configuration for MacBook Pro M4 Max (36GB), optimized f
 
 ```bash
 # Install dependencies
-brew install neovim fish stow lazygit bat jq ollama aider opencode pi-coding-agent
+brew install neovim fish stow lazygit bat jq macmon ollama aider opencode pi-coding-agent
 brew install --cask kitty orbstack intellij-idea-ce rustrover
 
 # Clone and apply
@@ -111,6 +111,13 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 
 ## Fish
 
+**Environment defaults** (`fish/.config/fish/conf.d/env.fish`):
+- `EDITOR` / `VISUAL` → `nvim`
+- `LANG` → `en_US.UTF-8`
+- `OLLAMA_CONTEXT_LENGTH` → `32768` (raises Ollama's 4K default for local-model agents)
+- `JAVA_HOME` is owned by SDKMAN when installed; `config.fish` only sets a fallback for non-SDKMAN machines
+- Host-specific overrides: create `~/.config/fish/conf.d/env.local.fish` (gitignored), auto-sourced
+
 **Aliases:**
 - Navigation: `..`, `...`, `work` (~/work), `ll` (ls -la), `la` (ls -A)
 - Git: `g`, `gs`, `gl`, `gp`, `gpl`, `gc`, `gca`, `gco`, `gb`, `gd`, `ga`, `gaa`, `lg` (lazygit)
@@ -158,7 +165,7 @@ All functions support `-h/--help`.
   - `--file FILE` review specific file, `--brief` short summary
   - `--lang LANG` response language, `--lang-all LANG` full response + thinking
   - `--provider` override provider
-- `ai chat` — chat model (default: llama3.1:8b, ollama only)
+- `ai chat` — chat model (`$AI_DEFAULT_MODEL` or fallback `qwen3.5:9b`, ollama only)
 - `ai code` — aider in ask mode by default, `-e/--edit` for code editing (ollama only)
 - `ai models` — model manager (dynamic catalog from ollama.com, offline cache)
   - `list [FILTER]` show models filtered by RAM, `--all` show all

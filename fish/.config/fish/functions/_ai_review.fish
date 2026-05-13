@@ -5,7 +5,7 @@ function _ai_review --description "AI code review of branch or commit changes"
         echo "Usage: ai review [OPTIONS] [BASE]"
         echo ""
         echo "AI code review. Reviews branch vs base by default."
-        echo "Uses AI_DEFAULT_MODEL if set, otherwise deepseek-coder-v2:16b."
+        echo "Uses AI_DEFAULT_MODEL if set, otherwise qwen3.5:9b."
         echo ""
         echo "Options:"
         echo "  --model MODEL    Override model"
@@ -49,11 +49,7 @@ function _ai_review --description "AI code review of branch or commit changes"
 
     set -l model $_flag_model
     if test -z "$model"; and test "$provider" = ollama
-        if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"
-            set model $AI_DEFAULT_MODEL
-        else
-            set model deepseek-coder-v2:16b
-        end
+        set model (_ai_default_model)
     end
 
     set -l lang en
