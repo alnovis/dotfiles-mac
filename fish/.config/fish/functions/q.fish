@@ -36,6 +36,7 @@ function q --description "Quick alias manager: lightweight named commands"
 
             if test -z "$cmd"
                 # No command given — open editor
+                set -l editor (_q_editor); or return 1
                 set -l tmpfile (mktemp /tmp/q-edit-XXXXXX)
                 printf '%s\n' "$desc" >$tmpfile
 
@@ -44,7 +45,7 @@ function q --description "Quick alias manager: lightweight named commands"
                     tail -n +2 $quick_dir/$name >>$tmpfile
                 end
 
-                eval $EDITOR $tmpfile
+                eval $editor $tmpfile
 
                 # Check if user wrote anything beyond the description line
                 if test (wc -l <$tmpfile | string trim) -le 1
@@ -157,7 +158,8 @@ function q --description "Quick alias manager: lightweight named commands"
                 return 1
             end
 
-            eval $EDITOR $quick_dir/$name
+            set -l editor (_q_editor); or return 1
+            eval $editor $quick_dir/$name
 
         case --help -h help ''
             echo "Usage: q <name> [args...]       Run a quick command"

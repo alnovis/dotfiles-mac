@@ -48,8 +48,10 @@ fish_add_path ~/.cargo/bin
 fish_add_path ~/.local/share/coursier/bin
 fish_add_path ~/Library/"Application Support"/Coursier/bin
 
-# SDKMAN (Java)
-set -gx JAVA_HOME (string replace -r '/bin/java$' '' (which java 2>/dev/null); or echo "")
+# SDKMAN (Java) — sdkman owns JAVA_HOME when installed; this is a fallback only
+if not set -q JAVA_HOME
+    set -gx JAVA_HOME (string replace -r '/bin/java$' '' (which java 2>/dev/null); or echo "")
+end
 
 # OrbStack
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
