@@ -35,6 +35,10 @@ complete -c ai -n "__fish_seen_subcommand_from gen" -s o -l output -d "Save outp
 # ai gen review/summary: allow directory completion
 complete -c ai -n "__fish_seen_subcommand_from gen; and __fish_seen_subcommand_from review summary" -a "(__fish_complete_directories)" -d "Project directory"
 
+# ai gen review: also accept file targets and project-context opt-in flag
+complete -c ai -n "__fish_seen_subcommand_from gen; and __fish_seen_subcommand_from review" -F -d "File to review"
+complete -c ai -n "__fish_seen_subcommand_from gen; and __fish_seen_subcommand_from review" -l with-project-context -d "Include parent project context for file targets"
+
 # --- ai config ---
 complete -c ai -n "__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from provider" -a provider -d "Default AI provider"
 complete -c ai -n "__fish_seen_subcommand_from config; and __fish_seen_subcommand_from provider" -x -a "(_ai_providers)"

@@ -154,7 +154,9 @@ All functions support `-h/--help`.
 *AI — unified `ai` command with multi-provider support (Ollama, Claude) and Tab-completion:*
 - `ai [PROMPT]` — interactive chat or one-shot prompt (`ai "question"`, `git diff | ai "review"`)
   - `-m/--model` override model, `-t/--think` enable thinking (ollama), `--provider` override provider
-- `ai gen review [DIR]` — project review using meta-prompt (claude explores files, ollama gets tree+README)
+- `ai gen review [DIR|FILE]` — project or single-file review using meta-prompt
+  - Directory target: claude explores files, ollama gets tree+README
+  - File target: embeds file contents only; add `--with-project-context` to also include parent tree+README
 - `ai gen commit` — generate commit message from uncommitted changes (staged or unstaged)
 - `ai gen summary [DIR]` — generate project summary
   - Common flags: `--provider`, `--model`, `--lang` (default: en), `-o/--output FILE`
@@ -208,7 +210,7 @@ ai models use qwen3.5:9b           # set as default
 | Tool | Purpose | Usage |
 |------|---------|-------|
 | `ai` | Multi-provider AI toolkit (Ollama/Claude) | `ai "question"`, `ai gen review` |
-| `ai gen` | Content generation (review, commit, summary) | `ai gen commit`, `ai gen review ~/project` |
+| `ai gen` | Content generation (review, commit, summary) | `ai gen commit`, `ai gen review ~/project`, `ai gen review script.sh` |
 | `ai config` | Provider configuration | `ai config provider claude` |
 | `ai code` | AI-assisted coding (aider + Ollama) | `ai code src/` |
 | `pi` | Coding agent (multi-provider, Ollama) | `pi --model ollama/qwen3.5:9b` |
