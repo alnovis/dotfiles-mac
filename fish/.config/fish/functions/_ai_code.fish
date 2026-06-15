@@ -29,7 +29,7 @@ function _ai_code --description "Run aider with Ollama for AI-assisted coding"
 
     _ai_ensure_running; or return 1
 
-    set -l model (_ai_default_model)
+    set -l model (_ai_default_model code ollama)
 
     # Check for --edit flag
     set -l chat_mode --chat-mode ask

@@ -142,11 +142,14 @@ function _ai_models_list --description "List available Ollama models"
 
     set -l shown (math (count $coding) + (count $vision) + (count $general))
 
+    # Active selection (per-task resolution)
+    _ai_print_active_selection
+
     # Header
     set_color cyan
-    printf "     %-26s %9s  %s\n" "Model" "Size" "Status"
+    printf "     %-26s %9s  %-9s  %s\n" "Model" "Size" "Status" "Used for"
     set_color normal
-    echo " ───────────────────────────────────────────────────"
+    echo " ──────────────────────────────────────────────────────────────"
 
     # Print groups
     if test (count $coding) -gt 0
@@ -159,7 +162,7 @@ function _ai_models_list --description "List available Ollama models"
         _ai_print_group "Vision" $installed -- $vision
     end
 
-    echo " ───────────────────────────────────────────────────"
+    echo " ──────────────────────────────────────────────────────────────"
 
     # Footer
     echo ""
@@ -234,14 +237,50 @@ function _ai_print_group --argument-names group_name
         # Name and size (size right-aligned)
         printf "%-26s %9s" $name $size_str
 
-        # Status
+        # Status (fixed-width slot so "Used for" column lines up)
         if test "$is_installed" = 1
-            printf "  "
             set_color green
-            printf "installed"
+            printf "  %-9s" "installed"
+            set_color normal
+        else
+            printf "  %-9s" ""
+        end
+
+        # Per-task tags
+        set -l tags (_ai_model_tags $name)
+        if test -n "$tags"
+            printf "  "
+            set_color yellow
+            printf "%s" $tags
             set_color normal
         end
 
         echo
     end
+end
+
+function _ai_print_active_selection --description "Header showing resolved provider/model per task"
+    set_color cyan
+    echo " Active selection:"
+    set_color normal
+
+    set -l labels default (_ai_tasks)
+    for t in $labels
+        set -l p
+        set -l m
+        if test "$t" = default
+            set p (_ai_default_provider)
+            set m (_ai_default_model "" $p)
+        else
+            set p (_ai_default_provider $t)
+            set m (_ai_default_model $t $p)
+        end
+
+        if test -n "$m"
+            printf "   %-9s %s / %s\n" "$t:" $p $m
+        else
+            printf "   %-9s %s (provider default)\n" "$t:" $p
+        end
+    end
+    echo
 end
