@@ -1,5 +1,5 @@
 function _ai_gen_summary --description "AI project summary"
-    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' -- $argv; or return 1
+    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'dry-run' -- $argv; or return 1
 
     if set -q _flag_help
         echo "Usage: ai gen summary [DIR] [OPTIONS]"
@@ -13,6 +13,7 @@ function _ai_gen_summary --description "AI project summary"
         echo "  --model MODEL         Override model"
         echo "  -l, --lang LANG       Response language (default: en)"
         echo "  -o, --output FILE     Save output to file (default: stdout)"
+        echo "  --dry-run             Print the assembled prompt without invoking the model"
         echo "  -h, --help            Show this help"
         echo ""
         echo "Examples:"
@@ -44,12 +45,12 @@ function _ai_gen_summary --description "AI project summary"
         return 1
     end
 
-    # Resolve provider
+    # Resolve provider (task: summary)
     set -l provider
     if set -q _flag_provider
         set provider $_flag_provider
     else
-        set provider (_ai_config_read provider; or echo ollama)
+        set provider (_ai_default_provider summary)
     end
 
     # Resolve lang
@@ -87,21 +88,22 @@ $prompt"
     end
     echo "---"
 
-    # Provider-specific execution
+    set -l model $_flag_model
+    if test -z "$model"
+        set model (_ai_default_model summary $provider)
+    end
     set -l model_flag
-    if set -q _flag_model
-        set model_flag --model $_flag_model
+    if test -n "$model"
+        set model_flag --model $model
     end
 
     set -l output $_flag_output
 
+    # Build provider-specific prompt. Claude reads files via workdir cd; ollama needs context embedded.
+    set -l full_prompt
     switch $provider
         case claude
-            if test -n "$output"
-                cd $dir && claude -p $model_flag "$prompt" >$output
-            else
-                cd $dir && claude -p $model_flag "$prompt"
-            end
+            set full_prompt $prompt
 
         case ollama
             set -l context ""
@@ -127,17 +129,11 @@ $readme_content
                 end
             end
 
-            set -l full_prompt "$prompt
+            set full_prompt "$prompt
 
 # Project context
 Directory: $dir
 $context"
-
-            if test -n "$output"
-                echo "$full_prompt" | _ai_provider_run --provider ollama $model_flag >$output
-            else
-                echo "$full_prompt" | _ai_provider_run --provider ollama $model_flag
-            end
 
         case '*'
             set_color red
@@ -146,7 +142,14 @@ $context"
             return 1
     end
 
+    set -l runner_args --provider $provider --workdir $dir $model_flag
     if test -n "$output"
+        set -a runner_args --output $output
+    end
+    set -q _flag_dry_run; and set -a runner_args --dry-run
+    echo "$full_prompt" | _ai_run $runner_args
+
+    if test -n "$output"; and not set -q _flag_dry_run
         set_color green
         echo "Saved to: $output"
         set_color normal

@@ -1,5 +1,5 @@
 function _ai_gen_commit --description "Generate commit message from uncommitted changes"
-    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' -- $argv; or return 1
+    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'dry-run' -- $argv; or return 1
 
     if set -q _flag_help
         echo "Usage: ai gen commit [OPTIONS]"
@@ -13,6 +13,7 @@ function _ai_gen_commit --description "Generate commit message from uncommitted 
         echo "  --model MODEL         Override model"
         echo "  -l, --lang LANG       Response language (default: en)"
         echo "  -o, --output FILE     Save to file"
+        echo "  --dry-run             Print the assembled prompt without invoking the model"
         echo "  -h, --help            Show this help"
         echo ""
         echo "Examples:"
@@ -42,12 +43,12 @@ function _ai_gen_commit --description "Generate commit message from uncommitted 
         return 1
     end
 
-    # Resolve provider
+    # Resolve provider (task: commit)
     set -l provider
     if set -q _flag_provider
         set provider $_flag_provider
     else
-        set provider (_ai_config_read provider; or echo ollama)
+        set provider (_ai_default_provider commit)
     end
 
     # Resolve lang
@@ -74,20 +75,27 @@ $prompt
 Diff:
 $diff"
 
-    # Run
+    set -l model $_flag_model
+    if test -z "$model"
+        set model (_ai_default_model commit $provider)
+    end
     set -l model_flag
-    if set -q _flag_model
-        set model_flag --model $_flag_model
+    if test -n "$model"
+        set model_flag --model $model
     end
 
     set -l output $_flag_output
 
+    set -l runner_args --provider $provider $model_flag
     if test -n "$output"
-        echo "$prompt" | _ai_provider_run --provider $provider $model_flag >$output
+        set -a runner_args --output $output
+    end
+    set -q _flag_dry_run; and set -a runner_args --dry-run
+    echo "$prompt" | _ai_run $runner_args
+
+    if test -n "$output"; and not set -q _flag_dry_run
         set_color green
         echo "Saved to: $output"
         set_color normal
-    else
-        echo "$prompt" | _ai_provider_run --provider $provider $model_flag
     end
 end
