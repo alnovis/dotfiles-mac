@@ -87,7 +87,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 - `Space gg` — lazygit
 - `Space lr` — run LeetCode tests
 
-> Full keymaps reference: [docs/nvim-keymaps.md](docs/nvim-keymaps.md)
+> Full keymaps reference: [docs/nvim/keymaps.md](docs/nvim/keymaps.md)
 
 ## Kitty
 
@@ -151,30 +151,60 @@ All functions support `-h/--help`.
 - `dclean` — remove stopped containers, dangling images, unused volumes (`-a` for full prune)
 - `dlogs` — docker compose logs with service filter and grep (`-g/--grep`, `-n/--lines`)
 
-*AI — unified `ai` command with multi-provider support (Ollama, Claude) and Tab-completion:*
-- `ai [PROMPT]` — interactive chat or one-shot prompt (`ai "question"`, `git diff | ai "review"`)
-  - `-m/--model` override model, `-t/--think` enable thinking (ollama), `--provider` override provider
-- `ai gen review [DIR|FILE]` — project or single-file review using meta-prompt
-  - Directory target: claude explores files, ollama gets tree+README
-  - File target: embeds file contents only; add `--with-project-context` to also include parent tree+README
-- `ai gen commit` — generate commit message from uncommitted changes (staged or unstaged)
-- `ai gen summary [DIR]` — generate project summary
-  - Common flags: `--provider`, `--model`, `--lang` (default: en), `-o/--output FILE`
-  - Prompt templates: `~/.config/fish/prompts/meta-{review,commit,summary}.md`
-- `ai config` — view/set AI configuration (`ai config provider claude`)
-- `ai review` — AI code review of branch, last commits, or specific commit
-  - `--last [N]` review last N commits, `--commit SHA` specific commit
-  - `--file FILE` review specific file, `--brief` short summary
-  - `--lang LANG` response language, `--lang-all LANG` full response + thinking
-  - `--provider` override provider
-- `ai chat` — chat model (`$AI_DEFAULT_MODEL` or fallback `qwen3.5:9b`, ollama only)
+*AI — unified `ai` command with multi-provider support (Ollama, Claude), per-task / per-project config, named sessions, and Tab-completion. Full docs: [docs/fish/ai/](docs/fish/ai/).*
+
+**Core / chat:**
+- `ai [PROMPT]` — one-shot prompt or interactive chat (`ai "question"`, `git diff | ai "review"`)
+  - `-m/--model`, `-t/--think` (ollama), `--provider`, `--dry-run` (print assembled prompt without invoking)
+- `ai chat` — interactive chat (default ollama)
+  - `--session NAME` / `-s NAME` — start/resume persistent session (ollama only, see Sessions below)
+  - `-c` continue last session, `--new` error if exists, `--global` force global scope, `--system "..."`
 - `ai code` — aider in ask mode by default, `-e/--edit` for code editing (ollama only)
-- `ai models` — model manager (dynamic catalog from ollama.com, offline cache)
-  - `list [FILTER]` show models filtered by RAM, `--all` show all
-  - `install MODEL` / `rm MODEL` / `use MODEL` set default
-  - `update` re-pull all installed, `info MODEL` show details, `prune` cleanup
-  - `running` show loaded models
-- `ai stop` — stop running models, `--server` to kill Ollama entirely
+
+**Review (auto-detected mode from positional):**
+- `ai review` — git mode: branch vs base (auto-detects develop/main/master)
+- `ai review BRANCH` — git mode: vs that branch
+- `ai review --last [N]` / `--commit SHA` / `--file FILE` — git mode: last N commits / specific commit / single file filter
+- `ai review PATH` — target mode: project (dir) or single-file review
+- `ai review FILE --with-project-context` — target mode: file + parent project context
+- Common: `--brief`, `--lang LANG`, `--lang-all LANG` (git only), `-o/--output FILE`, `--dry-run`
+
+**Generation:**
+- `ai gen commit` — commit message from staged/unstaged diff
+- `ai gen summary [DIR]` — project summary
+- Common: `--provider`, `--model`, `--lang`, `-o/--output FILE`, `--dry-run`
+
+**Sessions** (persistent chat history, ollama only — claude conversations use `claude --resume` natively):
+- Storage: walk-up `.ai/sessions/<name>.jsonl` (project) → `~/.config/ai/sessions/` (global)
+- `ai sessions ls [--archived|--all]` / `show NAME` / `info NAME` — browse + render
+- `ai sessions search QUERY [--name PAT] [--since DATE]` / `stats [--all]` — find + aggregate
+- `ai sessions rm / rename / clear / edit` — modify
+- `ai sessions branch / archive / restore / move --to {project|global}` — lifecycle
+- `ai sessions export / import / pin / unpin` — share + lock provider/model per session
+- Context management: rolling summary + sliding window (configurable thresholds)
+
+**Config (per-task / per-project, with global fallback):**
+- `ai config` — show project + global config side-by-side
+- `ai config status` — resolved provider/model per task with origin (`project / global / env / default`)
+- `ai config provider PROV [--task X] [--project]` — set provider scoped
+- `ai config reset --task {X|all} [--project]` — clear per-task overrides
+- `ai config move --task X --to {project|global}` — relocate per-task keys
+- `ai config tasks` — list known tasks (chat, code, review, commit, summary)
+- Resolver chain: project `.ai/config` → global `~/.config/ai/config` → `AI_DEFAULT_MODEL` env → fallback
+
+**Models:**
+- `ai models` / `ai models list [FILTER]` — RAM-filtered list (`--all` for everything)
+- Shows "Active selection" header per task + "Used for" tag per model
+- `ai models install / rm / use MODEL [--task X] [--project]` — manage models, set scoped defaults
+- `ai models update / info / prune / running` — maintenance
+
+**Prompt templates** (`~/.config/fish/prompts/`, overridable, fall back to inline defaults):
+- `meta-commit.md`, `meta-summary.md` — generation
+- `meta-review.md` (project state), `meta-review-diff.md` (git diff)
+- `meta-session-summary.md` (rolling summary for long sessions)
+
+**Other:**
+- `ai stop [MODEL]` — stop one or all running models, `--server` to kill Ollama entirely
 - `opencode` — run OpenCode TUI with Ollama auto-start
 
 *LeetCode:*
@@ -200,18 +230,24 @@ All functions support `-h/--help`.
 **AI Models:**
 
 ```bash
-ai models                           # browse available models
-ai models install qwen3.5:9b       # install a model
-ai models use qwen3.5:9b           # set as default
+ai models                                   # browse available models (RAM-filtered)
+ai models install qwen3.5:9b                # install a model
+ai models use qwen3.5:9b                    # set as global default
+ai models use qwen2.5-coder:7b --task commit  # per-task default
+ai config status                            # see resolved provider+model per task
 ```
 
 **AI Tools:**
 
 | Tool | Purpose | Usage |
 |------|---------|-------|
-| `ai` | Multi-provider AI toolkit (Ollama/Claude) | `ai "question"`, `ai gen review` |
-| `ai gen` | Content generation (review, commit, summary) | `ai gen commit`, `ai gen review ~/project`, `ai gen review script.sh` |
-| `ai config` | Provider configuration | `ai config provider claude` |
+| `ai` | Multi-provider toolkit (Ollama/Claude) with per-task/per-project config | `ai "question"`, `git diff \| ai "review this"` |
+| `ai review` | Code review — git changes or project state (auto-detected) | `ai review`, `ai review src/Foo.scala`, `ai review --last 3` |
+| `ai gen` | Content generation (commit, summary) | `ai gen commit`, `ai gen summary -o summary.md` |
+| `ai chat` | Chat — stateless or persistent (`--session NAME`, ollama only) | `ai chat -s debug-foo`, `ai chat -c` |
+| `ai sessions` | Session management (ls/show/search/branch/pin/...) | `ai sessions ls`, `ai sessions search migration` |
+| `ai config` | Provider/model config — global + per-project + per-task | `ai config status`, `ai config provider claude --task review` |
+| `ai models` | Model manager (install/use/info, per-task defaults) | `ai models use qwen3.5:9b --task chat` |
 | `ai code` | AI-assisted coding (aider + Ollama) | `ai code src/` |
 | `pi` | Coding agent (multi-provider, Ollama) | `pi --model ollama/qwen3.5:9b` |
 | `claude` | Cloud AI coding agent (Anthropic) | `claude "analyze project"` |
@@ -227,8 +263,9 @@ ai models use qwen3.5:9b           # set as default
 
 | Document | Description |
 |----------|-------------|
-| [nvim-keymaps.md](docs/nvim-keymaps.md) | Full Neovim keymaps reference |
-| [leetcode.md](docs/leetcode.md) | LeetCode offline runner guide |
+| [docs/fish/ai/](docs/fish/ai/) | AI toolkit — architecture, reference, sessions, how-to |
+| [docs/nvim/keymaps.md](docs/nvim/keymaps.md) | Full Neovim keymaps reference |
+| [docs/leetcode.md](docs/leetcode.md) | LeetCode offline runner guide |
 
 ## Global Gitignore
 
