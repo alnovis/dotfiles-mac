@@ -1,20 +1,23 @@
-function _ai_gen --description "Generate content: review, commit, summary"
+function _ai_gen --description "Generate content: commit, summary"
     set -l subcmd $argv[1]
 
     switch "$subcmd"
-        case review
-            _ai_gen_review $argv[2..]
         case commit
             _ai_gen_commit $argv[2..]
         case summary
             _ai_gen_summary $argv[2..]
+        case review
+            set_color yellow
+            echo "'ai gen review' moved to 'ai review' (now handles both project state and git changes)."
+            echo "Run 'ai review --help' for the unified usage."
+            set_color normal
+            return 1
         case --help -h help ''
             echo "Usage: ai gen COMMAND [OPTIONS]"
             echo ""
             echo "Generate content using AI."
             echo ""
             echo "Commands:"
-            echo "  review [DIR|FILE]   Project or single-file review using meta-prompt"
             echo "  commit              Generate commit message from staged changes"
             echo "  summary [DIR]       Generate project summary"
             echo ""
@@ -25,13 +28,10 @@ function _ai_gen --description "Generate content: review, commit, summary"
             echo "  -o, --output FILE     Save output to file"
             echo ""
             echo "Examples:"
-            echo "  ai gen review                     Review current project"
-            echo "  ai gen review ~/work/myproject    Review specific project"
-            echo "  ai gen review script.sh           Review a single file"
-            echo "  ai gen review . \"focus on perf\"   Custom prompt"
             echo "  ai gen commit                     Generate commit message"
             echo "  ai gen summary -o summary.md      Save summary to file"
-            echo "  ai gen review --provider claude   Use Claude for review"
+            echo ""
+            echo "Note: project/file review is now 'ai review PATH' (was 'ai gen review')."
             return 0
         case '*'
             set_color red
