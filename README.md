@@ -134,6 +134,11 @@ All functions support `-h/--help`.
 - `clipclean` — dedent and trim clipboard (removes common leading indentation)
 - `cheat` — cheat sheet for a command via cheat.sh (`cheat tar`, `cheat git rebase`)
 
+*Image clipboard (macOS):*
+- `clipimg` — copy an image file into the clipboard (`clipimg shot.png`)
+- `pasteimg` — save the clipboard image to a file (`pasteimg shot.png`); output format is taken from the extension, converting if needed (e.g. a copied PNG saved as `.jpg`)
+- Both support `.png .jpg/.jpeg .tif/.tiff .gif .bmp`
+
 *Git:*
 - `clipcommit` — git commit using clipboard as message (`-y -a -p -d -e --no-color`)
 - `gstat` — colored git changes summary (staged, unstaged, untracked with `--stat`)
