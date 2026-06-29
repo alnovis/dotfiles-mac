@@ -139,6 +139,9 @@ All functions support `-h/--help`.
 - `pasteimg` — save the clipboard image to a file (`pasteimg shot.png`); output format is taken from the extension, converting if needed (e.g. a copied PNG saved as `.jpg`)
 - Both support `.png .jpg/.jpeg .tif/.tiff .gif .bmp`
 
+*Files / paths:*
+- `fpath` — print a file's absolute path, like `pwd` for files (`fpath gitlab.log`); searches NAME recursively below the current dir (or a given DIR: `fpath ~/work '*.log'`), matches NAME as a glob, includes ignored/hidden files, and prints every match one per line
+
 *Git:*
 - `clipcommit` — git commit using clipboard as message (`-y -a -p -d -e --no-color`)
 - `gstat` — colored git changes summary (staged, unstaged, untracked with `--stat`)
