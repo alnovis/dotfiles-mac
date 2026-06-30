@@ -140,7 +140,7 @@ All functions support `-h/--help`.
 - Both support `.png .jpg/.jpeg .tif/.tiff .gif .bmp`
 
 *Files / paths:*
-- `fpath` — print a file's absolute path, like `pwd` for files (`fpath gitlab.log`); searches NAME recursively below the current dir (or a given DIR: `fpath ~/work '*.log'`), matches NAME as a glob, includes ignored/hidden files, and prints every match one per line
+- `fpath` — print a file's absolute path, like `pwd` for files (`fpath gitlab.log`); searches NAME recursively below the current dir (or a given DIR: `fpath ~/work '*.log'`), matches NAME as a glob, includes ignored/hidden files, and prints every match one per line. A path prefix on NAME folds into the search dir, so the basename is searched below it (`fpath ../project/docs/notes.md`)
 
 *Git:*
 - `clipcommit` — git commit using clipboard as message (`-y -a -p -d -e --no-color`)
