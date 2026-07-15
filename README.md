@@ -15,7 +15,7 @@ Development environment configuration for MacBook Pro M4 Max (36GB), optimized f
 
 ```bash
 # Install dependencies
-brew install neovim fish stow lazygit bat jq macmon ollama aider opencode pi-coding-agent
+brew install neovim fish stow lazygit bat jq macmon ollama opencode pi-coding-agent
 brew install --cask kitty orbstack intellij-idea-ce rustrover
 
 # Clone and apply
@@ -167,7 +167,7 @@ All functions support `-h/--help`.
 - `ai chat` — interactive chat (default ollama)
   - `--session NAME` / `-s NAME` — start/resume persistent session (ollama only, see Sessions below)
   - `-c` continue last session, `--new` error if exists, `--global` force global scope, `--system "..."`
-- `ai code` — aider in ask mode by default, `-e/--edit` for code editing (ollama only)
+- `ai code` — pi in read-only mode by default, `-e/--edit` for code editing (ollama only)
 
 **Review (auto-detected mode from positional):**
 - `ai review` — git mode: branch vs base (auto-detects develop/main/master)
@@ -231,7 +231,6 @@ All functions support `-h/--help`.
 | Scala | `brew install sbt coursier/formulas/coursier && cs setup` |
 | Rust | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | Ollama | `brew install ollama` |
-| Aider | `brew install aider` |
 | OpenCode | `brew install opencode` |
 | Pi | `brew install pi-coding-agent` |
 
@@ -256,7 +255,7 @@ ai config status                            # see resolved provider+model per ta
 | `ai sessions` | Session management (ls/show/search/branch/pin/...) | `ai sessions ls`, `ai sessions search migration` |
 | `ai config` | Provider/model config — global + per-project + per-task | `ai config status`, `ai config provider claude --task review` |
 | `ai models` | Model manager (install/use/info, per-task defaults) | `ai models use qwen3.5:9b --task chat` |
-| `ai code` | AI-assisted coding (aider + Ollama) | `ai code src/` |
+| `ai code` | AI-assisted coding (pi + Ollama) | `ai code @src/` |
 | `pi` | Coding agent (multi-provider, Ollama) | `pi --model ollama/qwen3.5:9b` |
 | `claude` | Cloud AI coding agent (Anthropic) | `claude "analyze project"` |
 

@@ -25,7 +25,7 @@ Command reference for `ai`. For design decisions and the "why" behind these comm
 ```
 ai [PROMPT]                          one-shot or interactive chat
 ai chat [-s NAME | -c]               chat, optionally with persistent session
-ai code [-e] [FILES...]              AI-assisted coding via aider
+ai code [-e] [@FILES...]             AI-assisted coding via pi
 ai review [PATH | --last N]          code review (auto-detects mode)
 ai gen commit                        generate commit message
 ai gen summary [DIR]                 generate project summary
@@ -84,23 +84,25 @@ ai chat qwen2.5-coder:32b            override model (positional)
 
 ### `ai code [OPTIONS] [FILES...]`
 
-Run [aider](https://github.com/Aider-AI/aider) with Ollama as the backend. Defaults to ask mode (read-only).
+Run [pi](https://pi.dev/) with Ollama as the backend. Defaults to read-only mode (edit/write tools disabled).
 
 ```
-ai code src/                         analyze (ask mode, no edits)
-ai code -e src/                      edit mode
-ai code --model ollama/qwen2.5-coder:32b src/
+ai code @src/main.rs                 analyze (read-only, no edits)
+ai code -e @src/main.rs              edit mode
+ai code --model ollama/qwen2.5-coder:32b @src/
 ```
+
+Use pi's `@`-syntax to add files or directories to context.
 
 **Flags:**
 
 | Flag | Effect |
 |---|---|
-| `-e`, `--edit` | Allow code editing (default: ask-only) |
-| `--model MODEL` | Pass through to aider (format: `ollama/MODEL`) |
-| Any other aider flag | Passed through |
+| `-e`, `--edit` | Allow code editing (default: read-only — `--exclude-tools edit,write`) |
+| `--model MODEL` | Pass through to pi (format: `ollama/MODEL`) |
+| Any other pi flag | Passed through |
 
-`ai code` is ollama-only — uses aider's native Ollama support. For Claude-assisted coding, use `claude` directly.
+`ai code` is ollama-only — points pi at the resolved code model via `--model ollama/MODEL`. For Claude-assisted coding, use `claude` directly.
 
 ### `ai stop`
 

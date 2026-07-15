@@ -266,7 +266,7 @@ Claude has its own native session story (`claude --resume`, internal storage in 
 
 - **Abstraction integrity.** A bridge would surface "what works for ollama doesn't work for claude" inconsistencies. Better to have one clean feature (ollama sessions) and let claude users go to claude CLI for its own session story.
 - **Don't depend on another product's internals.** Claude's storage format is private API. Parsing it would create unmaintainable coupling.
-- **Symmetric with how the toolkit treats other tools.** We don't manage aider's history, opencode's memory, or future cline's Kanban. Each tool owns its territory.
+- **Symmetric with how the toolkit treats other tools.** We don't manage pi's sessions, opencode's memory, or future cline's Kanban. Each tool owns its territory.
 
 When the user passes `--session NAME --provider claude` (or task resolution selects claude), the command errors with a clear redirect to `claude --resume` / `claude -c`.
 
@@ -341,7 +341,7 @@ These should stay true as the code evolves:
 |---|---|
 | Bridge to claude CLI sessions | Rejected — each tool owns its territory |
 | Direct Anthropic API access | Rejected — API gating, requires separate billing |
-| Manage aider / opencode / claude-code state | Rejected — same boundary principle |
+| Manage pi / opencode / claude-code state | Rejected — same boundary principle |
 | Vector search / embeddings for sessions | Not yet — out of scope for current implementation |
 | Cross-provider session migration | Rejected — sessions are scoped to one provider for life |
 | Encryption for sessions storage | Not yet — could be added without changing architecture |

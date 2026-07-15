@@ -27,7 +27,7 @@ function _ai_help
     echo "  config               View or set AI config (provider, etc.)"
     echo "  models               Manage models (list, install, rm, use, update, info, prune)"
     echo "  review               AI code review — project state (path) or git changes"
-    echo "  code                 AI-assisted coding with aider"
+    echo "  code                 AI-assisted coding with pi"
     echo "  chat                 Chat model (--session NAME for persistent REPL, ollama only)"
     echo "  sessions             Manage chat sessions (ls, show, info, rm, rename)"
     echo "  stop                 Stop running models or server"
@@ -52,6 +52,6 @@ function _ai_help
     echo "  ai gen summary                    Generate project summary"
     echo "  ai config provider claude         Set default provider"
     echo "  ai models list coder              List coding models"
-    echo "  ai code -e src/main/              Edit code with aider"
+    echo "  ai code -e @src/main/             Edit code with pi"
     echo "  ai stop                           Stop all models"
 end

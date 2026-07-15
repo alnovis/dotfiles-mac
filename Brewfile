@@ -51,7 +51,6 @@ brew "imagemagick"
 brew "webp"
 
 # AI / agents
-brew "aider"
 brew "ollama"
 brew "opencode"
 brew "pi-coding-agent"
