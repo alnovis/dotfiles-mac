@@ -84,10 +84,14 @@ ai chat qwen2.5-coder:32b            override model (positional)
 
 ### `ai code [OPTIONS] [FILES...]`
 
-Run [pi](https://pi.dev/) with Ollama as the backend. Defaults to read-only mode (edit/write tools disabled).
+Run [pi](https://pi.dev/) with Ollama as the backend. By default file edits are
+disabled (`--exclude-tools edit,write`), but `read` and `bash` stay available and pi
+prompts before each bash command in interactive mode. This is not a sandbox -- bash
+can still touch files, and `-p` (non-interactive) removes the prompt, so avoid it on a
+working tree you care about. Use `-e` to allow direct file edits.
 
 ```
-ai code @src/main.rs                 analyze (read-only, no edits)
+ai code @src/main.rs                 analyze (no file edits)
 ai code -e @src/main.rs              edit mode
 ai code --model ollama/qwen2.5-coder:32b @src/
 ```
@@ -98,7 +102,7 @@ Use pi's `@`-syntax to add files or directories to context.
 
 | Flag | Effect |
 |---|---|
-| `-e`, `--edit` | Allow code editing (default: read-only — `--exclude-tools edit,write`) |
+| `-e`, `--edit` | Allow file edits (default: edits off via `--exclude-tools edit,write`; bash still available) |
 | `--model MODEL` | Pass through to pi (format: `ollama/MODEL`) |
 | Any other pi flag | Passed through |
 

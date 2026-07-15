@@ -167,7 +167,7 @@ All functions support `-h/--help`.
 - `ai chat` — interactive chat (default ollama)
   - `--session NAME` / `-s NAME` — start/resume persistent session (ollama only, see Sessions below)
   - `-c` continue last session, `--new` error if exists, `--global` force global scope, `--system "..."`
-- `ai code` — pi in read-only mode by default, `-e/--edit` for code editing (ollama only)
+- `ai code` — pi with file edits off by default (read + bash stay on, prompted), `-e/--edit` to allow edits (ollama only)
 
 **Review (auto-detected mode from positional):**
 - `ai review` — git mode: branch vs base (auto-detects develop/main/master)
