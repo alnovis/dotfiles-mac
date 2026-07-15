@@ -50,7 +50,7 @@ complete -c ai -n "__fish_seen_subcommand_from config" -l project -d "Write/clea
 complete -c ai -n "__fish_seen_subcommand_from config; and __fish_seen_subcommand_from move" -l to -d "Target layer" -x -a "project global"
 
 # --- ai models ---
-set -l models_subcmds "list install rm use update info prune running"
+set -l models_subcmds "list install rm use update info prune running label unlabel labels"
 
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a list -d "Show available models"
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a install -d "Download a model"
@@ -60,12 +60,18 @@ complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subco
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a info -d "Show model details"
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a prune -d "Clean up disk"
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a running -d "Show running models"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a label -d "Set a grouping label"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a unlabel -d "Remove a model's label"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a labels -d "Show model -> label map"
 
 # ai models list flags
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from list" -l all -d "Show all models"
 
-# ai models install/rm/use/info — complete with installed model names
-complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from rm use info" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+# ai models install/rm/use/info/label/unlabel — complete with installed model names
+complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from rm use info label unlabel" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+
+# ai models label --seed
+complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from label" -l seed -d "Auto-fill labels from name heuristics"
 
 # ai models use --task TASK / --project
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -l task -d "Set per-task instead of global" -x -a "(_ai_tasks; echo all)"

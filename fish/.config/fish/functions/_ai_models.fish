@@ -14,6 +14,9 @@ function _ai_models --description "Manage Ollama models: list, install, remove, 
         echo "  info MODEL             Show model details (params, quant, context)"
         echo "  prune                  Clean up partial downloads and orphaned blobs"
         echo "  running                Show currently running models"
+        echo "  label MODEL LABEL      Set a grouping label (--seed to auto-fill from names)"
+        echo "  unlabel MODEL          Remove a model's label (back to General)"
+        echo "  labels                 Show the model -> label map"
         echo ""
         echo "Examples:"
         echo "  ai models                              Show models that fit"
@@ -26,6 +29,9 @@ function _ai_models --description "Manage Ollama models: list, install, remove, 
         echo "  ai models update                       Update all models"
         echo "  ai models info qwen2.5-coder:32b       Show model details"
         echo "  ai models prune                        Clean up disk"
+        echo "  ai models label --seed                 Auto-label from name heuristics"
+        echo "  ai models label ornith:9b coding       Group ornith under 'Coding'"
+        echo "  ai models labels                       Show all labels"
         return 0
     end
 
@@ -54,6 +60,12 @@ function _ai_models --description "Manage Ollama models: list, install, remove, 
             _ai_models_prune
         case running ps
             _ai_models_running
+        case label
+            _ai_models_label $argv[2..]
+        case unlabel
+            _ai_models_unlabel $argv[2..]
+        case labels
+            _ai_models_labels
         case list ''
             _ai_models_list $argv[2..]
         case '*'

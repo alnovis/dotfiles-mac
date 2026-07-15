@@ -26,22 +26,21 @@ function _ai_models_list --description "List available Ollama models"
     # Status line
     if test $reg_status -eq 1 -a $local_status -eq 1
         set_color yellow
-        echo "[offline mode — cached data]"
+        echo "[offline mode - cached data]"
         set_color normal
         echo ""
     else if test $reg_status -eq 1
         set_color yellow
-        echo "[registry offline — cached catalog]"
+        echo "[registry offline - cached catalog]"
         set_color normal
         echo ""
     else if test $reg_status -eq 2
         set_color red
-        echo "[registry unavailable — no cache]"
+        echo "[registry unavailable - no cache]"
         set_color normal
         echo ""
     end
 
-    set -l default_model (set -q AI_DEFAULT_MODEL; and echo $AI_DEFAULT_MODEL; or echo "")
     set -l installed (_ai_get_installed_names)
 
     set -l registry_cache ~/.cache/ai-registry.json
@@ -95,13 +94,11 @@ function _ai_models_list --description "List available Ollama models"
         return 0
     end
 
-    # Categorize and filter
+    # RAM/size filter -> collect entries that will be displayed
     set -l total (count $models)
     set -l hidden 0
     set -l installed_count 0
-    set -l coding
-    set -l vision
-    set -l general
+    set -l disp_entries
 
     for entry in $models
         set -l parts (string split "|" $entry)
@@ -129,47 +126,87 @@ function _ai_models_list --description "List available Ollama models"
             end
         end
 
-        # Categorize by name
-        set -l lower_name (string lower $name)
-        if string match -qi "*coder*" $lower_name; or string match -qi "*devstral*" $lower_name
-            set -a coding $entry
-        else if string match -qi "*vl*" $lower_name; or string match -qi "*vision*" $lower_name
-            set -a vision $entry
-        else
-            set -a general $entry
-        end
+        set -a disp_entries $entry
     end
 
-    set -l shown (math (count $coding) + (count $vision) + (count $general))
+    set -l shown (count $disp_entries)
+
+    # Group by label: general = unlabeled; every other label is its own group.
+    set -l labeled
+    set -l group_names
+    for entry in $disp_entries
+        set -l name (string split "|" $entry)[1]
+        set -l label (_ai_model_label $name)
+        test -z "$label"; and set label general
+        set -a labeled "$label"\t"$entry"
+        if test "$label" != general; and not contains -- $label $group_names
+            set -a group_names $label
+        end
+    end
+    # Labeled groups alphabetical; General is printed last, separately.
+    if test (count $group_names) -gt 0
+        set group_names (printf '%s\n' $group_names | sort)
+    end
+
+    # Auto-width for the Model column: min 26, grow to the longest name, but never
+    # so wide that Size/Status/Used-for run off the terminal (then truncate names).
+    set -l min_name 26
+    set -l max_name 0
+    for entry in $disp_entries
+        set -l n (string length -- (string split "|" $entry)[1])
+        test $n -gt $max_name; and set max_name $n
+    end
+    set -l term_cols 80
+    if set -q COLUMNS; and test -n "$COLUMNS"; and test "$COLUMNS" -gt 0 2>/dev/null
+        set term_cols $COLUMNS
+    else
+        set -l tc (tput cols 2>/dev/null)
+        test -n "$tc"; and set term_cols $tc
+    end
+    # Reserve for prefix(5) + size(10) + status(11) + "Used for" room (~16).
+    set -l name_max (math "$term_cols - 42")
+    test $name_max -lt $min_name; and set name_max $min_name
+    set -l name_col $max_name
+    test $name_col -lt $min_name; and set name_col $min_name
+    test $name_col -gt $name_max; and set name_col $name_max
 
     # Active selection (per-task resolution)
     _ai_print_active_selection
 
-    # Header
+    # Header + separator sized to the table
+    set -l sep (string repeat -n (math "$name_col + 36") -- -)
     set_color cyan
-    printf "     %-26s %9s  %-9s  %s\n" "Model" "Size" "Status" "Used for"
+    printf "     %-"$name_col"s %9s  %-9s  %s\n" "Model" "Size" "Status" "Used for"
     set_color normal
-    echo " ──────────────────────────────────────────────────────────────"
+    echo " $sep"
 
-    # Print groups
-    if test (count $coding) -gt 0
-        _ai_print_group "Coding" $installed -- $coding
+    # Print labeled groups (alphabetical), then General last.
+    for g in $group_names
+        set -l entries
+        for l in $labeled
+            set -l lp (string split \t $l)
+            test "$lp[1]" = "$g"; and set -a entries $lp[2]
+        end
+        set -l title (string upper (string sub -l 1 -- $g))(string sub -s 2 -- $g)
+        _ai_print_group $title $name_col $installed -- $entries
     end
-    if test (count $general) -gt 0
-        _ai_print_group "General" $installed -- $general
+    set -l gen_entries
+    for l in $labeled
+        set -l lp (string split \t $l)
+        test "$lp[1]" = general; and set -a gen_entries $lp[2]
     end
-    if test (count $vision) -gt 0
-        _ai_print_group "Vision" $installed -- $vision
+    if test (count $gen_entries) -gt 0
+        _ai_print_group General $name_col $installed -- $gen_entries
     end
 
-    echo " ──────────────────────────────────────────────────────────────"
+    echo " $sep"
 
     # Footer
     echo ""
     echo " $installed_count installed, $shown shown, $total available"
     if test $hidden -gt 0
         set_color yellow
-        echo " $hidden models hidden (> $ram_gb GB RAM or unknown size) — use --all to show"
+        echo " $hidden models hidden (> $ram_gb GB RAM or unknown size) - use --all to show"
         set_color normal
     end
     if test -n "$filter"
@@ -180,8 +217,8 @@ function _ai_models_list --description "List available Ollama models"
     echo " Browse:  https://ollama.com/library"
 end
 
-function _ai_print_group --argument-names group_name
-    set -l args $argv[2..]
+function _ai_print_group --argument-names group_name name_col
+    set -l args $argv[3..]
     set -l default_model (set -q AI_DEFAULT_MODEL; and echo $AI_DEFAULT_MODEL; or echo "")
 
     # Split: installed names before --, model entries after --
@@ -225,17 +262,23 @@ function _ai_print_group --argument-names group_name
             printf "   "
         end
 
-        # Checkmark for installed
+        # Marker for installed
         if test "$is_installed" = 1
             set_color green
-            printf "✓ "
+            printf "* "
             set_color normal
         else
             printf "  "
         end
 
+        # Truncate over-long names so Size/Status stay aligned.
+        set -l disp_name $name
+        if test (string length -- $name) -gt $name_col
+            set disp_name (string sub -l (math "$name_col - 1") -- $name)"~"
+        end
+
         # Name and size (size right-aligned)
-        printf "%-26s %9s" $name $size_str
+        printf "%-"$name_col"s %9s" $disp_name $size_str
 
         # Status (fixed-width slot so "Used for" column lines up)
         if test "$is_installed" = 1
@@ -246,7 +289,7 @@ function _ai_print_group --argument-names group_name
             printf "  %-9s" ""
         end
 
-        # Per-task tags
+        # Per-task tags (which task(s) resolve to this model)
         set -l tags (_ai_model_tags $name)
         if test -n "$tags"
             printf "  "
