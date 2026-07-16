@@ -1,13 +1,18 @@
-function _ai_default_model --description "Resolve model: per-task config > AI_DEFAULT_MODEL > hardcoded (ollama only)"
+function _ai_default_model --description "Resolve model: per-task config (matching provider) > AI_DEFAULT_MODEL > hardcoded (ollama only)"
     set -l task $argv[1]
     set -l provider $argv[2]
 
-    # 1. Per-task model (works for any provider — caller is responsible for compat)
+    # 1. Per-task model — applies only when the runtime provider matches the
+    #    provider this task is configured for. A model name is provider-specific
+    #    (e.g. an ollama tag), so a --provider override must not leak it across
+    #    to a different provider that can't resolve it.
     if test -n "$task"
         set -l v (_ai_config_read "$task"_model)
         if test $status -eq 0; and test -n "$v"
-            echo $v
-            return
+            if test -z "$provider"; or test "$provider" = (_ai_default_provider $task)
+                echo $v
+                return
+            end
         end
     end
 
