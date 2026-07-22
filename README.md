@@ -142,6 +142,9 @@ All functions support `-h/--help`.
 *Files / paths:*
 - `fpath` — print a file's absolute path, like `pwd` for files (`fpath gitlab.log`); searches NAME recursively below the current dir (or a given DIR: `fpath ~/work '*.log'`), matches NAME as a glob, includes ignored/hidden files, and prints every match one per line. A path prefix on NAME folds into the search dir, so the basename is searched below it (`fpath ../project/docs/notes.md`)
 
+*Shell introspection:*
+- `describe` — inspect a fish function like psql's `\d` (`describe gstat`): a header card (name, description, source `file:line`, type) followed by the syntax-highlighted body via `fish_indent --ansi`. Flags: `-d/--description` (summary only), `-p/--path` (source file only, e.g. `v (describe -p gstat)`), `-b/--body` (highlighted body only), `--plain` (no ANSI). Colors/highlighting auto-disable off a tty. Non-function names fall back to `type` output. Tab-completes your functions.
+
 *Git:*
 - `clipcommit` — git commit using clipboard as message (`-y -a -p -d -e --no-color`)
 - `gstat` — colored git changes summary (staged, unstaged, untracked with `--stat`)
