@@ -6,7 +6,7 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
     # Provider resolution: --provider flag > config file > default (ollama)
     # Providers are auto-discovered as _ai_provider_<name> functions (see _ai_providers).
 
-    argparse 'provider=' 'model=' 'think' 'workdir=' 'output=' 'dry-run' -- $argv; or return 1
+    argparse 'provider=' 'model=' 'think' 'agentic' 'workdir=' 'output=' 'dry-run' -- $argv; or return 1
 
     set -l provider
     if set -q _flag_provider
@@ -37,10 +37,6 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
         set interactive 1
     end
 
-    # /dev/stdout collapses "to file" and "to stdout" branches into one pipeline
-    set -l outfile $output
-    test -z "$outfile"; and set outfile /dev/stdout
-
     # Dry-run: print the assembled prompt without invoking the provider
     if set -q _flag_dry_run
         if test $interactive -eq 1
@@ -55,16 +51,42 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
         return 0
     end
 
-    set -l provider_args
-    test -n "$_flag_model"; and set -a provider_args --model $_flag_model
-    set -q _flag_think; and set -a provider_args --think
+    # Dispatch target: normally the provider. With --agentic on a NON-native provider
+    # (e.g. ollama), route through an agent-runner so the model explores the repo with
+    # tools; a native provider (claude -p) already does, so it stays as-is.
+    set -l dispatch $provider_fn
+    set -l dispatch_args
+    test -n "$_flag_model"; and set -a dispatch_args --model $_flag_model
+    set -q _flag_think; and set -a dispatch_args --think
+    set -q _flag_agentic; and set -a dispatch_args --agentic
+
+    if set -q _flag_agentic; and not _ai_provider_agentic_native $provider
+        set -l agent (_ai_default_agent)
+        set -l agent_fn _ai_agent_$agent
+        if not functions -q $agent_fn
+            echo "Unknown agent-runner: $agent (valid: "(string join ", " (_ai_agents))")" >&2
+            cd $prev_pwd
+            return 1
+        end
+        set dispatch $agent_fn
+        # The runner takes provider+model (maps to pi's <provider>/<model>), runs
+        # read-only and ephemeral. It does not understand --think/--agentic.
+        set dispatch_args --provider $provider --no-session
+        test -n "$_flag_model"; and set -a dispatch_args --model $_flag_model
+    end
 
     set -l rc 0
     if test $interactive -eq 1
-        $provider_fn --interactive $provider_args
+        $dispatch --interactive $dispatch_args
+        set rc $status
+    else if test -n "$output"
+        # Real file: redirect stdout there.
+        _ai_pipe_input "$prompt" | $dispatch $dispatch_args >$output
         set rc $status
     else
-        _ai_pipe_input "$prompt" | $provider_fn $provider_args >$outfile
+        # No output file: write to fd 1 directly. Never /dev/stdout — that reopens
+        # the controlling terminal and escapes an enclosing pipe (e.g. _ai_run_watched's tee).
+        _ai_pipe_input "$prompt" | $dispatch $dispatch_args
         set rc $status
     end
 

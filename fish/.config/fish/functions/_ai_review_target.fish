@@ -1,6 +1,7 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'dry-run' -- $argv; or return 1
+    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'dry-run' 'agentic' \
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
 
     # Resolve positional args: [DIR|FILE] ["custom prompt"]
     set -l target_dir
@@ -59,6 +60,14 @@ function _ai_review_target --description "AI review of a project directory or si
 Additional instructions: $custom_prompt"
     end
 
+    # Security lens(es)
+    if set -q _flag_lens
+        set -l lens_block (_ai_review_lens $_flag_lens); or return 1
+        set prompt "$prompt
+
+$lens_block"
+    end
+
     # Language instruction
     set -l lang_full (_ai_lang_name $lang)
     set prompt "IMPORTANT: Write your entire response in $lang_full.
@@ -78,6 +87,14 @@ $prompt"
         echo "Model: $_flag_model"
     end
     echo "Language: $lang_full"
+    if set -q _flag_lens
+        echo "Lens: $_flag_lens"
+    end
+    if _ai_verify_wanted (set -q _flag_verify; and echo 1) (set -q _flag_no_verify; and echo 1)
+        set -l vp $_flag_verify_provider
+        test -z "$vp"; and set vp "$provider"
+        echo "Verify: on ($vp)"
+    end
     if set -q _flag_output
         echo "Output: $_flag_output"
     end
@@ -196,16 +213,51 @@ $context"
             return 1
     end
 
-    set -l runner_args --provider $provider --workdir $work_dir $model_flag
-    if test -n "$output"
-        set -a runner_args --output $output
+    set -l do_verify 0
+    if _ai_verify_wanted (set -q _flag_verify; and echo 1) (set -q _flag_no_verify; and echo 1)
+        set do_verify 1
+        set -l p1file (mktemp)
+        printf '%s' "$full_prompt" >$p1file
+        set -l flow_args --prompt-file $p1file --provider $provider --workdir $work_dir --lang $lang_full
+        test -n "$model"; and set -a flow_args --model $model
+        test -n "$output"; and set -a flow_args --output $output
+        set -q _flag_dry_run; and set -a flow_args --dry-run
+        set -q _flag_verify_provider; and set -a flow_args --verify-provider $_flag_verify_provider
+        set -q _flag_verify_model; and set -a flow_args --verify-model $_flag_verify_model
+        set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
+        set -q _flag_agentic; and set -a flow_args --agentic
+        # A single-file target is the code context embedded for the verifier.
+        test -n "$target_file"; and set -a flow_args --code-file $target_file
+        _ai_review_verify_flow $flow_args
+        rm -f $p1file
+    else if test -n "$output"; and not set -q _flag_dry_run
+        # Output captured to a file → terminal is quiet, so show a live watched run.
+        set -l lbl "Review - $provider"
+        test -n "$model"; and set lbl "$lbl - $model"
+        _ai_stage_plan "$lbl"
+        set -l runner_args --provider $provider --workdir $work_dir $model_flag
+        set -q _flag_agentic; and set -a runner_args --agentic
+        echo "$full_prompt" | _ai_run_watched --label "$lbl" --output $output --dest $output -- $runner_args
+    else
+        # Streaming to terminal (or dry-run): output is visible, no spinner needed.
+        set -l runner_args --provider $provider --workdir $work_dir $model_flag
+        set -q _flag_dry_run; and set -a runner_args --dry-run
+        set -q _flag_agentic; and set -a runner_args --agentic
+        echo "$full_prompt" | _ai_run $runner_args
     end
-    set -q _flag_dry_run; and set -a runner_args --dry-run
-    echo "$full_prompt" | _ai_run $runner_args
 
-    if test -n "$output"; and not set -q _flag_dry_run
-        set_color green
-        echo "Saved to: $output"
-        set_color normal
+    # Verify mode reports its own two files (review + verify) inside the flow; only
+    # the single-file (non-verify) path reports here.
+    if test $do_verify -eq 0; and test -n "$output"; and not set -q _flag_dry_run
+        if test -s "$output"
+            set_color green
+            echo "Saved to: $output"
+            set_color normal
+        else
+            set_color red
+            echo "No output written — $output is empty. The model returned nothing (interrupted stream, or context/size issue). Try again, or --context-lines 0 for a smaller prompt." >&2
+            set_color normal
+            return 1
+        end
     end
 end

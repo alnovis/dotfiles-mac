@@ -114,7 +114,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 **Environment defaults** (`fish/.config/fish/conf.d/env.fish`):
 - `EDITOR` / `VISUAL` → `nvim`
 - `LANG` → `en_US.UTF-8`
-- `OLLAMA_CONTEXT_LENGTH` → `32768` (raises Ollama's 4K default for local-model agents)
+- `OLLAMA_CONTEXT_LENGTH` → `131072` (default context for the agentic/pi path & `ollama run`; the non-agentic `ai` provider sizes num_ctx per-request and overrides it)
 - `JAVA_HOME` is owned by SDKMAN when installed; `config.fish` only sets a fallback for non-SDKMAN machines
 - Host-specific overrides: create `~/.config/fish/conf.d/env.local.fish` (gitignored), auto-sourced
 

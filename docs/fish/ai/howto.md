@@ -60,12 +60,35 @@ ai config status            # check: review row should show provider: global, mo
 
 Now `ai review` (any mode) uses Claude; `ai gen commit`, `ai chat`, `ai code`, etc. continue with Ollama.
 
+### Persistently: generate the review locally, verify with claude
+
+Configure the `verify` task separately from the `review` task, so a plain
+`ai review --verify` splits work across providers without extra flags:
+
+```
+ai config provider ollama --task review        first pass on a local model
+ai config provider claude --task verify         second-opinion pass on claude
+ai models use review north-mini-code-1.0
+ai config status                                # confirm review→ollama, verify→claude
+```
+
+Then `ai review --verify` runs the local review and the claude verify with no
+per-invocation flags. To make `--verify` the default (opt-out with `--no-verify`),
+add a line by hand to `~/.config/ai/config` (or a project `.ai/config`) — there is no
+CLI setter for this toggle:
+
+```
+review_verify=1
+```
+
+Accepted truthy values: `1`, `true`, `yes`, `on`.
+
 ### Smaller, faster model for commit messages
 
 Commit messages are short — a 7B model is plenty.
 
 ```
-ai models use qwen2.5-coder:7b --task commit
+ai models use commit qwen2.5-coder:7b
 ai gen commit --dry-run     # confirm the prompt looks right
 ai gen commit               # generate the real thing
 ```
@@ -78,7 +101,7 @@ Inside the repo:
 cd ~/work/scala-project
 ai config provider claude --task review --project
 ai config provider ollama --task commit --project
-ai models use qwen2.5-coder:32b --task code --project
+ai models use code qwen2.5-coder:32b --project
 ```
 
 Result: a `.ai/config` file at the repo root. Outside this repo, your global config still applies. See [walk-up resolution](architecture.md#layer-3-configuration) for the precedence rules.
@@ -125,6 +148,46 @@ ai review                            branch vs auto-detected base
 ai review main                       vs specific base
 ai review --brief                    short summary instead of detailed
 ai review --lang ru                  in Russian
+```
+
+### Security-focused review with a lens
+
+Add a specialist checklist for one class of bug. Lenses stack (comma-separated) and
+work in both git and target mode:
+
+```
+ai review --lens access-control                 authorization checklist on the diff
+ai review . --lens crypto,logic-bug             two lenses on the whole project
+ai review --commit abc1234 --lens deserialization
+```
+
+Pick by what the change touches: `access-control` for request handlers/APIs,
+`crypto` for signing/TLS, `deserialization` for JVM services reading untrusted input,
+`logic-bug` for concurrency/ordering-sensitive code. See the
+[lens table](toolkit.md#security-lenses---lens) for the full applicability guide.
+
+### Adversarial second-opinion verify
+
+Run a verify pass that tries to refute each finding, then annotates the output:
+
+```
+ai review --verify --provider claude            review + agentic verify, both on claude
+ai review --provider ollama --verify --verify-provider claude
+                                                generate locally, verify with claude
+```
+
+On claude the verify pass reads the repo itself; on a local model it reasons from the
+embedded diff only (and is a weaker verifier). See
+[Verify and local models](toolkit.md#verify-and-local-models) for why.
+
+### Review a large commit that exceeds the diff cap
+
+The git-mode diff is capped at 500 lines. For a big commit (e.g. 40+ files), raise the
+cap so the whole change is reviewed:
+
+```
+git diff HEAD~1..HEAD | wc -l                    check the real size first
+ai review --last 1 --max-lines 4000 --provider claude --verify -o review.md
 ```
 
 ### Generate a commit message and pipe to git

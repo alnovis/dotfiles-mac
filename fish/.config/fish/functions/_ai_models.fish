@@ -1,5 +1,10 @@
 function _ai_models --description "Manage Ollama models: list, install, remove, set default"
     if contains -- --help $argv; or contains -- -h $argv
+        # Subcommands with their own detailed help handle it themselves.
+        if test "$argv[1]" = use
+            _ai_models_use --help
+            return $status
+        end
         echo "Usage: ai models [COMMAND] [ARGS]"
         echo ""
         echo "Manage Ollama models."
@@ -9,7 +14,8 @@ function _ai_models --description "Manage Ollama models: list, install, remove, 
         echo "  list --all [FILTER]    Show all models including oversized"
         echo "  install MODEL          Download a model"
         echo "  rm MODEL               Remove an installed model"
-        echo "  use MODEL              Set default model (add --task X for per-task)"
+        echo "  use [TASK] MODEL       Set model: global default, or per-task"
+        echo "                         (TASK: chat/code/review/verify/commit/summary/all)"
         echo "  update                 Update all installed models to latest"
         echo "  info MODEL             Show model details (params, quant, context)"
         echo "  prune                  Clean up partial downloads and orphaned blobs"
@@ -23,8 +29,9 @@ function _ai_models --description "Manage Ollama models: list, install, remove, 
         echo "  ai models list --all                   Show all"
         echo "  ai models list coder                   Filter by 'coder'"
         echo "  ai models install qwen3:32b            Download model"
-        echo "  ai models use qwen2.5-coder:32b        Set default"
-        echo "  ai models use qwen2.5-coder:7b --task commit"
+        echo "  ai models use qwen2.5-coder:32b        Set global default"
+        echo "  ai models use verify north-mini-code-1.0   Set the verify task's model"
+        echo "  ai models use review,code qwen3.5:27b  Set several tasks at once"
         echo "  ai models rm codellama:13b             Remove model"
         echo "  ai models update                       Update all models"
         echo "  ai models info qwen2.5-coder:32b       Show model details"

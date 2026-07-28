@@ -144,6 +144,7 @@ ai review .                          target mode: current dir
 | `--last [N]` | Review last N commits on current branch (default 1) |
 | `--commit SHA` | Review one specific commit |
 | `--file FILE` | Filter diff to a single file |
+| `--max-lines N` | Cap the diff at N lines (default 500) |
 | `--lang-all LANG` | Force language for response AND thinking (slower) |
 | (any other) | See [Common flags](#common-flags) |
 
@@ -160,7 +161,7 @@ ai review --brief --lang ru          short review in Russian
 
 The base branch auto-detection order: `develop` → `main` → `master`.
 
-Diff size cap: 500 lines by default — larger diffs are truncated with a warning. Use `--file` to scope down.
+Diff size cap: 500 lines by default — larger diffs are truncated with a warning. Use `--file` to scope down, or `--max-lines N` to raise the cap for a large commit (e.g. `--max-lines 4000`).
 
 ### Target mode
 
@@ -188,6 +189,100 @@ The dispatcher validates flag combinations before delegating:
 
 - `--last`, `--commit`, `--file` require git mode → error if combined with a PATH target.
 - `--with-project-context` requires target mode → error if used without a PATH.
+
+### Security lenses (`--lens`)
+
+A lens injects a specialist hunting checklist into the review, on top of the base
+prompt. It tells the model *where to look* for one class of vulnerability; the
+finding gate and severity rules in `meta-review*.md` still apply — a lens is not a
+mandate to find something. Lenses work in both git and target mode.
+
+```
+ai review . --lens access-control          add the authorization checklist
+ai review --lens crypto,logic-bug          stack two lenses on the diff
+ai review src/Auth.scala --lens access-control,deserialization
+```
+
+Available lenses (comma-separated, stackable):
+
+| Lens | Hunts for | Best fit |
+|---|---|---|
+| `crypto` | JWT alg-confusion, nonce/IV reuse, non-constant-time compares, non-CSPRNG randomness, unenforced TLS verification, hardcoded keys | Anything touching tokens, signing, encryption, TLS |
+| `access-control` | IDOR/BOLA, missing `@PreAuthorize`/route guards, privilege escalation, mass assignment, multi-tenant leakage, unscoped bulk ops | APIs, request handlers, anything with authenticated identity + per-object access |
+| `logic-bug` | TOCTOU, concurrency on half-initialized state, integer overflow/narrowing, state-machine confusion, tenant-blind cache keys, sentinel-return misuse | Ordering/concurrency-sensitive code, no single grep signature |
+| `deserialization` | `ObjectInputStream`, Jackson default-typing, XStream/`XMLDecoder`, SnakeYAML, Kryo/Hessian, allow-list bypass | JVM services (Scala/Java/Kotlin) that read untrusted serialized input |
+
+Each lens carries a **HARD GATE** — e.g. `access-control` requires citing the entry
+point + where ownership is checked; `logic-bug` requires citing the trust boundary
+crossed. This keeps a lens from turning the reviewer into a false-positive machine.
+
+Lens files live at `~/.config/fish/prompts/lenses/<name>.md` and are overridable;
+drop a new `<name>.md` there and it becomes selectable immediately. Checklists are
+adapted from Visa's VVAH (Apache-2.0) — see `lenses/README.md` for attribution.
+`--lens` is ignored (with a note) in `--brief` mode.
+
+### Second-opinion verify (`--verify`)
+
+A two-pass review: after the first-pass findings, a second pass adversarially tries
+to **refute** each one ("assume it is WRONG until confirmed"), then annotates the
+output. Nothing is hidden — every finding is kept and tagged, so you decide.
+
+```
+ai review --verify                       review, then verify with the same provider
+ai review . --lens access-control --verify   lens + verify together
+ai review --provider ollama --verify --verify-provider claude   generate locally, verify with claude
+```
+
+| Flag | Effect |
+|---|---|
+| `--verify` | Run the verify pass after the review |
+| `--no-verify` | Disable verify (overrides a `review_verify` config default) |
+| `--verify-provider P` | Provider for the verify pass (default: the review provider) |
+| `--verify-model M` | Model for the verify pass (default: per-task `verify` config) |
+
+Output — the first-pass review verbatim, then a `## Verification` section with one
+keyed verdict per finding:
+
+```
+- <finding title / file:line> — [CONFIRMED N/10] | [REFUTED N/10 — reason] | [UNCERTAIN — what's missing]
+  why: <one or two sentences citing the code>
+Verify: X confirmed, Y refuted, Z uncertain
+```
+
+Verify runs **entirely through the provider layer** (`_ai_run`) — it never reaches
+for an agent runner like `pi`. Tool grounding is a property of the provider, not of
+the verify step (see [Verify and local models](#verify-and-local-models) below).
+Defaults: opt-in (off unless `--verify` or a `review_verify` config default), and the
+`verify` task is configurable like any other via `ai config` / `ai models use verify MODEL`.
+`--verify` is skipped (with a note) in `--brief` mode.
+
+#### Verify and local models
+
+The two verify providers behave differently because tool grounding lives in the
+provider, not the verify step:
+
+- **claude** — `claude -p` is agentic: the verify pass reads the actual repo
+  (Read/Grep) and walks the call chain to confirm or refute. This is the strong
+  path, and it comes for free — no special-casing.
+- **ollama / local** — the provider has no tools, so the verifier reasons from the
+  **embedded code** (the diff or file the first pass saw). It cannot explore beyond
+  that.
+
+This asymmetry is deliberate. Local models are unreliable *verifiers* — a small model
+will confidently claim it "checked the callers" without doing so, and can refute a
+real bug as a false positive. So:
+
+- Best pattern: **generate locally, verify with claude** — cheap local first pass,
+  rigorous cloud refutation on a focused set of findings
+  (`--provider ollama --verify --verify-provider claude`).
+- Weak direction: **claude review → local verify** — a local model refutes cloud
+  findings unreliably; the command prints a warning suggesting `--verify-provider claude`.
+
+Tool-grounded verification on a *local* model would need a real agent runner (pi,
+cline). That deliberately stays out of `ai review` — it belongs to a future
+agent-runner abstraction (the `ai agent` roadmap), not a special-case wired into the
+provider-based review path. Keeping `ai review` provider-only is why `pi` lives in
+`ai code` and nowhere near review.
 
 ### Deprecated: `ai gen review`
 
@@ -363,16 +458,22 @@ The list output has two extras for the per-task system:
 ai models install qwen3.5:9b                          pull from ollama.com
 ai models rm codellama:13b                            remove
 ai models use qwen3.5:9b                              set as global default (sets AI_DEFAULT_MODEL)
-ai models use qwen2.5-coder:32b --task code           per-task default
-ai models use qwen2.5-coder:7b --task commit --project   per-task project-scoped default
+ai models use code qwen2.5-coder:32b                  per-task default (TASK MODEL, positional)
+ai models use review,verify north-mini-code-1.0       several tasks at once
+ai models use all qwen3.5:27b                         every task
+ai models use qwen2.5-coder:7b --task commit --project   flag form, project-scoped
 ```
 
-| Flag | Effect |
-|---|---|
-| `--task X` | Set for one task (or comma-list, or `all`) |
-| `--project` | Write to project config (requires `--task`) |
+`ai models use` takes either form:
 
-`ai models use MODEL` without `--task` sets the legacy `AI_DEFAULT_MODEL` universal variable. The model must be installed for global `use`; per-task writes are not validated (you may set a claude-side model name when the task uses claude).
+| Form | Meaning |
+|---|---|
+| `use MODEL` | Global default (`AI_DEFAULT_MODEL`) — MODEL must be installed |
+| `use TASK MODEL` | One task, or a `comma,list`, or `all` |
+| `use MODEL --task TASK` | Same as `use TASK MODEL` (flag form, kept) |
+| `… --project` | Write the per-task value to the project `.ai/config` (requires a TASK) |
+
+TASK is one of: `chat, code, review, verify, commit, summary, all`. A lone task name with no model errors instead of being misread as a model; an unknown task errors instead of being silently ignored. Per-task values are trusted as-is (you may set a claude-side model name when the task uses claude); the global default is validated against installed models. See `ai models use --help`.
 
 ### Maintenance
 
@@ -434,7 +535,7 @@ Iterate freely — changes take effect on the next invocation. No fish reload ne
 | Variable | Read by | Effect |
 |---|---|---|
 | `AI_DEFAULT_MODEL` | resolver chain | Legacy global model default (universal var, settable via `ai models use MODEL`) |
-| `OLLAMA_CONTEXT_LENGTH` | Ollama itself | Raises Ollama's default 4K context to a higher value (set globally in `env.fish`) |
+| `OLLAMA_CONTEXT_LENGTH` | Ollama itself | Default context (`env.fish`, 131072). Governs the AGENTIC/pi path & `ollama run`; the non-agentic provider overrides num_ctx per-request. Raise for bigger agentic reviews (KV-cache RAM cost); models cap at their native max |
 | `EDITOR` / `VISUAL` | `ai sessions edit` | Editor for raw JSONL editing |
 | `ANTHROPIC_API_KEY` | Not used by this toolkit | Claude CLI manages its own auth via web login |
 
@@ -446,7 +547,8 @@ Iterate freely — changes take effect on the next invocation. No fish reload ne
 - Subcommands of `gen`, `models`, `config`, `sessions`
 - Flag names per subcommand
 - Provider names (from `_ai_providers` — auto-discovers all installed providers)
-- Task names (`chat`, `code`, `review`, `commit`, `summary`)
+- Task names (`chat`, `code`, `review`, `verify`, `commit`, `summary`)
+- Lens names for `ai review --lens` (from `_ai_review_lens` — auto-discovers `prompts/lenses/*.md`)
 - Session names for `ai sessions show/info/rm/...` and `ai chat -s ...`
 - Installed Ollama models for `ai models use/rm/info`, `--model` flag
 - Scope values (`project`, `global`) for `ai config move`, `ai sessions move`

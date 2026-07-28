@@ -131,7 +131,7 @@ Configuration is layered, not monolithic. A value can be set globally, scoped to
 | `sessions_token_threshold` | Sessions | Truncation threshold (fraction of context window) |
 | `sessions_summary_model` | Sessions | Override model used for rolling summary |
 
-Known tasks: `chat`, `code`, `review`, `commit`, `summary` (enumerated by `_ai_tasks`).
+Known tasks: `chat`, `code`, `review`, `verify`, `commit`, `summary` (enumerated by `_ai_tasks`). The `verify` task configures the second-opinion pass of `ai review --verify` independently of the review task itself (so you can review with one provider/model and verify with another).
 
 **Walk-up resolution.** Project config is discovered by `_ai_project_config_file`: from `$PWD`, walk up the directory tree checking each ancestor for `.ai/config`. Stop conditions, in order:
 

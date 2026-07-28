@@ -24,33 +24,23 @@ function _ai_code --description "Run pi with Ollama for AI-assisted coding"
         return 0
     end
 
-    if not command -q pi
-        set_color red
-        echo "Error: pi is not installed — brew install pi-coding-agent"
-        set_color normal
-        return 1
-    end
-
-    _ai_ensure_running; or return 1
-
     set -l model (_ai_default_model code ollama)
 
-    # Read-only by default (block edit/write tools); -e/--edit enables full toolset.
-    set -l tool_args --exclude-tools edit,write
+    # Read-only by default (block edit/write; bash stays on for the attended session);
+    # -e/--edit enables the full toolset. All pi/ollama mechanics live in _ai_agent_pi.
+    set -l policy --exclude-tools edit,write
     set -l passthrough
     for arg in $argv
         if test "$arg" = -e; or test "$arg" = --edit
-            set tool_args
+            set policy --edit
         else
             set -a passthrough $arg
         end
     end
 
-    # Build command
-    set -l cmd pi $tool_args
-    if contains -- --model $passthrough
-        $cmd $passthrough
-    else
-        $cmd --model ollama/$model $passthrough
-    end
+    # A user-supplied --model (in passthrough) wins over the resolved default.
+    set -l model_args --model $model
+    contains -- --model $passthrough; and set model_args
+
+    _ai_agent_pi --interactive --provider ollama $policy $model_args $passthrough
 end

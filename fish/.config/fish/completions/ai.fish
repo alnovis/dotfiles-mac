@@ -73,15 +73,30 @@ complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcomman
 # ai models label --seed
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from label" -l seed -d "Auto-fill labels from name heuristics"
 
-# ai models use --task TASK / --project
+# ai models use — TASK as the first positional (models come from the group above)
+function __ai_models_use_first_arg
+    set -l toks (commandline -opc)
+    test (count $toks) -ge 1; and test "$toks[-1]" = use
+end
+complete -c ai -n __ai_models_use_first_arg -x -a "(_ai_tasks; echo all)" -d task
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -l task -d "Set per-task instead of global" -x -a "(_ai_tasks; echo all)"
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -l project -d "Write to project .ai/config (requires --task)"
+complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -s h -l help -d "Show 'models use' help"
 
 # --- ai review (unified: target mode and git mode) ---
 complete -c ai -n "__fish_seen_subcommand_from review" -l model -d "Override model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
 complete -c ai -n "__fish_seen_subcommand_from review" -l provider -d "Override provider" -x -a "(_ai_providers)"
 complete -c ai -n "__fish_seen_subcommand_from review" -s o -l output -d "Save output to file" -rF
 complete -c ai -n "__fish_seen_subcommand_from review" -l brief -d "Short summary"
+complete -c ai -n "__fish_seen_subcommand_from review" -l agentic -d "Skip embedding changed files; let the model explore the repo (claude is always tool-grounded)"
+complete -c ai -n "__fish_seen_subcommand_from review" -l context-lines -d "Budget for embedding full changed files (git mode, default 2000; 0=diff-only)" -x
+complete -c ai -n "__fish_seen_subcommand_from review" -l lens -d "Specialist security checklist(s)" -x -a "(_ai_review_lens)"
+complete -c ai -n "__fish_seen_subcommand_from review" -l verify -d "Second-opinion verify pass"
+complete -c ai -n "__fish_seen_subcommand_from review" -l no-verify -d "Disable verify (override config default)"
+complete -c ai -n "__fish_seen_subcommand_from review" -l verify-provider -d "Provider for the verify pass" -x -a "(_ai_providers)"
+complete -c ai -n "__fish_seen_subcommand_from review" -l verify-model -d "Model for the verify pass" -x
+complete -c ai -n "__fish_seen_subcommand_from review" -l verify-output -d "Output file for the verify pass" -r
+complete -c ai -n "__fish_seen_subcommand_from review" -l verify-only -d "Re-verify an existing review file (no review pass)" -r
 complete -c ai -n "__fish_seen_subcommand_from review" -l dry-run -d "Print assembled prompt without invoking the model"
 complete -c ai -n "__fish_seen_subcommand_from review" -l lang -d "Response language" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"
 # git-mode-only flags
@@ -89,6 +104,7 @@ complete -c ai -n "__fish_seen_subcommand_from review" -l lang-all -d "Full resp
 complete -c ai -n "__fish_seen_subcommand_from review" -l last -d "Review last N commits (git mode)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l commit -d "Review specific commit (git mode)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l file -d "Filter diff to one file (git mode)" -rF
+complete -c ai -n "__fish_seen_subcommand_from review" -l max-lines -d "Cap diff at N lines (git mode, default 500)" -x
 # target-mode-only flag
 complete -c ai -n "__fish_seen_subcommand_from review" -l with-project-context -d "Include parent project context (target mode, file)"
 # positional: dir or file (target mode)

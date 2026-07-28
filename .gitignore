@@ -8,6 +8,10 @@ nvim/.config/nvim/README.md
 # Local experiments / scratch (not published)
 experiments/
 
+# Working / planning docs — session-local, not part of history
+docs/progress.md
+docs/refactoring.md
+
 # Scala build artifacts
 .scala-build/
 .bsp/

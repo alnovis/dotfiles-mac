@@ -1,8 +1,9 @@
 function _ai_ensure_running --description "Ensure Ollama server is running"
+    # All status/errors go to stderr — this runs inside the provider, whose stdout
+    # is captured (e.g. `_ai_run --output FILE`); a stray line on stdout would land
+    # in the review/output file.
     if not command -q ollama
-        set_color red
-        echo "Error: ollama is not installed"
-        set_color normal
+        echo "Error: ollama is not installed" >&2
         return 1
     end
 
@@ -10,9 +11,7 @@ function _ai_ensure_running --description "Ensure Ollama server is running"
         return 0
     end
 
-    set_color yellow
-    echo "Starting Ollama..."
-    set_color normal
+    echo "Starting Ollama..." >&2
     ollama serve >/dev/null 2>&1 &
     disown
 
@@ -24,8 +23,6 @@ function _ai_ensure_running --description "Ensure Ollama server is running"
         sleep 0.5
     end
 
-    set_color red
-    echo "Error: Ollama failed to start"
-    set_color normal
+    echo "Error: Ollama failed to start" >&2
     return 1
 end
