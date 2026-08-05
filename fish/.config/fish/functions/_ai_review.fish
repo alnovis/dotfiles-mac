@@ -1,4 +1,29 @@
 function _ai_review --description "AI code review — project state (path target) or git changes (branch/last/commit)"
+    # `--last` has an OPTIONAL arg (`last=?`), and fish argparse binds an optional
+    # value ONLY when attached with '=' — so `--last 30` left the flag empty and
+    # dropped 30 to a positional, silently reviewing just the last commit. Fold the
+    # space form into `--last=N` up front (bare `--last` still means 1). This also
+    # feeds the normalized args to _ai_review_git via orig_argv below.
+    set -l norm
+    set -l pending_last 0
+    for a in $argv
+        if test $pending_last -eq 1
+            set pending_last 0
+            if string match -qr '^[0-9]+$' -- $a
+                set -a norm "--last=$a"
+                continue
+            end
+            set -a norm --last # bare --last (next token isn't a number)
+        end
+        if test "$a" = --last
+            set pending_last 1
+        else
+            set -a norm $a
+        end
+    end
+    test $pending_last -eq 1; and set -a norm --last # trailing bare --last
+    set argv $norm
+
     set -l orig_argv $argv
 
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
