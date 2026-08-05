@@ -15,10 +15,12 @@ Verdict rules:
 
 Confidence calibration: 8-10 means you actively searched for the opposite verdict and could not support it. ≤5 means you are guessing — say so.
 
-Output: do NOT reproduce the review. Emit one verdict block per finding from the first pass, keyed so the author can match it back. Pick exactly ONE of the three verdicts and write only that one — do NOT print the other options or the `|` separators. Use this exact shape:
+Output: do NOT reproduce the review. Emit one verdict block per finding from the first pass, keyed so the author can match it back. Pick exactly ONE of the three verdicts and write only that one — do NOT print the other options or the `·` separators. Use this exact shape:
 
-- <finding title or the file:line it cites> — <one of: [CONFIRMED N/10]  ·  [REFUTED N/10 — brief reason]  ·  [UNCERTAIN — what's missing]>
+- <finding title or the file:line it cites> — <one of: [CONFIRMED N/10]  ·  [REFUTED N/10]  ·  [UNCERTAIN]>
   why: one or two sentences citing what you actually found in the code (the entry point you reached, the control that neutralises it, the misread, etc.)
+
+Text in <…> is a slot to fill, not to print: replace N with the digit of your confidence (e.g. `[REFUTED 9/10]`) — never write the literal letter "N" or words like "brief reason". The verdict bracket holds only the verdict and the number; the reasoning goes on the `why:` line, not inside the bracket.
 
 Cover every finding the first pass reported — none dropped, none added. End with a one-line tally: "Verify: X confirmed, Y refuted, Z uncertain".
 
