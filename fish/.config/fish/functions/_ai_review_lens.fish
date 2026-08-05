@@ -23,7 +23,7 @@ function _ai_review_lens --description "Resolve --lens names to an injectable re
             set_color normal >&2
             return 1
         end
-        set -a blocks "## Security lens: $name
+        set -a blocks "## Review lens: $name
 "(cat $lens_dir/$name.md | string collect)
     end
 
