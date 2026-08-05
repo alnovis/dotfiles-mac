@@ -15,7 +15,7 @@ complete -c ai -n __fish_use_subcommand -a stop -d "Stop models or server"
 complete -c ai -n __fish_use_subcommand -a help -d "Show help"
 
 # Top-level flags
-complete -c ai -n __fish_use_subcommand -s m -l model -d "Use specific model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+complete -c ai -n __fish_use_subcommand -s m -l model -d "Use specific model" -x -a "(_ai_complete_models)"
 complete -c ai -n __fish_use_subcommand -s t -l think -d "Enable thinking mode"
 complete -c ai -n __fish_use_subcommand -l provider -d "Override provider" -x -a "(_ai_providers)"
 complete -c ai -n __fish_use_subcommand -l dry-run -d "Print assembled prompt without invoking the model"
@@ -29,7 +29,7 @@ complete -c ai -n "__fish_seen_subcommand_from gen; and not __fish_seen_subcomma
 
 # ai gen common flags
 complete -c ai -n "__fish_seen_subcommand_from gen" -l provider -d "Override provider" -x -a "(_ai_providers)"
-complete -c ai -n "__fish_seen_subcommand_from gen" -l model -d "Override model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+complete -c ai -n "__fish_seen_subcommand_from gen" -l model -d "Override model" -x -a "(_ai_complete_models)"
 complete -c ai -n "__fish_seen_subcommand_from gen" -l lang -s l -d "Response language" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"
 complete -c ai -n "__fish_seen_subcommand_from gen" -s o -l output -d "Save output to file" -rF
 complete -c ai -n "__fish_seen_subcommand_from gen" -l dry-run -d "Print assembled prompt without invoking the model"
@@ -68,7 +68,7 @@ complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subco
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from list" -l all -d "Show all models"
 
 # ai models install/rm/use/info/label/unlabel — complete with installed model names
-complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from rm use info label unlabel" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from rm use info label unlabel" -x -a "(_ai_complete_models)"
 
 # ai models label --seed
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from label" -l seed -d "Auto-fill labels from name heuristics"
@@ -84,17 +84,17 @@ complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcomman
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -s h -l help -d "Show 'models use' help"
 
 # --- ai review (unified: target mode and git mode) ---
-complete -c ai -n "__fish_seen_subcommand_from review" -l model -d "Override model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+complete -c ai -n "__fish_seen_subcommand_from review" -l model -d "Override model" -x -a "(_ai_complete_models)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l provider -d "Override provider" -x -a "(_ai_providers)"
 complete -c ai -n "__fish_seen_subcommand_from review" -s o -l output -d "Save output to file" -rF
 complete -c ai -n "__fish_seen_subcommand_from review" -l brief -d "Short summary"
 complete -c ai -n "__fish_seen_subcommand_from review" -l agentic -d "Skip embedding changed files; let the model explore the repo (claude is always tool-grounded)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l context-lines -d "Budget for embedding full changed files (git mode, default 2000; 0=diff-only)" -x
-complete -c ai -n "__fish_seen_subcommand_from review" -l lens -d "Specialist security checklist(s)" -x -a "(_ai_review_lens)"
+complete -c ai -n "__fish_seen_subcommand_from review" -l lens -d "Specialist security checklist(s)" -x -a "(_ai_complete_lens)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify -d "Second-opinion verify pass"
 complete -c ai -n "__fish_seen_subcommand_from review" -l no-verify -d "Disable verify (override config default)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-provider -d "Provider for the verify pass" -x -a "(_ai_providers)"
-complete -c ai -n "__fish_seen_subcommand_from review" -l verify-model -d "Model for the verify pass" -x
+complete -c ai -n "__fish_seen_subcommand_from review" -l verify-model -d "Model for the verify pass" -x -a "(_ai_complete_models --claude)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-output -d "Output file for the verify pass" -r
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-only -d "Re-verify an existing review file (no review pass)" -r
 complete -c ai -n "__fish_seen_subcommand_from review" -l dry-run -d "Print assembled prompt without invoking the model"
@@ -114,20 +114,20 @@ complete -c ai -n "__fish_seen_subcommand_from review" -F -d "File to review"
 # --- ai code ---
 complete -c ai -n "__fish_seen_subcommand_from code" -F
 complete -c ai -n "__fish_seen_subcommand_from code" -s e -l edit -d "Allow code editing"
-complete -c ai -n "__fish_seen_subcommand_from code" -l model -d "Override model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+complete -c ai -n "__fish_seen_subcommand_from code" -l model -d "Override model" -x -a "(_ai_complete_models)"
 
 # --- ai stop ---
 complete -c ai -n "__fish_seen_subcommand_from stop" -l server -d "Kill Ollama server entirely"
 complete -c ai -n "__fish_seen_subcommand_from stop" -x -a "(ollama ps 2>/dev/null | tail -n +2 | awk '{print \$1}')"
 
 # --- ai chat ---
-complete -c ai -n "__fish_seen_subcommand_from chat" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+complete -c ai -n "__fish_seen_subcommand_from chat" -x -a "(_ai_complete_models)"
 complete -c ai -n "__fish_seen_subcommand_from chat" -s s -l session -d "Start/resume named session (ollama only)" -x -a "(_ai_session_names)"
 complete -c ai -n "__fish_seen_subcommand_from chat" -s c -l continue -d "Continue last session"
 complete -c ai -n "__fish_seen_subcommand_from chat" -l global -d "Force global scope for new session"
 complete -c ai -n "__fish_seen_subcommand_from chat" -l new -d "Error if session NAME already exists"
 complete -c ai -n "__fish_seen_subcommand_from chat" -l system -d "System prompt (applied at session creation)" -x
-complete -c ai -n "__fish_seen_subcommand_from chat" -l model -d "Override model" -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')"
+complete -c ai -n "__fish_seen_subcommand_from chat" -l model -d "Override model" -x -a "(_ai_complete_models)"
 
 # --- ai sessions ---
 set -l sessions_subcmds "ls show info rm rename branch archive restore edit export import clear pin unpin move search stats"
@@ -158,7 +158,7 @@ complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcomm
 complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from import" -l name -x -d "Override session name"
 complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from import move" -l global -d "Target global scope"
 complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from pin" -l provider -x -a "(_ai_providers)" -d "Pin provider"
-complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from pin" -l model -x -a "(ollama list 2>/dev/null | tail -n +2 | awk '{print \$1}')" -d "Pin model"
+complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from pin" -l model -x -a "(_ai_complete_models)" -d "Pin model"
 complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from move" -l to -x -a "project global" -d "Target scope"
 complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from search" -l name -x -d "Filter sessions by name pattern"
 complete -c ai -n "__fish_seen_subcommand_from sessions; and __fish_seen_subcommand_from search" -l since -x -d "Filter sessions updated since YYYY-MM-DD"
