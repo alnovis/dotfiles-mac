@@ -12,6 +12,9 @@ experiments/
 docs/progress.md
 docs/refactoring.md
 
+# Talk / presentation material — session-local, not published
+presentation/
+
 # Scala build artifacts
 .scala-build/
 .bsp/
