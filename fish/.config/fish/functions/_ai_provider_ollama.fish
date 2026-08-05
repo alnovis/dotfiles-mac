@@ -14,7 +14,7 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     # prompt (num_ctx per request, clamped to a RAM-safe ceiling) so a large embed
     # is not silently truncated — the global OLLAMA_CONTEXT_LENGTH is a one-size cap
     # that is wrong per-task. Streams the response to stdout.
-    argparse 'interactive' 'model=' 'think' 'agentic' 'thinking-output=' -- $argv; or return 1
+    argparse 'interactive' 'model=' 'think' 'no-think' 'agentic' 'thinking-output=' -- $argv; or return 1
 
     _ai_ensure_running; or return 1
 
@@ -70,7 +70,11 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
         set capable 1
     end
     set -l think false
-    if test $capable -eq 1
+    if set -q _flag_no_think
+        # Explicit fast path: quarantine reasoning (think:false) even on a thinking
+        # model. Reasoning generation is the bulk of a thinking model's wall-clock —
+        # this trades that depth for speed on demand (`ai review --no-think`).
+    else if test $capable -eq 1
         set think true
     else if set -q _flag_think
         echo "ollama: $model does not support thinking — ignoring --think" >&2

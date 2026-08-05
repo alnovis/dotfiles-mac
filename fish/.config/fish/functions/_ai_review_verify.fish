@@ -9,7 +9,7 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     #   --findings-file F   first-pass output to verify (required)
     #   --code-file F       code/diff context embedded for the verifier (optional)
     #   --output F          write verdicts to a real file (avoids /dev/stdout loss)
-    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'agentic' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
+    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
 
     set -l provider $_flag_provider
     test -z "$provider"; and set provider ollama
@@ -54,6 +54,7 @@ $code"
     set -l run_args --provider $provider --workdir $workdir
     test -n "$model"; and set -a run_args --model $model
     set -q _flag_agentic; and set -a run_args --agentic
+    set -q _flag_no_think; and set -a run_args --no-think
 
     # Watched run when writing to a file with a label (shows live progress);
     # otherwise a plain run (streaming / dry-run).

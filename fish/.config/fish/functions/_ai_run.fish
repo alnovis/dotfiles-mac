@@ -6,7 +6,7 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
     # Provider resolution: --provider flag > config file > default (ollama)
     # Providers are auto-discovered as _ai_provider_<name> functions (see _ai_providers).
 
-    argparse 'provider=' 'model=' 'think' 'agentic' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
+    argparse 'provider=' 'model=' 'think' 'no-think' 'agentic' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
 
     set -l provider
     if set -q _flag_provider
@@ -88,8 +88,11 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
 
     # Reasoning sidecar is an ollama-provider feature (not the agent runners, not
     # claude which owns its own thinking). Forward it only when dispatching there.
-    if test "$dispatch" = _ai_provider_ollama; and test -n "$thinking_out"
-        set -a dispatch_args --thinking-output $thinking_out
+    if test "$dispatch" = _ai_provider_ollama
+        test -n "$thinking_out"; and set -a dispatch_args --thinking-output $thinking_out
+        # --no-think is an ollama-provider option (the fast path); other providers and
+        # the agent runners don't accept it, so forward it only here.
+        set -q _flag_no_think; and set -a dispatch_args --no-think
     end
 
     set -l rc 0

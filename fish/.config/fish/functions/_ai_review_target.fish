@@ -1,6 +1,6 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'dry-run' 'agentic' \
+    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'dry-run' 'agentic' 'no-think' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
 
     # Resolve positional args: [DIR|FILE] ["custom prompt"]
@@ -227,6 +227,7 @@ $context"
         set -q _flag_verify_model; and set -a flow_args --verify-model $_flag_verify_model
         set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
         set -q _flag_agentic; and set -a flow_args --agentic
+        set -q _flag_no_think; and set -a flow_args --no-think
         # A single-file target is the code context embedded for the verifier.
         test -n "$target_file"; and set -a flow_args --code-file $target_file
         _ai_review_verify_flow $flow_args
@@ -238,12 +239,14 @@ $context"
         _ai_stage_plan "$lbl"
         set -l runner_args --provider $provider --workdir $work_dir $model_flag
         set -q _flag_agentic; and set -a runner_args --agentic
+        set -q _flag_no_think; and set -a runner_args --no-think
         echo "$full_prompt" | _ai_run_watched --label "$lbl" --output $output --dest $output -- $runner_args
     else
         # Streaming to terminal (or dry-run): output is visible, no spinner needed.
         set -l runner_args --provider $provider --workdir $work_dir $model_flag
         set -q _flag_dry_run; and set -a runner_args --dry-run
         set -q _flag_agentic; and set -a runner_args --agentic
+        set -q _flag_no_think; and set -a runner_args --no-think
         echo "$full_prompt" | _ai_run $runner_args
     end
 

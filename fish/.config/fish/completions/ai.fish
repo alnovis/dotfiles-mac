@@ -89,6 +89,7 @@ complete -c ai -n "__fish_seen_subcommand_from review" -l provider -d "Override 
 complete -c ai -n "__fish_seen_subcommand_from review" -s o -l output -d "Save output to file" -rF
 complete -c ai -n "__fish_seen_subcommand_from review" -l brief -d "Short summary"
 complete -c ai -n "__fish_seen_subcommand_from review" -l agentic -d "Skip embedding changed files; let the model explore the repo (claude is always tool-grounded)"
+complete -c ai -n "__fish_seen_subcommand_from review" -l no-think -d "Fast pass: disable a thinking model's reasoning (think:false) — trades depth for speed"
 complete -c ai -n "__fish_seen_subcommand_from review" -l context-lines -d "Budget for embedding full changed files (git mode, default 2000; 0=diff-only)" -x
 complete -c ai -n "__fish_seen_subcommand_from review" -l lens -d "Specialist security checklist(s)" -x -a "(_ai_complete_lens)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify -d "Second-opinion verify pass"

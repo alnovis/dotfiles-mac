@@ -1,6 +1,6 @@
 function _ai_review_git --description "AI review of git changes (branch, last N, or specific commit)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' 'o/output=' 'lens=' 'max-lines=' 'context-lines=' 'agentic' 'dry-run' \
+    argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' 'o/output=' 'lens=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'dry-run' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
 
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
@@ -353,6 +353,7 @@ $context_block"
         set -q _flag_verify_model; and set -a flow_args --verify-model $_flag_verify_model
         set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
         set -q _flag_agentic; and set -a flow_args --agentic
+        set -q _flag_no_think; and set -a flow_args --no-think
         # The diff is the code context embedded for the verifier.
         set -l diff_tmp (mktemp)
         printf '%s' "$diff_content" >$diff_tmp
@@ -367,6 +368,7 @@ $context_block"
         set -l provider_args --provider $provider
         test -n "$model"; and set -a provider_args --model $model
         set -q _flag_agentic; and set -a provider_args --agentic
+        set -q _flag_no_think; and set -a provider_args --no-think
         echo "$prompt" | _ai_run_watched --label "$lbl" --output $output --dest $output -- $provider_args
     else
         # Streaming to terminal (or dry-run): output is visible, no spinner needed.
@@ -376,6 +378,7 @@ $context_block"
         end
         set -q _flag_dry_run; and set -a provider_args --dry-run
         set -q _flag_agentic; and set -a provider_args --agentic
+        set -q _flag_no_think; and set -a provider_args --no-think
         echo "$prompt" | _ai_run $provider_args
     end
 

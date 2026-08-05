@@ -13,7 +13,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --verify-provider P      override verify provider (default: review provider)
     #   --verify-model M         override verify model (default: per-task config)
     #   --code-file FILE         code/diff context embedded for the verifier
-    argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' \
+    argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
              'verify-provider=' 'verify-model=' 'code-file=' -- $argv; or return 1
 
     if test -z "$_flag_prompt_file"; or not test -f "$_flag_prompt_file"
@@ -58,6 +58,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l run_args --provider $provider --workdir $workdir
     test -n "$model"; and set -a run_args --model $model
     set -q _flag_agentic; and set -a run_args --agentic
+    set -q _flag_no_think; and set -a run_args --no-think
 
     # Weak direction: cloud review verified by a local model refutes unreliably.
     if test "$provider" = claude; and test "$vprovider" = ollama
@@ -111,6 +112,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     test -n "$lang"; and set -a vargs --lang $lang
     test -n "$_flag_code_file"; and set -a vargs --code-file $_flag_code_file
     set -q _flag_agentic; and set -a vargs --agentic
+    set -q _flag_no_think; and set -a vargs --no-think
 
     set -l ver_target
     set -l ver_is_temp 0

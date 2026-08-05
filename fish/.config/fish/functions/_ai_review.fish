@@ -27,7 +27,7 @@ function _ai_review --description "AI code review — project state (path target
     set -l orig_argv $argv
 
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
-             'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'with-project-context' 'lens=' \
+             'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' -- $argv
     or return 1
 
