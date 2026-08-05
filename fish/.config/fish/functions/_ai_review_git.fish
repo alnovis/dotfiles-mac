@@ -67,9 +67,9 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         set range "$commit_sha~1..$commit_sha"
         set tip $commit_sha
         if test -n "$file_filter"
-            set diff_content (git show $commit_sha -- $file_filter)
+            set diff_content (git show $commit_sha -- $file_filter | string collect)
         else
-            set diff_content (git diff $commit_sha~1..$commit_sha)
+            set diff_content (git diff $commit_sha~1..$commit_sha | string collect)
         end
         set header_info "Commit: $commit_msg"
 
@@ -77,9 +77,9 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         set range "HEAD~$last_n..HEAD"
         set tip HEAD
         if test -n "$file_filter"
-            set diff_content (git diff HEAD~$last_n..HEAD -- $file_filter)
+            set diff_content (git diff HEAD~$last_n..HEAD -- $file_filter | string collect)
         else
-            set diff_content (git diff HEAD~$last_n..HEAD)
+            set diff_content (git diff HEAD~$last_n..HEAD | string collect)
         end
         set header_info "Last $last_n commit(s) on $branch"
 
@@ -122,9 +122,9 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         set range "$merge_base..HEAD"
         set tip HEAD
         if test -n "$file_filter"
-            set diff_content (git diff $merge_base..HEAD -- $file_filter)
+            set diff_content (git diff $merge_base..HEAD -- $file_filter | string collect)
         else
-            set diff_content (git diff $merge_base..HEAD)
+            set diff_content (git diff $merge_base..HEAD | string collect)
         end
         set header_info "Base: $base ($commits commit(s))"
     end
@@ -154,7 +154,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         echo "Use --file to review specific files, or --max-lines N to raise the cap."
         set_color normal
         echo ""
-        set diff_content (echo "$diff_content" | head -n $max_lines)
+        set diff_content (echo "$diff_content" | head -n $max_lines | string collect)
     end
 
     # Header
@@ -315,7 +315,8 @@ $diff_content"
         # Security lens(es)
         set -l lens_suffix ""
         if set -q _flag_lens
-            set -l lens_block (_ai_review_lens $_flag_lens); or return 1
+            set -l lens_block (_ai_review_lens $_flag_lens | string collect)
+            test $pipestatus[1] -eq 0; or return 1
             set lens_suffix "
 
 $lens_block"

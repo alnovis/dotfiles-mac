@@ -133,7 +133,7 @@ function _ai_agent_ollama --description "AI agent-runner: native ollama tool-loo
                     printf '\r\033[K  ollama · %s | turn %d | %s %s | ctx %d | %ds' \
                         $model $iter $name "$a1" $num_ctx (math (date +%s) - $t0) >&2
                 end
-                set -l result (_ai_agent_ollama_tool $workdir $name $args)
+                set -l result (_ai_agent_ollama_tool $workdir $name $args | string collect)
                 jq -n --arg n $name --arg c "$result" '{role:"tool",tool_name:$n,content:$c}' >$msgs.tool
                 jq --slurpfile t $msgs.tool '. + $t' $msgs >$msgs.new; and mv $msgs.new $msgs
                 rm -f $msgs.tool

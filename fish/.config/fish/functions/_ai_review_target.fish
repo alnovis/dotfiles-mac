@@ -49,7 +49,7 @@ function _ai_review_target --description "AI review of a project directory or si
     set -l template_file ~/.config/fish/prompts/meta-review.md
     set -l prompt
     if test -f $template_file
-        set prompt (cat $template_file)
+        set prompt (cat $template_file | string collect)
     else
         set prompt "Review this project. Analyze architecture, code quality, potential issues, and suggest improvements."
     end
@@ -62,7 +62,8 @@ Additional instructions: $custom_prompt"
 
     # Security lens(es)
     if set -q _flag_lens
-        set -l lens_block (_ai_review_lens $_flag_lens); or return 1
+        set -l lens_block (_ai_review_lens $_flag_lens | string collect)
+        test $pipestatus[1] -eq 0; or return 1
         set prompt "$prompt
 
 $lens_block"
@@ -170,7 +171,7 @@ $file_content
 
             # Project tree + README: always for dir targets, opt-in for file targets
             if test -z "$target_file"; or set -q _flag_with_project_context
-                set -l tree_output (tree -L 3 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache' $work_dir 2>/dev/null)
+                set -l tree_output (tree -a -L 4 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache|.DS_Store' $work_dir 2>/dev/null | string collect)
                 if test -n "$tree_output"
                     set context "$context
 ## Project structure
@@ -182,7 +183,7 @@ $tree_output
 
                 for f in $work_dir/README.md $work_dir/readme.md $work_dir/README.rst $work_dir/README
                     if test -f $f
-                        set -l readme_content (head -100 $f)
+                        set -l readme_content (head -100 $f | string collect)
                         set context "$context
 ## README
 $readme_content

@@ -108,7 +108,7 @@ $prompt"
         case ollama
             set -l context ""
 
-            set -l tree_output (tree -L 3 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache' $dir 2>/dev/null)
+            set -l tree_output (tree -a -L 4 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache|.DS_Store' $dir 2>/dev/null | string collect)
             if test -n "$tree_output"
                 set context "$context
 ## Project structure
@@ -120,7 +120,7 @@ $tree_output
 
             for f in $dir/README.md $dir/readme.md $dir/README.rst $dir/README
                 if test -f $f
-                    set -l readme_content (head -100 $f)
+                    set -l readme_content (head -100 $f | string collect)
                     set context "$context
 ## README
 $readme_content
