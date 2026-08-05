@@ -162,15 +162,15 @@ All functions support `-h/--help`.
 - `dclean` — remove stopped containers, dangling images, unused volumes (`-a` for full prune)
 - `dlogs` — docker compose logs with service filter and grep (`-g/--grep`, `-n/--lines`)
 
-*Kube — single `k` dispatcher for the local k3s cluster (ai-toolkit style): short-verb smart helpers plus transparent kubectl passthrough. Full docs: [docs/fish/kube/toolkit.md](docs/fish/kube/toolkit.md).*
-- `k <helper> …` — smart helper; `k <anything else>` — raw kubectl (`k get`, `k apply`, …) with the kubeconfig baked in
+*Kube — single `k` dispatcher for the local k3s cluster, modelled on the `ai` toolkit: a closed set of helpers (each with its own `--help` and flags) plus `k x …` for raw kubectl. No implicit passthrough. Full docs: [docs/fish/kube/toolkit.md](docs/fish/kube/toolkit.md).*
 - `k pods [NS]` — pod overview, defaults to all namespaces; non-Running red, not-ready yellow
 - `k log <sub>` — tail a pod's logs by name substring (`-f` follow, `-g` grep, `-t` tail, `-p` previous, `-c` container)
 - `k sh <sub> [CMD]` — exec into a pod; no CMD opens an interactive shell (bash→sh)
 - `k desc <sub>` — describe pod + recent events ("why won't it come up?")
 - `k ns [NAME]` — show namespaces / switch the default
 - `k pf <sub> <PORT>` — port-forward (`PORT` = `LOCAL:REMOTE` or single)
-- Pods match by name **substring** across namespaces (`-n` to scope); short helper verbs (`log`/`desc`/`sh`) don't shadow kubectl's own (`logs`/`describe`/`exec`)
+- `k x <args…>` — raw kubectl (`k x apply -f`, `k x get pods -A`, …) with the kubeconfig baked in and full native completion
+- Pods match by name **substring** across namespaces (`-n` to scope); completion is entirely ours (helpers) or bridged to `kubectl __complete` (`k x`)
 - KUBECONFIG: `$K_KUBECONFIG` override, else `~/work/rf/local-config/k3s/config`
 
 *AI — unified `ai` command with multi-provider support (Ollama, Claude), per-task / per-project config, named sessions, and Tab-completion. Full docs: [docs/fish/ai/](docs/fish/ai/).*
