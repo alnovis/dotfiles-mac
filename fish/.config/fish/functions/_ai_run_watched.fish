@@ -18,6 +18,17 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     test -z "$dest"; and set dest $outfile
     set -l run_args $argv
 
+    # Reasoning sidecar: when the report has a real destination (not a temp streamed to
+    # the terminal), the model's thinking goes next to it as <base>.thinking.<ext>. Made
+    # absolute up front because _ai_run cd's into --workdir before the provider writes it
+    # — a relative path would otherwise land in the repo, not beside the report. Only the
+    # non-agentic ollama path supports it (agent runners have no such channel yet).
+    set -l sidecar ""
+    if test -n "$dest"; and test "$dest" != "(terminal)"; and not contains -- --agentic $run_args
+        set sidecar (_ai_thinking_output_path $dest)
+        string match -q '/*' -- $sidecar; or set sidecar $PWD/$sidecar
+    end
+
     set -l t0 (date +%s)
     : >$outfile
     set -l errlog (mktemp)
@@ -47,7 +58,9 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
             $label (math "round($tokens / 1000)") $etime >&2
 
         set -l n 0
-        _ai_run $run_args <$pfile 2>$errlog | tee $outfile | while read -l line
+        set -l na_args $run_args
+        test -n "$sidecar"; and set -a na_args --thinking-output $sidecar
+        _ai_run $na_args <$pfile 2>$errlog | tee $outfile | while read -l line
             set n (math $n + 1)
             if test $tty -eq 1; and test (math $n % 3) -eq 0
                 printf '\r\033[K  %s | %ds | %d lines -> %s' \
@@ -65,6 +78,15 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     else
         printf '  %s FAILED (rc %s) | %ds -> %s\n' $label "$rc" $total $dest >&2
         test -s $errlog; and cat $errlog >&2
+    end
+    # A non-empty sidecar means the model reasoned — point at it; an empty one means it
+    # didn't (or wasn't a thinking model) — drop it so no stray files accumulate.
+    if test -n "$sidecar"
+        if test -s "$sidecar"
+            printf '  ↳ reasoning -> %s\n' $sidecar >&2
+        else
+            rm -f "$sidecar"
+        end
     end
     rm -f $errlog $pfile
     return $rc

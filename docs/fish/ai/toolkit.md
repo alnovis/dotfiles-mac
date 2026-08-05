@@ -284,6 +284,27 @@ agent-runner abstraction (the `ai agent` roadmap), not a special-case wired into
 provider-based review path. Keeping `ai review` provider-only is why `pi` lives in
 `ai code` and nowhere near review.
 
+### Reasoning sidecar
+
+When a review is written to a file (`-o report.md`) and the model is a **thinking**
+model (ollama capability `thinking` — e.g. `laguna-xs-2.1`), its reasoning is saved
+next to the report as `report.thinking.md` (the verify pass likewise yields
+`report.verify.thinking.md`). The report itself stays clean — only the final review,
+never the chain-of-thought.
+
+This exists because thinking models otherwise **leak their reasoning into the report**:
+omitting the `think` field lets the model dump its chain-of-thought straight into the
+answer (prose glued onto the front of the real review). The toolkit now always sends an
+explicit `think` boolean — `true` for thinking-capable models (they reason for depth,
+but the reasoning is routed to ollama's separate `thinking` channel), `false` for the
+rest. The sidecar simply captures that separated channel instead of discarding it.
+
+- The sidecar appears only for thinking models writing to a file. Non-thinking models
+  and terminal-streamed reviews produce no sidecar (nothing is created empty).
+- A `↳ reasoning -> <path>` line is printed when one is written.
+- It is not produced on the `--agentic` path (the agent runner streams its own live
+  turn/tool trace instead).
+
 ### Deprecated: `ai gen review`
 
 Replaced by `ai review PATH`. The old name shows a yellow deprecation notice and exits non-zero.
@@ -525,6 +546,7 @@ Iterate freely — changes take effect on the next invocation. No fish reload ne
 | `<project>/.ai/sessions/<name>.jsonl` | Project session storage |
 | `~/.config/ai/sessions/.last` | Pointer to most recent global session |
 | `<project>/.ai/sessions/.last` | Pointer to most recent project session |
+| `<report>.thinking.<ext>` | Reasoning sidecar next to a review report (thinking models only) |
 | `~/.config/fish/prompts/meta-*.md` | Prompt templates (symlinked from dotfiles) |
 | `~/.cache/ai-models.json` | Local installed-models cache |
 | `~/.cache/ai-registry.json` | Ollama catalog cache |

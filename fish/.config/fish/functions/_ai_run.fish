@@ -6,7 +6,7 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
     # Provider resolution: --provider flag > config file > default (ollama)
     # Providers are auto-discovered as _ai_provider_<name> functions (see _ai_providers).
 
-    argparse 'provider=' 'model=' 'think' 'agentic' 'workdir=' 'output=' 'dry-run' -- $argv; or return 1
+    argparse 'provider=' 'model=' 'think' 'agentic' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
 
     set -l provider
     if set -q _flag_provider
@@ -25,6 +25,17 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
 
     set -l prompt (string join " " $argv)
     set -l output $_flag_output
+
+    # Reasoning sidecar. Explicit --thinking-output (from _ai_run_watched, already an
+    # absolute path) wins and the CALLER owns cleanup. Otherwise, for a direct
+    # --output on the ollama provider, derive one here and own its cleanup ourselves
+    # (covers `ai gen commit -o`, `ai … -o`). Only ollama supports the flag.
+    set -l thinking_out $_flag_thinking_output
+    set -l thinking_owned 0
+    if test -z "$thinking_out"; and test -n "$output"; and test "$provider" = ollama; and not set -q _flag_agentic
+        set thinking_out (_ai_thinking_output_path $output)
+        set thinking_owned 1
+    end
 
     set -l prev_pwd $PWD
     if set -q _flag_workdir
@@ -75,6 +86,12 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
         test -n "$_flag_model"; and set -a dispatch_args --model $_flag_model
     end
 
+    # Reasoning sidecar is an ollama-provider feature (not the agent runners, not
+    # claude which owns its own thinking). Forward it only when dispatching there.
+    if test "$dispatch" = _ai_provider_ollama; and test -n "$thinking_out"
+        set -a dispatch_args --thinking-output $thinking_out
+    end
+
     set -l rc 0
     if test $interactive -eq 1
         $dispatch --interactive $dispatch_args
@@ -88,6 +105,17 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
         # the controlling terminal and escapes an enclosing pipe (e.g. _ai_run_watched's tee).
         _ai_pipe_input "$prompt" | $dispatch $dispatch_args
         set rc $status
+    end
+
+    # Sidecar bookkeeping for the path WE derived (explicit --thinking-output is the
+    # caller's to clean). Done before restoring PWD so a workdir-relative path resolves.
+    # An empty file means the model didn't reason (or wasn't capable) — drop it.
+    if test $thinking_owned -eq 1; and test -n "$thinking_out"
+        if test -s "$thinking_out"
+            echo "  ↳ reasoning -> $thinking_out" >&2
+        else
+            rm -f "$thinking_out"
+        end
     end
 
     cd $prev_pwd
