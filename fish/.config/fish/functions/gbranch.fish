@@ -5,7 +5,8 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
         echo "Usage: gbranch [OPTIONS] [BASE]"
         echo ""
         echo "Show commits and diff stat of current branch vs base branch."
-        echo "Auto-detects base (develop/main/master) or specify manually."
+        echo "Auto-detects the nearest base among develop/main/master/release/stage"
+        echo "(override the list with \$GBRANCH_BASES) or specify manually."
         echo ""
         echo "Options:"
         echo "      --stat=N     Set stat output width (default: terminal width)"
@@ -32,19 +33,41 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
     set -l repo_name (basename $repo_root)
     set -l branch (git branch --show-current)
 
-    # Determine base branch
+    # Determine base branch: explicit arg, or the nearest long-lived branch
+    # (fewest commits base..HEAD) — a branch cut from release must not be
+    # measured against develop, or every release merge shows up as "ahead"
     set -l base
     if test (count $argv) -eq 1
         set base $argv[1]
-    else if git show-ref --verify --quiet refs/heads/develop
-        set base develop
-    else if git show-ref --verify --quiet refs/heads/main
-        set base main
-    else if git show-ref --verify --quiet refs/heads/master
-        set base master
     else
-        echo "No base branch found, specify manually: gbranch <branch>"
-        return 1
+        set -l candidates develop main master release stage
+        if set -q GBRANCH_BASES
+            set candidates $GBRANCH_BASES
+        end
+        if contains -- "$branch" $candidates
+            set base $branch
+        else
+            set -l best_count
+            for c in $candidates
+                set -l ref
+                if git show-ref --verify --quiet refs/remotes/origin/$c
+                    set ref origin/$c
+                else if git show-ref --verify --quiet refs/heads/$c
+                    set ref $c
+                else
+                    continue
+                end
+                set -l n (git rev-list --count $ref..HEAD 2>/dev/null); or continue
+                if test -z "$best_count"; or test $n -lt $best_count
+                    set best_count $n
+                    set base $c
+                end
+            end
+        end
+        if test -z "$base"
+            echo "No base branch found, specify manually: gbranch <branch>"
+            return 1
+        end
     end
 
     if test "$branch" = "$base"
