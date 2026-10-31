@@ -9,6 +9,7 @@ Give a brief summary of this file in 3-5 bullet points: what it does, how it is 
 
 # File context
 Path: <SANDBOX>/fixture/leetcode/LeetCode.scala
+Review ONLY this single file. Do not explore neighboring files.
 
 ## File: LeetCode.scala
 ```scala

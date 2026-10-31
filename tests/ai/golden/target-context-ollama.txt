@@ -43,6 +43,7 @@ Output rules:
 
 # File context
 Path: <SANDBOX>/fixture/leetcode/LeetCode.scala
+Review this file. You may briefly consult neighboring files in the parent project for context if needed.
 
 ## File: LeetCode.scala
 ```scala

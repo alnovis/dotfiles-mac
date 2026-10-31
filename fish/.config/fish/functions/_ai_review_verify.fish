@@ -1,10 +1,7 @@
 function _ai_review_verify --description "Second-opinion verify pass over first-pass review findings"
-    # Runs entirely through the provider abstraction (_ai_run) — no agent-runner
-    # coupling. The claude provider (claude -p) is agentic and reads the repo
-    # itself; ollama reasons from the embedded code. Tool grounding is a property
-    # of the provider, not of this function. (Agentic local verify, if ever wanted,
-    # belongs to a proper agent-runner abstraction — see the `ai agent` roadmap —
-    # not a pi special-case wired into review.)
+    # Runs entirely through _ai_run. Whether the verifier can read the repo is a
+    # matter of the mode (--agentic → read-only tools), not of the provider: by
+    # default every executor reasons from the embedded code alone.
     #   --provider P  --model M  --workdir DIR  --lang FULL
     #   --findings-file F   first-pass output to verify (required)
     #   --code-file F       code/diff context embedded for the verifier (optional)
@@ -41,8 +38,8 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
 FINDINGS FROM THE FIRST PASS (verify each):
 $findings"
 
-    # Embed the code the first pass saw. A tool-capable provider (claude) can also
-    # explore beyond it; a plain one (ollama) reasons from this alone.
+    # Embed the code the first pass saw. With --agentic the verifier may also explore
+    # beyond it; otherwise it reasons from this alone.
     if test -n "$_flag_code_file"; and test -f "$_flag_code_file"
         set -l code (cat $_flag_code_file | string collect)
         set payload "$payload

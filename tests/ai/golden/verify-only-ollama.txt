@@ -1,8 +1,8 @@
 Verify-only: <SANDBOX>/review.md
 Verify provider: ollama
 Verify model: default-model
-Note: no code embedded — a local verifier reasons from the findings text alone.
-  Pass --file DIFF for grounding (or use --provider claude, which reads the repo itself).
+Note: no code embedded — the verifier reasons from the findings text alone.
+  Pass --file DIFF for grounding, or --agentic to let it read the repo.
 Output: <SANDBOX>/review.verify.md
 ---
 --- dry-run: prompt that would be sent to ollama (native) ---

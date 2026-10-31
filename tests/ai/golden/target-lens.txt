@@ -58,6 +58,7 @@ Where to look first (non-exhaustive — reason beyond this list):
 
 # File context
 Path: <SANDBOX>/fixture/leetcode/LeetCode.scala
+Review ONLY this single file. Do not explore neighboring files.
 
 ## File: LeetCode.scala
 ```scala

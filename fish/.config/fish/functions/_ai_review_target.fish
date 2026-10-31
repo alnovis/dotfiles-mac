@@ -139,95 +139,70 @@ $prompt"
         set work_dir $target_dir
     end
 
-    # File payload (content + lang hint), reused by both providers when target is a file
-    set -l file_basename
-    set -l file_ext
-    set -l file_content
+    # What gets embedded is decided by the mode, never by the provider (docs/refactoring.md §6):
+    # by default the file, tree and README for every executor; with --agentic only the target
+    # file — the executor explores the rest read-only. Embedded content is a floor, not a ceiling.
+    set -l context ""
+
     if test -n "$target_file"
-        set file_basename (basename $target_file)
+        set -l file_basename (basename $target_file)
+        set -l file_ext
         if string match -q '*.*' -- $file_basename
             set file_ext (string match -r '[^.]+$' -- $file_basename)
         end
-        set file_content (cat $target_file | string collect)
-    end
+        set -l file_content (cat $target_file | string collect)
+        set -l scope_note "Review ONLY this single file. Do not explore neighboring files."
+        if set -q _flag_with_project_context
+            set scope_note "Review this file. You may briefly consult neighboring files in the parent project for context if needed."
+        end
+        set context "$scope_note
 
-    # Build provider-specific prompt. Claude reads files via workdir cd; ollama needs context embedded.
-    set -l full_prompt
-    switch $provider
-        case claude
-            if test -n "$target_file"
-                set -l scope_note "Review ONLY this single file. Do not explore neighboring files."
-                if set -q _flag_with_project_context
-                    set scope_note "Review this file. You may briefly consult neighboring files in the parent project for context if needed."
-                end
-                set full_prompt "Target file: $file_basename
-$scope_note
-
-## File contents
-```$file_ext
-$file_content
-```
-
-$prompt"
-            else
-                set full_prompt $prompt
-            end
-
-        case ollama
-            set -l context ""
-
-            if test -n "$target_file"
-                set context "$context
 ## File: $file_basename
 ```$file_ext
 $file_content
 ```
 "
-            end
+    end
 
-            # Project tree + README: always for dir targets, opt-in for file targets
-            if test -z "$target_file"; or set -q _flag_with_project_context
-                set -l tree_output (tree -a -L 4 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache|.DS_Store' $work_dir 2>/dev/null | string collect)
-                if test -n "$tree_output"
-                    set context "$context
+    # Project tree + README: dir targets, and file targets with --with-project-context
+    if not set -q _flag_agentic; and begin
+            test -z "$target_file"; or set -q _flag_with_project_context
+        end
+        set -l tree_output (tree -a -L 4 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache|.DS_Store' $work_dir 2>/dev/null | string collect)
+        if test -n "$tree_output"
+            set context "$context
 ## Project structure
 ```
 $tree_output
 ```
 "
-                end
+        end
 
-                for f in $work_dir/README.md $work_dir/readme.md $work_dir/README.rst $work_dir/README
-                    if test -f $f
-                        set -l readme_content (head -100 $f | string collect)
-                        set context "$context
+        for f in $work_dir/README.md $work_dir/readme.md $work_dir/README.rst $work_dir/README
+            if test -f $f
+                set -l readme_content (head -100 $f | string collect)
+                set context "$context
 ## README
 $readme_content
 "
-                        break
-                    end
-                end
+                break
             end
+        end
+    end
 
-            if test -n "$target_file"
-                set full_prompt "$prompt
+    set -l full_prompt
+    if test -n "$target_file"
+        set full_prompt "$prompt
 
 # File context
 Path: $target_file
 $context"
-            else
-                set full_prompt "$prompt
+    else
+        set full_prompt "$prompt
 
 # Project context
 Directory: $target_dir
 $context"
-            end
-
-        case '*'
-            set_color red
-            echo "Unknown provider: $provider"
-            set_color normal
-            return 1
     end
 
     # Verify runs only for the detailed (non-brief) review.

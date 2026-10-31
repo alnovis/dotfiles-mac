@@ -26,4 +26,15 @@ Output rules:
 - No preamble like "Here is the summary..." or "Below is..."
 - No closing remarks ("That covers the main points...")
 - Skip a section entirely (don't write "(none)") if there's nothing concrete to say
+
+# Project context
+Directory: <SANDBOX>/fixture/leetcode
+
+## Project structure
+```
+<SANDBOX>/fixture/leetcode
+├── 3546_equal_sum_grid_partition.scala
+└── LeetCode.scala
+```
+
 [exit 0]

@@ -60,12 +60,6 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -q _flag_agentic; and set -a run_args --agentic
     set -q _flag_no_think; and set -a run_args --no-think
 
-    # Weak direction: cloud review verified by a local model refutes unreliably.
-    if test "$provider" = claude; and test "$vprovider" = ollama
-        set_color yellow >&2
-        echo "Note: verifying claude findings with a local model — local verifiers refute unreliably. Consider --verify-provider claude." >&2
-        set_color normal >&2
-    end
 
     if set -q _flag_dry_run
         set_color cyan >&2; echo "--- dry-run: pass 1 (review) ---" >&2; set_color normal >&2

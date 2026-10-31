@@ -1,5 +1,7 @@
 Verify-only: <SANDBOX>/review.md
 Verify provider: claude
+Note: no code embedded — the verifier reasons from the findings text alone.
+  Pass --file DIFF for grounding, or --agentic to let it read the repo.
 Output: <SANDBOX>/review.verify.md
 ---
 --- dry-run: prompt that would be sent to claude (runner claude, profile none) ---

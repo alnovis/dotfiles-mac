@@ -44,6 +44,7 @@ Output rules:
 
 # File context
 Path: <SANDBOX>/fixture/leetcode/LeetCode.scala
+Review ONLY this single file. Do not explore neighboring files.
 
 ## File: LeetCode.scala
 ```scala

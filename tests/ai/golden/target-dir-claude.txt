@@ -39,4 +39,15 @@ Output rules:
 - Don't say "I can't tell without more context" — say what you CAN see
 - Markdown headers per section
 - If findings run long, give Critical and Important in full, then a one-line tally of held-back Nits rather than dropping them silently
+
+# Project context
+Directory: <SANDBOX>/fixture/leetcode
+
+## Project structure
+```
+<SANDBOX>/fixture/leetcode
+├── 3546_equal_sum_grid_partition.scala
+└── LeetCode.scala
+```
+
 [exit 0]

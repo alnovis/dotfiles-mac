@@ -99,48 +99,36 @@ $prompt"
 
     set -l output $_flag_output
 
-    # Build provider-specific prompt. Claude reads files via workdir cd; ollama needs context embedded.
-    set -l full_prompt
-    switch $provider
-        case claude
-            set full_prompt $prompt
+    # Tree + README are embedded for every executor: the summary is a single-shot call with
+    # no tools, so the context is all the model sees (docs/refactoring.md §6)
+    set -l context ""
 
-        case ollama
-            set -l context ""
-
-            set -l tree_output (tree -a -L 4 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache|.DS_Store' $dir 2>/dev/null | string collect)
-            if test -n "$tree_output"
-                set context "$context
+    set -l tree_output (tree -a -L 4 --noreport -I 'node_modules|target|.git|.idea|__pycache__|.scala-build|.bsp|.metals|dist|build|out|.cache|.DS_Store' $dir 2>/dev/null | string collect)
+    if test -n "$tree_output"
+        set context "$context
 ## Project structure
 ```
 $tree_output
 ```
 "
-            end
+    end
 
-            for f in $dir/README.md $dir/readme.md $dir/README.rst $dir/README
-                if test -f $f
-                    set -l readme_content (head -100 $f | string collect)
-                    set context "$context
+    for f in $dir/README.md $dir/readme.md $dir/README.rst $dir/README
+        if test -f $f
+            set -l readme_content (head -100 $f | string collect)
+            set context "$context
 ## README
 $readme_content
 "
-                    break
-                end
-            end
+            break
+        end
+    end
 
-            set full_prompt "$prompt
+    set -l full_prompt "$prompt
 
 # Project context
 Directory: $dir
 $context"
-
-        case '*'
-            set_color red
-            echo "Unknown provider: $provider"
-            set_color normal
-            return 1
-    end
 
     set -l runner_args --provider $provider --workdir $dir $model_flag
     if test -n "$output"

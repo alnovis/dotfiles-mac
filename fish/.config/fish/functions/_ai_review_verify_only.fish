@@ -8,8 +8,8 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #   --verify-output FILE explicit output (default: <review>.verify.<ext>)
     #   -o/--output FILE     alias for --verify-output here (there is no review to write)
     #   --file FILE          optional code/diff file to embed for the verifier
-    #   --agentic            passed to the verifier (claude reads the repo anyway;
-    #                        ollama goes through the agent-runner, see _ai_default_agent)
+    #   --agentic            passed to the verifier: it reads the repo read-only (claude via
+    #                        its CLI, any other provider via the runner, see _ai_default_agent)
     #   --no-think           passed to the verifier (fast pass, think:false)
     #   --lang L, --dry-run
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
@@ -52,10 +52,10 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set_color normal
     echo "Verify provider: $vprovider"
     test -n "$vmodel"; and echo "Verify model: $vmodel"
-    if test "$vprovider" = ollama; and not set -q _flag_file
+    if not set -q _flag_file; and not set -q _flag_agentic
         set_color yellow
-        echo "Note: no code embedded — a local verifier reasons from the findings text alone."
-        echo "  Pass --file DIFF for grounding (or use --provider claude, which reads the repo itself)."
+        echo "Note: no code embedded — the verifier reasons from the findings text alone."
+        echo "  Pass --file DIFF for grounding, or --agentic to let it read the repo."
         set_color normal
     end
     echo "Output: $verify_out"
