@@ -1,46 +1,51 @@
-function _ai_code --description "Run pi with Ollama for AI-assisted coding"
+function _ai_code --description "Interactive coding session with the code task's provider (via its runner)"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: ai code [OPTIONS] [FILES...]"
+        echo "Usage: ai code [OPTIONS] [ARGS...]"
         echo ""
-        echo "Run pi with Ollama in current repository."
-        echo "Default: no file edits (edit/write disabled); read + bash stay on and"
-        echo "pi prompts before each bash command interactively. -e/--edit allows edits."
-        echo "Note: not a sandbox -- bash can still touch files. Use -p at your own risk."
-        echo "Model: per-task code_model > AI_DEFAULT_MODEL > default."
+        echo "Start an interactive coding session in the current repository with the code"
+        echo "task's provider: claude → the claude CLI, any other provider → the runner"
+        echo "(config key agent: pi or opencode)."
+        echo "Default: no file edits (read profile; pi also keeps bash, prompting in the"
+        echo "session). -e/--edit allows edits. Not a sandbox: bash can still touch files."
+        echo "Provider/model: code_provider / code_model, overridable with flags."
         echo ""
         echo "Options:"
-        echo "  -e, --edit       Allow file edits (default: edits off; bash still available)"
-        echo "  --model MODEL    Override model (format: ollama/MODEL)"
-        echo "  Any other pi flags are passed through."
-        echo ""
-        echo "Files: use pi's @-syntax to add files to context, e.g. ai code @src/main.rs"
+        echo "  -e, --edit           Allow file edits"
+        echo "  --provider P         Override the provider"
+        echo "  --model M            Override the model"
+        echo "  --dry-run            Show which executor would start, then exit"
+        echo "  Any other arguments are passed to the executor (e.g. pi's @files)."
         echo ""
         echo "Examples:"
         echo "  ai code @src/main.rs                 Analyze code (no file edits)"
         echo "  ai code -e @src/main.rs              Edit mode"
-        echo "  ai code --model ollama/qwen2.5-coder:32b @src/"
+        echo "  ai code --provider claude            Coding session in the claude CLI"
         echo ""
         echo "See also: ai review, ai models, ai stop"
         return 0
     end
 
-    set -l model (_ai_default_model code ollama)
-
-    # Read-only by default (the read profile keeps bash in an attended session);
-    # -e/--edit enables the full toolset. All pi/ollama mechanics live in _ai_agent_pi.
-    set -l policy --tools read
+    # Pull out our options; everything else goes to the executor untouched
+    set -l profile read
+    set -l opts
     set -l passthrough
-    for arg in $argv
-        if test "$arg" = -e; or test "$arg" = --edit
-            set policy --tools edit
-        else
-            set -a passthrough $arg
+    set -l i 1
+    while test $i -le (count $argv)
+        switch $argv[$i]
+            case -e --edit
+                set profile edit
+            case --dry-run
+                set -a opts --dry-run
+            case --provider --model
+                set -a opts $argv[$i] $argv[(math $i + 1)]
+                set i (math $i + 1)
+            case '--provider=*' '--model=*'
+                set -a opts $argv[$i]
+            case '*'
+                set -a passthrough $argv[$i]
         end
+        set i (math $i + 1)
     end
 
-    # A user-supplied --model (in passthrough) wins over the resolved default.
-    set -l model_args --model $model
-    contains -- --model $passthrough; and set model_args
-
-    _ai_agent_pi --interactive --provider ollama $policy $model_args $passthrough
+    _ai_interactive --task code --profile $profile $opts -- $passthrough
 end

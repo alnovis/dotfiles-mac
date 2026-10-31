@@ -39,8 +39,9 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
     end
 
     # pi's --provider needs --model, so the provider travels inside the model spec
+    # A slash inside the id (huihui_ai/glm…, ycloud/…/latest) is not a provider prefix
     if test -n "$_flag_model"
-        if string match -q '*/*' -- $_flag_model; or test -z "$_flag_provider"
+        if test -z "$_flag_provider"; or string match -q -- "$_flag_provider/*" $_flag_model
             set -a args --model $_flag_model
         else
             set -a args --model $_flag_provider/$_flag_model

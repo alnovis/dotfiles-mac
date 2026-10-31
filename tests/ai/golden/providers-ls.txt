@@ -1,0 +1,8 @@
+PROVIDER     EXECUTOR                   MODELS
+ollama       native (127.0.0.1:9)       3 installed (single-shot)
+claude       claude CLI                 sonnet, opus, haiku
+ollama       via pi                     2 (--agentic, ai code)
+testcloud    via pi                     1
+
+ Reachable now? ai providers check NAME · runner: config key agent (pi)
+[exit 0]

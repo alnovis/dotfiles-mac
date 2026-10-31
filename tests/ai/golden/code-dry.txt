@@ -1,0 +1,7 @@
+would start: ollama via pi (profile read), interactive, model default-model
+  passing: @src
+would start: ollama via pi (profile edit), interactive, model default-model
+would start: claude (runner claude, profile read), interactive, model (executor default)
+would start: testcloud via pi (profile read), interactive, model cloud-model
+Provider nosuch: unknown to runner pi — configure it in pi, or pick another provider (ai providers)
+[exit 1]

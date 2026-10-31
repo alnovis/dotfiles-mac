@@ -113,6 +113,10 @@ set -g golden_cases \
     'no-model-configured|fixture|set -e AI_DEFAULT_MODEL; set -gx HOME (path dirname $HOME)/home-empty; ai hello' \
     'ollama-num-ctx|fixture|_ai_ollama_num_ctx 3000; _ai_ollama_num_ctx 600000; echo "ceiling: "(_ai_ollama_max_ctx); set -gx AI_OLLAMA_MAX_CTX 16384; echo "env ceiling: "(_ai_ollama_max_ctx); _ai_ollama_num_ctx 30000' \
     'ollama-host|fixture|set -e OLLAMA_HOST; _ai_ollama_host; set -gx OLLAMA_HOST box:11434; _ai_ollama_host; set -gx OLLAMA_HOST https://ollama.example; _ai_ollama_host' \
+    'code-dry|fixture|ai code --dry-run @src; ai code -e --dry-run; ai code --provider claude --dry-run; ai code --provider testcloud --dry-run; ai code --provider nosuch --dry-run' \
+    'chat-dry|fixture|ai chat --dry-run; ai chat other:7b --dry-run; ai chat --provider claude --dry-run; ai chat --provider testcloud --dry-run' \
+    'providers-ls|fixture|ai providers' \
+    'providers-check|fixture|ai providers check testcloud; ai providers check ollama; ai providers check nosuch' \
     'models-list|fixture|ai models' \
     'models-filter|fixture|ai models other' \
     'models-label|fixture|ai models label review-model coding; ai models label other:7b general; ai models label nosuch:1b x; jq -S . ~/.config/ai/models.json' \

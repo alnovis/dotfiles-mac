@@ -6,6 +6,10 @@ complete -c ai -f
 # Top-level subcommands
 complete -c ai -n __fish_use_subcommand -a gen -d "Generate: commit, summary"
 complete -c ai -n __fish_use_subcommand -a config -d "View or set AI config"
+complete -c ai -n __fish_use_subcommand -a providers -d "List providers / check reachability"
+complete -c ai -n "__fish_seen_subcommand_from providers; and not __fish_seen_subcommand_from ls check" -a ls -d "List providers"
+complete -c ai -n "__fish_seen_subcommand_from providers; and not __fish_seen_subcommand_from ls check" -a check -d "Is it reachable now?"
+complete -c ai -n "__fish_seen_subcommand_from providers; and __fish_seen_subcommand_from check" -x -a "(_ai_providers)"
 complete -c ai -n __fish_use_subcommand -a models -d "Manage models"
 complete -c ai -n __fish_use_subcommand -a review -d "AI code review"
 complete -c ai -n __fish_use_subcommand -a code -d "AI-assisted coding (pi)"
@@ -114,6 +118,8 @@ complete -c ai -n "__fish_seen_subcommand_from review" -F -d "File to review"
 complete -c ai -n "__fish_seen_subcommand_from code" -F
 complete -c ai -n "__fish_seen_subcommand_from code" -s e -l edit -d "Allow code editing"
 complete -c ai -n "__fish_seen_subcommand_from code" -l model -d "Override model" -x -a "(_ai_complete_models)"
+complete -c ai -n "__fish_seen_subcommand_from code" -l provider -d "Override provider" -x -a "(_ai_providers)"
+complete -c ai -n "__fish_seen_subcommand_from code" -l dry-run -d "Show which executor would start"
 
 # --- ai stop ---
 complete -c ai -n "__fish_seen_subcommand_from stop" -l server -d "Kill Ollama server entirely"
@@ -127,6 +133,8 @@ complete -c ai -n "__fish_seen_subcommand_from chat" -l global -d "Force global 
 complete -c ai -n "__fish_seen_subcommand_from chat" -l new -d "Error if session NAME already exists"
 complete -c ai -n "__fish_seen_subcommand_from chat" -l system -d "System prompt (applied at session creation)" -x
 complete -c ai -n "__fish_seen_subcommand_from chat" -l model -d "Override model" -x -a "(_ai_complete_models)"
+complete -c ai -n "__fish_seen_subcommand_from chat" -l provider -d "Override provider" -x -a "(_ai_providers)"
+complete -c ai -n "__fish_seen_subcommand_from chat" -l dry-run -d "Show which executor would start"
 
 # --- ai sessions ---
 set -l sessions_subcmds "ls show info rm rename branch archive restore edit export import clear pin unpin move search stats"

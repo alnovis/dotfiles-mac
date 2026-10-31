@@ -1,0 +1,4 @@
+testcloud: not reachable (via pi) — off-network?
+ollama: not reachable (http://127.0.0.1:9) — it is started on demand when local
+nosuch: unknown to runner pi (and not ollama / claude)
+[exit 1]

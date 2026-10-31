@@ -24,21 +24,7 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
     set -l dispatch $sel[1]
     set -l label $sel[2]
 
-    # A runner needs a model: the default ollama model for ollama, otherwise the first
-    # model the runner lists for the provider (claude: the CLI picks its own default)
-    set -l model $_flag_model
-    if test -z "$model"; and test "$dispatch" != _ai_provider_ollama; and test "$provider" != claude
-        if test "$provider" = ollama
-            set model (_ai_default_model "" ollama)
-            if test -z "$model"
-                echo "ollama: no model configured — set one with: ai models use MODEL" >&2
-                return 1
-            end
-        else
-            set -l runner (string replace _ai_agent_ '' -- $dispatch)
-            set model (_ai_agent_{$runner}_models | string match -r -g (printf '^%s\t(.+)$' (string escape --style=regex -- $provider)))[1]
-        end
-    end
+    set -l model (_ai_executor_model $dispatch $provider "$_flag_model"); or return 1
 
     set -l prompt (string join " " $argv)
     set -l output $_flag_output

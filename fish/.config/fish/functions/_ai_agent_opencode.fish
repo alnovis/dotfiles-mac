@@ -43,8 +43,9 @@ function _ai_agent_opencode --description "Runner: opencode (any provider in ope
     end
 
     set -l args --agent $agent
+    # A slash inside the id (huihui_ai/glm…) is not a provider prefix
     if test -n "$_flag_model"
-        if string match -q '*/*' -- $_flag_model; or test -z "$_flag_provider"
+        if test -z "$_flag_provider"; or string match -q -- "$_flag_provider/*" $_flag_model
             set -a args -m $_flag_model
         else
             set -a args -m $_flag_provider/$_flag_model
