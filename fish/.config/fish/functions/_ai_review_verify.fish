@@ -50,7 +50,7 @@ $code"
 
     set -l run_args --provider $provider --workdir $workdir
     test -n "$model"; and set -a run_args --model $model
-    set -q _flag_agentic; and set -a run_args --agentic
+    set -q _flag_agentic; and set -a run_args --agentic --skill ai-verify
     set -q _flag_no_think; and set -a run_args --no-think
 
     # Watched run when writing to a file with a label (shows live progress);

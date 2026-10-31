@@ -57,7 +57,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
 
     set -l run_args --provider $provider --workdir $workdir
     test -n "$model"; and set -a run_args --model $model
-    set -q _flag_agentic; and set -a run_args --agentic
+    set -q _flag_agentic; and set -a run_args --agentic --skill ai-review
     set -q _flag_no_think; and set -a run_args --no-think
 
 

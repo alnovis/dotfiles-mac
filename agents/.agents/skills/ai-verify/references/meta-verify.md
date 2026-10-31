@@ -1,0 +1,1 @@
+../../../../../fish/.config/fish/prompts/meta-verify.md

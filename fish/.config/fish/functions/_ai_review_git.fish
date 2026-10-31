@@ -367,7 +367,7 @@ $context_block"
         _ai_stage_plan "$lbl"
         set -l provider_args --provider $provider
         test -n "$model"; and set -a provider_args --model $model
-        set -q _flag_agentic; and set -a provider_args --agentic
+        set -q _flag_agentic; and set -a provider_args --agentic --skill ai-review
         set -q _flag_no_think; and set -a provider_args --no-think
         echo "$prompt" | _ai_run_watched --label "$lbl" --output $output --dest $output -- $provider_args
     else
@@ -377,7 +377,7 @@ $context_block"
             set -a provider_args --model $model
         end
         set -q _flag_dry_run; and set -a provider_args --dry-run
-        set -q _flag_agentic; and set -a provider_args --agentic
+        set -q _flag_agentic; and set -a provider_args --agentic --skill ai-review
         set -q _flag_no_think; and set -a provider_args --no-think
         echo "$prompt" | _ai_run $provider_args
     end

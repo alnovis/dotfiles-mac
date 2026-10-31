@@ -33,6 +33,8 @@ end
 
 mkdir -p $sb/home/.config/fish $sb/home/.config/ai $sb/out
 ln -s $root/fish/.config/fish/prompts $sb/home/.config/fish/prompts
+mkdir -p $sb/home/.agents
+ln -s $root/agents/.agents/skills $sb/home/.agents/skills
 # model= is shadowed by AI_DEFAULT_MODEL in every case except those that unset it
 printf '%s\n' provider=ollama model=config-model review_model=review-model commit_model=commit-model >$sb/home/.config/ai/config
 # A HOME with no ai config at all, for "nothing configured" cases

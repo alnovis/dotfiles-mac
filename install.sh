@@ -10,9 +10,10 @@ case "${1:-install}" in
       echo "Warning: brew not found, skipping Brewfile. Install Homebrew first: https://brew.sh"
     fi
     stow -v nvim kitty fish
-    # agents: opencode runner profiles for the ai toolkit. Create the target dir first so
-    # stow links each file instead of folding the whole dir into the repo.
-    mkdir -p ~/.config/opencode/agents
+    # agents: opencode runner profiles and the ai-review / ai-verify skills for the ai toolkit.
+    # Create the target dirs first so stow links each entry instead of folding a whole dir into
+    # the repo (anything other tools later put there would land in the dotfiles).
+    mkdir -p ~/.config/opencode/agents ~/.agents/skills ~/.claude/skills
     stow -v agents
     cp .gitignore_global ~/.gitignore_global
     git config --global core.excludesfile ~/.gitignore_global

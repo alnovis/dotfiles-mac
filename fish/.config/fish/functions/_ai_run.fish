@@ -7,7 +7,7 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
     # Provider resolution: --provider flag > config file > default (ollama).
     # Executor selection (claude CLI / native ollama / runner): _ai_select_executor.
 
-    argparse 'provider=' 'model=' 't/think' 'no-think' 'agentic' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
+    argparse 'provider=' 'model=' 't/think' 'no-think' 'agentic' 'skill=' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
 
     set -l provider
     if set -q _flag_provider
@@ -23,6 +23,18 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
     set -l sel (_ai_select_executor $provider $profile); or return 1
     set -l dispatch $sel[1]
     set -l label $sel[2]
+
+    # --skill NAME: the agentic procedure, injected explicitly into a runner or claude
+    # (docs/refactoring.md §6a). The native driver has no tools, so a skill means nothing there.
+    set -l skill_file
+    if set -q _flag_skill; and test "$dispatch" != _ai_provider_ollama
+        set skill_file (_ai_skill_file $_flag_skill)
+        if test -n "$skill_file"
+            set label "$label, skill $_flag_skill"
+        else
+            echo "Note: skill $_flag_skill is not installed (stow agents) — running without it" >&2
+        end
+    end
 
     set -l model (_ai_executor_model $dispatch $provider "$_flag_model"); or return 1
 
@@ -102,6 +114,7 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
         test -n "$thinking_out"; and set -a dispatch_args --thinking-output $thinking_out
     else
         set -a dispatch_args --provider $provider --tools $profile
+        test -n "$skill_file"; and set -a dispatch_args --skill $skill_file
         test $interactive -eq 0; and set -a dispatch_args --no-session
     end
 

@@ -230,14 +230,14 @@ $context"
         test -n "$model"; and set lbl "$lbl - $model"
         _ai_stage_plan "$lbl"
         set -l runner_args --provider $provider --workdir $work_dir $model_flag
-        set -q _flag_agentic; and set -a runner_args --agentic
+        set -q _flag_agentic; and set -a runner_args --agentic --skill ai-review
         set -q _flag_no_think; and set -a runner_args --no-think
         echo "$full_prompt" | _ai_run_watched --label "$lbl" --output $output --dest $output -- $runner_args
     else
         # Streaming to terminal (or dry-run): output is visible, no spinner needed.
         set -l runner_args --provider $provider --workdir $work_dir $model_flag
         set -q _flag_dry_run; and set -a runner_args --dry-run
-        set -q _flag_agentic; and set -a runner_args --agentic
+        set -q _flag_agentic; and set -a runner_args --agentic --skill ai-review
         set -q _flag_no_think; and set -a runner_args --no-think
         echo "$full_prompt" | _ai_run $runner_args
     end
