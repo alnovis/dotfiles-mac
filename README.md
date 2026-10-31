@@ -32,12 +32,13 @@ chsh -s /opt/homebrew/bin/fish
 
 ## Post-Install
 
-Fish theme (bobthefish) and Oh My Fish are installed automatically by `install.sh`. If needed manually:
+Fish plugins (bobthefish theme, sdkman-for-fish) are managed by [fisher](https://github.com/jorgebucaran/fisher) and installed automatically by `install.sh` from `fish/.config/fish/fish_plugins`. If needed manually:
 
-```bash
-curl -sL https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish
-omf install bobthefish
+```fish
+curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher update
 ```
+
+Adding a plugin with `fisher install <repo>` updates the stowed `fish_plugins`, so commit that file afterwards.
 
 LSP servers (Metals, rust-analyzer, jdtls, kotlin-language-server) are installed automatically by Mason on first Neovim launch.
 

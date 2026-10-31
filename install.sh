@@ -13,13 +13,11 @@ case "${1:-install}" in
     cp .gitignore_global ~/.gitignore_global
     git config --global core.excludesfile ~/.gitignore_global
 
-    # Oh My Fish + bobthefish theme
+    # Fish plugins via fisher (bobthefish theme, sdkman-for-fish): list in fish/.config/fish/fish_plugins
     if command -v fish >/dev/null 2>&1; then
-      if [ ! -d "$HOME/.local/share/omf" ]; then
-        echo "Installing Oh My Fish..."
-        curl -sL https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish --command 'source - --noninteractive'
-      fi
-      fish -c 'omf install bobthefish' 2>/dev/null || true
+      echo "Installing fish plugins..."
+      fish -c 'type -q fisher; or curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source; fisher update' \
+        || echo "Warning: fisher update failed, run 'fisher update' manually"
     fi
 
     echo "Done! Restart terminal."
