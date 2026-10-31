@@ -1,0 +1,10 @@
+review-model:latest → coding
+other:7b → General
+Error: nosuch:1b is not installed
+{
+  "aaaa": {
+    "label": "coding",
+    "name": "review-model:latest"
+  }
+}
+[exit 0]

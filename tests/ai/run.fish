@@ -37,6 +37,16 @@ ln -s $root/fish/.config/fish/prompts $sb/home/.config/fish/prompts
 printf '%s\n' provider=ollama model=config-model review_model=review-model commit_model=commit-model >$sb/home/.config/ai/config
 # A HOME with no ai config at all, for "nothing configured" cases
 mkdir -p $sb/home-empty
+
+# Installed-model cache (two tags of one model + another model) and model metadata, for
+# `ai models`. OLLAMA_HOST points at a dead port (see _harness_run): the cache is all it sees.
+mkdir -p $sb/home/.cache
+echo '{"models": [
+  {"name": "review-model:latest", "digest": "aaaa", "size": 5368709120},
+  {"name": "review-model:q4", "digest": "aaaa", "size": 5368709120},
+  {"name": "other:7b", "digest": "bbbb", "size": 2147483648}
+]}' >$sb/home/.cache/ai-models.json
+echo '{"bbbb": {"name": "other:7b", "label": "coding"}}' >$sb/home/.config/ai/models.json
 cp $root/tests/ai/fixtures/review.md $sb/review.md
 
 # pi config for the runner paths: ollama, plus a cloud provider on a dead address so the
@@ -102,7 +112,11 @@ set -g golden_cases \
     'config-status-model-key|fixture|set -e AI_DEFAULT_MODEL; ai config status' \
     'no-model-configured|fixture|set -e AI_DEFAULT_MODEL; set -gx HOME (path dirname $HOME)/home-empty; ai hello' \
     'ollama-num-ctx|fixture|_ai_ollama_num_ctx 3000; _ai_ollama_num_ctx 600000; echo "ceiling: "(_ai_ollama_max_ctx); set -gx AI_OLLAMA_MAX_CTX 16384; echo "env ceiling: "(_ai_ollama_max_ctx); _ai_ollama_num_ctx 30000' \
-    'ollama-host|fixture|_ai_ollama_host; set -gx OLLAMA_HOST box:11434; _ai_ollama_host; set -gx OLLAMA_HOST https://ollama.example; _ai_ollama_host' \
+    'ollama-host|fixture|set -e OLLAMA_HOST; _ai_ollama_host; set -gx OLLAMA_HOST box:11434; _ai_ollama_host; set -gx OLLAMA_HOST https://ollama.example; _ai_ollama_host' \
+    'models-list|fixture|ai models' \
+    'models-filter|fixture|ai models other' \
+    'models-label|fixture|ai models label review-model coding; ai models label other:7b general; ai models label nosuch:1b x; jq -S . ~/.config/ai/models.json' \
+    'model-norm|fixture|_ai_model_norm qwen3; _ai_model_norm qwen3:30b; _ai_model_norm user/model; _ai_model_digest review-model; _ai_model_digest review-model:q4; _ai_model_digest missing; echo "missing rc=$status"' \
     'resolvers|fixture|echo providers: (_ai_providers); echo agents: (_ai_agents); for t in (_ai_tasks); set -l p (_ai_default_provider $t); echo "$t: $p / "(_ai_default_model $t $p); end'
 
 # Help surfaces: must exit 0 and print a usage line
@@ -121,7 +135,7 @@ function _harness_run --argument-names dir cmd
     # stdin from /dev/null: no case may depend on the terminal it was started from
     # AI_NONINTERACTIVE: never ask on /dev/tty (the fallback prompt), even from a terminal
     env -i HOME=$sb/home PATH=(string join : $PATH) TERM=dumb LANG=en_US.UTF-8 AI_DEFAULT_MODEL=default-model \
-        AI_NONINTERACTIVE=1 PI_OFFLINE=1 \
+        AI_NONINTERACTIVE=1 PI_OFFLINE=1 OLLAMA_HOST=127.0.0.1:9 \
         fish --no-config -c "set -p fish_function_path $fn_dir; cd $sb/$dir; and begin; $cmd; end; echo \"[exit \$status]\"" \
         </dev/null 2>&1 \
         | SB=$sb SB_SHORT=(string replace -r '^/private' '' -- $sb) \

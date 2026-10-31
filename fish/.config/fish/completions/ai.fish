@@ -50,28 +50,26 @@ complete -c ai -n "__fish_seen_subcommand_from config" -l project -d "Write/clea
 complete -c ai -n "__fish_seen_subcommand_from config; and __fish_seen_subcommand_from move" -l to -d "Target layer" -x -a "project global"
 
 # --- ai models ---
-set -l models_subcmds "list install rm use update info prune running label unlabel labels"
+set -l models_subcmds "list info try keep drop search label use install rm update prune running"
 
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a list -d "Show available models"
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a install -d "Download a model"
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a rm -d "Remove a model"
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a use -d "Set default model"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a list -d "Installed models"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a info -d "Details (registry if not installed)"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a try -d "Pull as a trial"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a keep -d "End a trial, keep the model"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a drop -d "Remove a model and its metadata"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a search -d "Search ollama.com"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a label -d "Group a model"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a use -d "Set default / task model"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a install -d "Pull a model"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a rm -d "Remove one tag"
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a update -d "Update all models"
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a info -d "Show model details"
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a prune -d "Clean up disk"
 complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a running -d "Show running models"
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a label -d "Set a grouping label"
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a unlabel -d "Remove a model's label"
-complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -a labels -d "Show model -> label map"
+complete -c ai -n "__fish_seen_subcommand_from models; and not __fish_seen_subcommand_from $models_subcmds" -l provider -x -a "(_ai_providers; echo all)" -d "Models of a provider"
 
-# ai models list flags
-complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from list" -l all -d "Show all models"
-
-# ai models install/rm/use/info/label/unlabel — complete with installed model names
-complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from rm use info label unlabel" -x -a "(_ai_complete_models)"
-
-# ai models label --seed
-complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from label" -l seed -d "Auto-fill labels from name heuristics"
+# installed model names
+complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from rm use info label keep drop" -x -a "(_ai_complete_models)"
+complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from try drop" -s y -l yes -d "Don't ask for confirmation"
 
 # ai models use — TASK as the first positional (models come from the group above)
 function __ai_models_use_first_arg
@@ -80,7 +78,7 @@ function __ai_models_use_first_arg
 end
 complete -c ai -n __ai_models_use_first_arg -x -a "(_ai_tasks; echo all)" -d task
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -l task -d "Set per-task instead of global" -x -a "(_ai_tasks; echo all)"
-complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -l project -d "Write to project .ai/config (requires --task)"
+complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -l project -d "Write to project .ai/config"
 complete -c ai -n "__fish_seen_subcommand_from models; and __fish_seen_subcommand_from use" -s h -l help -d "Show 'models use' help"
 
 # --- ai review (unified: target mode and git mode) ---

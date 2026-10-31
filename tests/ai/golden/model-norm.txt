@@ -1,0 +1,7 @@
+qwen3:latest
+qwen3:30b
+user/model:latest
+aaaa
+aaaa
+missing rc=1
+[exit 0]

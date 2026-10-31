@@ -1,4 +1,4 @@
-function _ai_models --description "Manage Ollama models: list, install, remove, set default"
+function _ai_models --description "Manage models: list installed, info, try/keep/drop, search, label, use"
     if contains -- --help $argv; or contains -- -h $argv
         # Subcommands with their own detailed help handle it themselves.
         if test "$argv[1]" = use
@@ -7,38 +7,37 @@ function _ai_models --description "Manage Ollama models: list, install, remove, 
         end
         echo "Usage: ai models [COMMAND] [ARGS]"
         echo ""
-        echo "Manage Ollama models."
+        echo "Manage models. Without a command: the installed ollama models (no network)."
         echo ""
         echo "Commands:"
-        echo "  (none), list [FILTER]  Show models that fit in RAM (filter by name)"
-        echo "  list --all [FILTER]    Show all models including oversized"
-        echo "  install MODEL          Download a model"
-        echo "  rm MODEL               Remove an installed model"
-        echo "  use [TASK] MODEL       Set model: global default, or per-task"
+        echo "  (none), list [FILTER]  Installed models: one row per model, grouped by label,"
+        echo "                         with size, capabilities, the tasks using it, trials"
+        echo "  --provider P           Models of a runner provider (P=all: every provider)"
+        echo "  info NAME[:TAG]        Details; for a model not installed, from the ollama"
+        echo "                         registry (download size, RAM fit, params, vision, …)"
+        echo "  try NAME:TAG           Show info, confirm, pull, mark as a trial"
+        echo "  keep NAME              End a trial, keep the model"
+        echo "  drop NAME              Remove a model (all its tags) and its metadata"
+        echo "  search [QUERY]         Open ollama.com search (ollama has no search API)"
+        echo "  label NAME LABEL       Group a model (LABEL general clears it)"
+        echo "  use [TASK] MODEL       Set the default model, or a task's model"
         echo "                         (TASK: chat/code/review/verify/commit/summary/all)"
+        echo "  install MODEL          Pull a model (no trial mark)"
+        echo "  rm MODEL               Remove one tag"
         echo "  update                 Update all installed models to latest"
-        echo "  info MODEL             Show model details (params, quant, context)"
         echo "  prune                  Clean up partial downloads and orphaned blobs"
         echo "  running                Show currently running models"
-        echo "  label MODEL LABEL      Set a grouping label (--seed to auto-fill from names)"
-        echo "  unlabel MODEL          Remove a model's label (back to General)"
-        echo "  labels                 Show the model -> label map"
         echo ""
         echo "Examples:"
-        echo "  ai models                              Show models that fit"
-        echo "  ai models list --all                   Show all"
-        echo "  ai models list coder                   Filter by 'coder'"
-        echo "  ai models install qwen3:32b            Download model"
-        echo "  ai models use qwen2.5-coder:32b        Set global default"
-        echo "  ai models use verify north-mini-code-1.0   Set the verify task's model"
-        echo "  ai models use review,code qwen3.5:27b  Set several tasks at once"
-        echo "  ai models rm codellama:13b             Remove model"
-        echo "  ai models update                       Update all models"
-        echo "  ai models info qwen2.5-coder:32b       Show model details"
-        echo "  ai models prune                        Clean up disk"
-        echo "  ai models label --seed                 Auto-label from name heuristics"
-        echo "  ai models label ornith:9b coding       Group ornith under 'Coding'"
-        echo "  ai models labels                       Show all labels"
+        echo "  ai models                              Installed models"
+        echo "  ai models coder                        Only names containing 'coder'"
+        echo "  ai models --provider litellm           Models the runner has for litellm"
+        echo "  ai models search qwen                  Find models on ollama.com"
+        echo "  ai models info qwen3:30b               Will it fit? (before downloading)"
+        echo "  ai models try qwen3:30b                Pull it as a trial"
+        echo "  ai models keep qwen3:30b               It's a keeper"
+        echo "  ai models label qwen3:30b coding       Group it under Coding"
+        echo "  ai models use review qwen3:30b         Use it for reviews"
         return 0
     end
 
@@ -53,30 +52,36 @@ function _ai_models --description "Manage Ollama models: list, install, remove, 
     end
 
     switch "$cmd"
-        case install pull
-            _ai_models_install $argv[2..]
+        case list ''
+            _ai_models_list $argv[2..]
+        case '--provider*'
+            _ai_models_list $argv
+        case info show
+            _ai_models_info $argv[2..]
+        case try
+            _ai_models_try $argv[2..]
+        case keep
+            _ai_models_keep $argv[2..]
+        case drop
+            _ai_models_drop $argv[2..]
+        case search
+            _ai_models_search $argv[2..]
+        case label
+            _ai_models_label $argv[2..]
         case use
             _ai_models_use $argv[2..]
+        case install pull
+            _ai_models_install $argv[2..]
         case rm remove
             _ai_models_rm $argv[2..]
         case update
             _ai_models_update
-        case info show
-            _ai_models_info $argv[2..]
         case prune cleanup
             _ai_models_prune
         case running ps
             _ai_models_running
-        case label
-            _ai_models_label $argv[2..]
-        case unlabel
-            _ai_models_unlabel $argv[2..]
-        case labels
-            _ai_models_labels
-        case list ''
-            _ai_models_list $argv[2..]
         case '*'
-            # Treat unknown command as filter for list
+            # Anything else filters the installed list
             _ai_models_list $argv
     end
 end

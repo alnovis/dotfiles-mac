@@ -1,329 +1,111 @@
-function _ai_models_list --description "List available Ollama models"
-    set -l filter
-    set -l show_all 0
-
-    # Parse args
-    for arg in $argv
-        if test "$arg" = "--all" -o "$arg" = "-a"
-            set show_all 1
-        else
-            set filter (string lower $arg)
-        end
+function _ai_models_list --description "Installed ollama models (no network): one row per model, grouped by label; --provider P: a runner provider's models"
+    # docs/refactoring.md §7a. Tags sharing a digest are one model (one row, one size).
+    # Per-task resolution lives in `ai config status`; discovery on ollama.com (`ai models search`).
+    argparse 'provider=' -- $argv; or return 1
+    if set -q _flag_provider
+        _ai_models_list_provider $_flag_provider
+        return
     end
+    set -l filter (string lower -- "$argv[1]")
 
-    # RAM limit for filtering
-    set -l ram_bytes (sysctl -n hw.memsize 2>/dev/null; or echo 0)
-    set -l ram_gb (math -s0 "$ram_bytes / 1073741824")
-
-    # Fetch registry
-    _ai_fetch_registry
-    set -l reg_status $status
-
-    # Fetch local
     _ai_fetch_local
-    set -l local_status $status
-
-    # Status line
-    if test $reg_status -eq 1 -a $local_status -eq 1
-        set_color yellow
-        echo "[offline mode - cached data]"
-        set_color normal
-        echo ""
-    else if test $reg_status -eq 1
-        set_color yellow
-        echo "[registry offline - cached catalog]"
-        set_color normal
-        echo ""
-    else if test $reg_status -eq 2
-        set_color red
-        echo "[registry unavailable - no cache]"
-        set_color normal
-        echo ""
-    end
-
-    set -l installed (_ai_get_installed_names)
-
-    set -l registry_cache ~/.cache/ai-registry.json
-    set -l local_cache ~/.cache/ai-models.json
-
-    # Read registry
-    set -l registry_json
-    if test -f $registry_cache
-        set registry_json (cat $registry_cache)
-    end
-
-    if test -z "$registry_json"
-        echo "No model catalog available."
-        echo "Browse: https://ollama.com/library"
+    set -l fetch $status
+    set -l cache ~/.cache/ai-models.json
+    if test $fetch -eq 2
+        echo "No installed models known (ollama not reachable, no cache)." >&2
         return 1
     end
-
-    # Extract registry models: name|size
-    set -l models (echo "$registry_json" | jq -r '.models[] | "\(.name)|\(.size)"' 2>/dev/null)
-
-    # Merge installed models not in registry
-    set -l registry_names (echo "$registry_json" | jq -r '.models[].name' 2>/dev/null)
-    set -l local_json
-    if test -f $local_cache
-        set local_json (cat $local_cache)
+    if test $fetch -eq 1
+        set_color yellow
+        echo "[ollama not reachable — showing the cached list]"
+        set_color normal
+        echo
     end
-    if test -n "$local_json"
-        set -l local_models (echo "$local_json" | jq -r '.models[] | "\(.name)|\(.size)"' 2>/dev/null)
-        for lm in $local_models
-            set -l lname (string split "|" $lm)[1]
-            if not contains -- $lname $registry_names
-                set -a models $lm
+
+    # What the default and the tasks point at (explicit task models only), canonical names
+    set -l uses
+    set -l dm (_ai_default_model "" ollama)
+    test -n "$dm"; and set -a uses (_ai_model_norm $dm)"|default"
+    for t in (_ai_tasks)
+        test (_ai_default_provider $t) = ollama; or continue
+        set -l m (_ai_config_read "$t"_model)
+        test -n "$m"; and set -a uses (_ai_model_norm $m)"|$t"
+    end
+
+    set -l rows
+    set -l n_models 0
+    set -l n_tags 0
+    set -l total_bytes 0
+    for r in (jq -r '.models | group_by(.digest)[] | [.[0].digest, (.[0].size | tostring), (map(.name) | join(","))] | @tsv' $cache)
+        set -l f (string split \t -- $r)
+        set -l digest $f[1]
+        set -l size $f[2]
+        set -l tags (string split , -- $f[3])
+        if test -n "$filter"; and not string match -q -- "*$filter*" (string lower -- $tags)
+            continue
+        end
+        set n_models (math $n_models + 1)
+        set n_tags (math $n_tags + (count $tags))
+        set total_bytes (math $total_bytes + $size)
+
+        set -l label (_ai_models_meta_get $digest label)
+        test -n "$label"; or set label general
+        set -l caps (_ai_model_caps $tags[1] $digest | string split ' ')
+        set -l capstr (for c in tools thinking vision; contains -- $c $caps; and echo $c; end | string join ,)
+        set -l used (for u in $uses; set -l p (string split '|' -- $u); contains -- $p[1] $tags; and echo $p[2]; end | string join ', ')
+        set -l trial (_ai_models_meta_get $digest trial)
+        set -l trialstr
+        test -n "$trial"; and set trialstr "trial, "(_ai_relative_time $trial | string replace ' ago' '')
+
+        # Display name: the first tag, then the other tags of the same model
+        set -l name $tags[1]
+        set -l base (string split -m1 : -- $tags[1])[1]
+        for x in $tags[2..]
+            if string match -q -- "$base:*" $x
+                set name "$name, :"(string split -m1 : -- $x)[2]
+            else
+                set name "$name, $x"
             end
         end
+
+        set -a rows (string join \t -- $label $name (math -s1 "$size / 1073741824")" GB" "$capstr" "$used" "$trialstr")
     end
 
-    # Sort
-    set models (for m in $models; echo $m; end | sort)
-
-    # Apply filter
-    if test -n "$filter"
-        set models (for m in $models; echo $m | string match -i "*$filter*"; end)
-    end
-
-    if test (count $models) -eq 0
-        if test -n "$filter"
-            echo "No models matching '$filter'"
-        else
-            echo "No models in catalog"
-        end
+    if test $n_models -eq 0
+        test -n "$filter"; and echo "No installed model matches '$filter'"; or echo "No installed models"
         return 0
     end
 
-    # RAM/size filter -> collect entries that will be displayed
-    set -l total (count $models)
-    set -l hidden 0
-    set -l installed_count 0
-    set -l disp_entries
+    # Name column: as wide as the longest name, within limits
+    set -l name_col 20
+    for r in $rows
+        set -l w (string length -- (string split \t -- $r)[2])
+        test $w -gt $name_col; and set name_col $w
+    end
+    test $name_col -gt 46; and set name_col 46
 
-    for entry in $models
-        set -l parts (string split "|" $entry)
-        set -l name $parts[1]
-        set -l size_bytes $parts[2]
-
-        # Skip unknown size
-        if test -z "$size_bytes"; or test "$size_bytes" = "0"; or test "$size_bytes" = null
-            set hidden (math $hidden + 1)
-            continue
-        end
-
-        # RAM filter: skip oversized unless --all or installed
-        set -l is_installed 0
-        if contains -- $name $installed
-            set is_installed 1
-            set installed_count (math $installed_count + 1)
-        end
-
-        if test $show_all -eq 0
-            set -l size_gb_raw (math -s0 "$size_bytes / 1073741824")
-            if test $size_gb_raw -gt $ram_gb; and test $is_installed -eq 0
-                set hidden (math $hidden + 1)
-                continue
+    set -l fmt "   %-"$name_col"s %8s  %-21s %-16s %s\n"
+    printf $fmt Model Size Capabilities "Used for" ""
+    set -l groups (for r in $rows; string split -f1 \t -- $r; end | sort -u | string match -v general)
+    contains -- general (for r in $rows; string split -f1 \t -- $r; end); and set -a groups general
+    for g in $groups
+        echo " "(string sub -l 1 -- $g | string upper)(string sub -s 2 -- $g)":"
+        for r in (printf '%s\n' $rows | string match -- (printf '%s\t*' $g) | sort -t \t -k2)
+            set -l f (string split \t -- $r)
+            set -l name $f[2]
+            if test (string length -- $name) -gt $name_col
+                set name (string sub -l (math $name_col - 1) -- $name)"~"
             end
-        end
-
-        set -a disp_entries $entry
-    end
-
-    set -l shown (count $disp_entries)
-
-    # Group by label: general = unlabeled; every other label is its own group.
-    set -l labeled
-    set -l group_names
-    for entry in $disp_entries
-        set -l name (string split "|" $entry)[1]
-        set -l label (_ai_model_label $name)
-        test -z "$label"; and set label general
-        set -a labeled "$label"\t"$entry"
-        if test "$label" != general; and not contains -- $label $group_names
-            set -a group_names $label
-        end
-    end
-    # Labeled groups alphabetical; General is printed last, separately.
-    if test (count $group_names) -gt 0
-        set group_names (printf '%s\n' $group_names | sort)
-    end
-
-    # Auto-width for the Model column: min 26, grow to the longest name, but never
-    # so wide that Size/Status/Used-for run off the terminal (then truncate names).
-    set -l min_name 26
-    set -l max_name 0
-    for entry in $disp_entries
-        set -l n (string length -- (string split "|" $entry)[1])
-        test $n -gt $max_name; and set max_name $n
-    end
-    set -l term_cols 80
-    if set -q COLUMNS; and test -n "$COLUMNS"; and test "$COLUMNS" -gt 0 2>/dev/null
-        set term_cols $COLUMNS
-    else
-        set -l tc (tput cols 2>/dev/null)
-        test -n "$tc"; and set term_cols $tc
-    end
-    # Reserve for prefix(5) + size(10) + status(11) + "Used for" room (~16).
-    set -l name_max (math "$term_cols - 42")
-    test $name_max -lt $min_name; and set name_max $min_name
-    set -l name_col $max_name
-    test $name_col -lt $min_name; and set name_col $min_name
-    test $name_col -gt $name_max; and set name_col $name_max
-
-    # Active selection (per-task resolution)
-    _ai_print_active_selection
-
-    # Header + separator sized to the table
-    set -l sep (string repeat -n (math "$name_col + 36") -- -)
-    set_color cyan
-    printf "     %-"$name_col"s %9s  %-9s  %s\n" "Model" "Size" "Status" "Used for"
-    set_color normal
-    echo " $sep"
-
-    # Print labeled groups (alphabetical), then General last.
-    for g in $group_names
-        set -l entries
-        for l in $labeled
-            set -l lp (string split \t $l)
-            test "$lp[1]" = "$g"; and set -a entries $lp[2]
-        end
-        set -l title (string upper (string sub -l 1 -- $g))(string sub -s 2 -- $g)
-        _ai_print_group $title $name_col $installed -- $entries
-    end
-    set -l gen_entries
-    for l in $labeled
-        set -l lp (string split \t $l)
-        test "$lp[1]" = general; and set -a gen_entries $lp[2]
-    end
-    if test (count $gen_entries) -gt 0
-        _ai_print_group General $name_col $installed -- $gen_entries
-    end
-
-    echo " $sep"
-
-    # Footer
-    echo ""
-    echo " $installed_count installed, $shown shown, $total available"
-    if test $hidden -gt 0
-        set_color yellow
-        echo " $hidden models hidden (> $ram_gb GB RAM or unknown size) - use --all to show"
-        set_color normal
-    end
-    if test -n "$filter"
-        echo " Filter: $filter"
-    end
-    echo ""
-    echo " Install: ai models install MODEL"
-    echo " Browse:  https://ollama.com/library"
-end
-
-function _ai_print_group --argument-names group_name name_col
-    set -l args $argv[3..]
-    set -l default_model (set -q AI_DEFAULT_MODEL; and echo $AI_DEFAULT_MODEL; or echo "")
-
-    # Split: installed names before --, model entries after --
-    set -l installed_names
-    set -l entries
-    set -l past_sep 0
-    for arg in $args
-        if test "$arg" = "--"
-            set past_sep 1
-            continue
-        end
-        if test $past_sep -eq 0
-            set -a installed_names $arg
-        else
-            set -a entries $arg
+            printf $fmt $name $f[3] $f[4] $f[5] $f[6]
         end
     end
 
-    set_color cyan
-    echo " $group_name:"
-    set_color normal
-
-    for entry in $entries
-        set -l parts (string split "|" $entry)
-        set -l name $parts[1]
-        set -l size_bytes $parts[2]
-        set -l size_str (_ai_format_size $size_bytes)
-
-        set -l is_installed (contains -- $name $installed_names; and echo 1; or echo 0)
-        set -l is_default 0
-        if test "$name" = "$default_model"
-            set is_default 1
-        end
-
-        # Arrow for default, space otherwise
-        if test $is_default -eq 1
-            set_color yellow
-            printf " > "
-            set_color normal
-        else
-            printf "   "
-        end
-
-        # Marker for installed
-        if test "$is_installed" = 1
-            set_color green
-            printf "* "
-            set_color normal
-        else
-            printf "  "
-        end
-
-        # Truncate over-long names so Size/Status stay aligned.
-        set -l disp_name $name
-        if test (string length -- $name) -gt $name_col
-            set disp_name (string sub -l (math "$name_col - 1") -- $name)"~"
-        end
-
-        # Name and size (size right-aligned)
-        printf "%-"$name_col"s %9s" $disp_name $size_str
-
-        # Status (fixed-width slot so "Used for" column lines up)
-        if test "$is_installed" = 1
-            set_color green
-            printf "  %-9s" "installed"
-            set_color normal
-        else
-            printf "  %-9s" ""
-        end
-
-        # Per-task tags (which task(s) resolve to this model)
-        set -l tags (_ai_model_tags $name)
-        if test -n "$tags"
-            printf "  "
-            set_color yellow
-            printf "%s" $tags
-            set_color normal
-        end
-
-        echo
-    end
-end
-
-function _ai_print_active_selection --description "Header showing resolved provider/model per task"
-    set_color cyan
-    echo " Active selection:"
-    set_color normal
-
-    set -l labels default (_ai_tasks)
-    for t in $labels
-        set -l p
-        set -l m
-        if test "$t" = default
-            set p (_ai_default_provider)
-            set m (_ai_default_model "" $p)
-        else
-            set p (_ai_default_provider $t)
-            set m (_ai_default_model $t $p)
-        end
-
-        if test -n "$m"
-            printf "   %-9s %s / %s\n" "$t:" $p $m
-        else
-            printf "   %-9s %s (provider default)\n" "$t:" $p
-        end
-    end
     echo
+    set -l models_word models
+    test $n_models -eq 1; and set models_word model
+    set -l tags_word tags
+    test $n_tags -eq 1; and set tags_word tag
+    echo " $n_models $models_word ($n_tags $tags_word), "(math -s1 "$total_bytes / 1073741824")" GB on disk"
+    echo " Details: ai models info NAME · try one: ai models try NAME:TAG · find: ai models search QUERY"
+    echo " Per-task models: ai config status"
 end

@@ -75,8 +75,7 @@ function _ai_models_use --description "Set the Ollama model — global default o
 
     # ---- Default model: must be an installed ollama model; config key `model` ----
     _ai_fetch_local
-    set -l installed (_ai_get_installed_names)
-    if not contains -- $model $installed
+    if test -z "$(_ai_model_digest $model)"
         set_color red
         echo "Error: model '$model' is not installed" >&2
         set_color normal
