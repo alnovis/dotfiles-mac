@@ -253,7 +253,7 @@ The working directory is the file's parent, or the directory itself.
 
 A lens injects a specialist checklist after the base review prompt. It says *where to look*; the
 finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
-(`--lens crypto,logic-bug`) and work in both modes. 15 ship today:
+(`--lens crypto,logic-bug`) and work in both modes. 18 ship today:
 
 | Group | Lens | Hunts for |
 |---|---|---|
@@ -261,11 +261,14 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | | `access-control` | IDOR/BOLA, missing authorization checks, privilege escalation, mass assignment, tenant leakage |
 | | `logic-bug` | TOCTOU, concurrency on half-initialized state, overflow/narrowing, state-machine confusion |
 | | `deserialization` | Untrusted-input deserialization leading to RCE (JVM: `ObjectInputStream`, Jackson default typing, SnakeYAML, …) |
+| | `injection` | SQL/shell built from input, XXE, path traversal / Zip-Slip, CRLF and log forging, ReDoS |
+| | `ssrf` | Outbound fetches with a caller-controlled URL; redirects, DNS rebinding, deny-list bypasses |
+| | `sensitive-data` | Secrets and PII in logs (incl. `toString` of DTOs), stack traces to clients, weak password storage, exposed actuator routes |
 | Quality | `documentation` | Docs, comments and examples that drift from the code |
 | | `reactive` | Blocking a non-blocking pipeline, lost signals, unbounded buffers (Reactor, reactive Kafka) |
 | | `resource-leak` | Handles not released on every path, especially the error path |
 | | `error-handling` | Swallowed or mislabeled failures, panics on recoverable input |
-| | `k8s-manifest` | Probes, limits, image tags, secrets in k8s / jkube YAML |
+| | `k8s-manifest` | Probes, limits, image tags, secrets, privileged / host escape hatches in k8s / jkube YAML |
 | Rust | `rust-unsafe` | UB and broken safety invariants behind `unsafe`, unsound safe APIs |
 | | `rust-async` | Lock across `.await`, blocking the executor, dropped tasks |
 | | `rust-ownership` | `Rc` cycles, runtime borrow panics, Drop order, needless allocations |

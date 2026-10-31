@@ -9,5 +9,7 @@ Where to look first (non-exhaustive — reason beyond this list):
 - Secret value inline in `env` or a ConfigMap instead of a `Secret` referenced via `secretKeyRef`.
 - `env` fieldRef/resourceFieldRef pointing at a field that doesn't exist, or a `valueFrom` key absent from the referenced ConfigMap/Secret.
 - No `securityContext` (`runAsNonRoot`, `readOnlyRootFilesystem`) on a service reachable by untrusted input.
+- Escape hatches: `privileged: true`, `allowPrivilegeEscalation` not false, added capabilities, `hostPath`, `hostNetwork`/`hostPID` — a compromised pod owns the node.
+- A committed `Secret` with `data:`/`stringData:` values — base64 is encoding, not encryption; a sealed-secret or external-secrets reference is fine.
 - StatefulSet `volumeClaimTemplate` / update-strategy mismatch; `replicas > 1` for a stateful service with no PodDisruptionBudget.
 - Hardcoded namespace or cluster-specific host that breaks in another environment.

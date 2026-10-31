@@ -12,6 +12,9 @@ Security lenses (adapted from VVAH — see Attribution):
 - `access-control` — missing authorization / ownership checks (IDOR, BOLA, privilege escalation)
 - `logic-bug` — ordering, concurrency, and edge-case flaws with no single grep signature
 - `deserialization` — untrusted-input deserialization leading to RCE (JVM-focused)
+- `injection` — input reaching an interpreter unseparated: SQL, shell, XXE, path traversal, CRLF / log forging, ReDoS
+- `ssrf` — outbound requests whose URL, host or port the caller controls
+- `sensitive-data` — secrets, PII or internals reaching logs, responses, URLs or unprotected storage
 
 Quality lenses (original to this repo — general correctness / maintainability):
 - `documentation` — docs, comments, and examples that drift from what the code does
@@ -38,7 +41,7 @@ files: a one-line framing, a `HARD GATE:` paragraph, then a
 ## Attribution
 
 The **security** lenses (`crypto`, `access-control`, `logic-bug`,
-`deserialization`) are adapted from Visa's Vulnerability Agentic Harness (VVAH),
+`deserialization`, `injection`, `ssrf`, `sensitive-data`) are adapted from Visa's Vulnerability Agentic Harness (VVAH),
 specifically its detection skills `vvaharness/skills/<name>/SKILL.md` (before
 v1.5.0 they were the `SPECIALIST_HINTS` in `vvaharness/lang/hints.py`). The
 sibling sweep and the absence rule in `meta-review*.md` and the `ai-review`
@@ -47,8 +50,13 @@ skill are adapted from its `sibling-instances` and `code-exploration` skills.
 - Source: https://github.com/visa/visa-vulnerability-agentic-harness
 - License: Apache License 2.0, © 2026 Visa, Inc.
 
-Wording has been condensed and re-framed for a general code-review command; the
-hunting checklists retain VVAH's structure and item set.
+Wording has been condensed and re-framed for a general code-review command. The
+first four retain VVAH's structure and item set; `injection`, `ssrf` and
+`sensitive-data` (v1.5 skills) keep its hard gates, with the checklists cut down
+and retargeted at JVM / Rust stacks (`sensitive-data` also takes the
+secrets-in-logs class of VVAH's `log-injection`, and `injection` its log forging).
+The two security items of `k8s-manifest` (escape hatches, committed `Secret`
+data) come from VVAH's `iac` skill.
 
 The **quality** lenses (`documentation`, `reactive`, `resource-leak`,
 `error-handling`, `k8s-manifest`), the **Rust** lenses (`rust-unsafe`,
