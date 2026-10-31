@@ -1,5 +1,6 @@
 function _ai_relative_time --description "Format ISO8601 timestamp as 'Nh ago' / 'Nd ago' / date" --argument-names ts
-    set -l then (date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s 2>/dev/null)
+    # -u: the timestamp is UTC ("…Z"); without it BSD date parses it as local time
+    set -l then (date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$ts" +%s 2>/dev/null)
     if test -z "$then"
         echo "?"
         return
