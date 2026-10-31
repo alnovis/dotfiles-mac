@@ -2,7 +2,7 @@ Project: leetcode
 Provider: ollama
 Language: English
 ---
---- dry-run: prompt that would be sent to ollama ---
+--- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your entire response in English.
 
 Generate a project summary for the codebase below. Audience: a developer new to the project who needs to know what it is and how to start working with it.

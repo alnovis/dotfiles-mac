@@ -26,13 +26,13 @@ function _ai_code --description "Run pi with Ollama for AI-assisted coding"
 
     set -l model (_ai_default_model code ollama)
 
-    # Read-only by default (block edit/write; bash stays on for the attended session);
+    # Read-only by default (the read profile keeps bash in an attended session);
     # -e/--edit enables the full toolset. All pi/ollama mechanics live in _ai_agent_pi.
-    set -l policy --exclude-tools edit,write
+    set -l policy --tools read
     set -l passthrough
     for arg in $argv
         if test "$arg" = -e; or test "$arg" = --edit
-            set policy --edit
+            set policy --tools edit
         else
             set -a passthrough $arg
         end

@@ -2,7 +2,7 @@ Project: leetcode
 Provider: claude
 Language: English
 ---
---- dry-run: prompt that would be sent to claude ---
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 IMPORTANT: Write your entire response in English.
 
 You are a senior software engineer doing a project review for the project shown below. Audience: the project's author or maintainer — they know the basics, you should give signal not noise.

@@ -1,0 +1,2 @@
+testcloud unreachable (via pi) — off-network? Rerun with --provider ollama
+[exit 1]

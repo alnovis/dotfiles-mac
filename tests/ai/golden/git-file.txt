@@ -9,7 +9,7 @@ Changes (d6f255bd1edf7482bb244216cdcfd69dee4c1e9f..HEAD):
  Brewfile | 192 +++++++++++++++++++++++++++++++++++++++++++++++++--------------
  1 file changed, 149 insertions(+), 43 deletions(-)
 Context window: 185 lines across 1 files (budget 2000)
---- dry-run: prompt that would be sent to ollama ---
+--- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your final response in English. You may think in English, but the output must be in English.
 
 You are reviewing a git diff. The diff shows lines added (+), removed (-), and surrounding context.

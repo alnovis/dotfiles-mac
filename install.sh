@@ -10,6 +10,10 @@ case "${1:-install}" in
       echo "Warning: brew not found, skipping Brewfile. Install Homebrew first: https://brew.sh"
     fi
     stow -v nvim kitty fish
+    # agents: opencode runner profiles for the ai toolkit. Create the target dir first so
+    # stow links each file instead of folding the whole dir into the repo.
+    mkdir -p ~/.config/opencode/agents
+    stow -v agents
     cp .gitignore_global ~/.gitignore_global
     git config --global core.excludesfile ~/.gitignore_global
 
@@ -28,7 +32,7 @@ case "${1:-install}" in
     ;;
   unstow)
     cd "$(dirname "$0")"
-    stow -D nvim kitty fish
+    stow -D nvim kitty fish agents
     echo "Symlinks removed."
     ;;
 esac

@@ -85,7 +85,7 @@ function _ai_review_print_help
     echo "  - git mode:    no path / BASE is a git ref → review git changes"
     echo ""
     echo "Common options:"
-    echo "  --provider P            Override provider (ollama, claude)"
+    echo "  --provider P            Override provider (ollama, claude, or one the runner knows)"
     echo "  --model MODEL           Override model"
     echo "  --lang LANG             Response language (default: en)"
     echo "  -o, --output FILE       Save output to file"

@@ -1,21 +1,15 @@
-function _ai_agent_pi --description "AI agent-runner plugin: pi (agentic, tool-using; local models via ollama/<model>)"
-    # An agent-runner is the second plug-in family, parallel to _ai_provider_<name>:
-    # a provider answers from the prompt alone, a runner explores the repo with tools.
-    # Contract (mirrors the provider contract, plus a tool policy):
-    #   --interactive        take over the tty (pi REPL). Otherwise `pi -p` reads the
-    #                        prompt from stdin and exits (one-shot, streams to stdout).
-    #   --provider P         maps to pi's "P/<model>" spec (e.g. ollama/qwen2.5-coder:7b).
-    #                        For ollama, the local server is ensured running.
-    #   --model M            model id
-    #   --edit               allow file mutation (full toolset). DEFAULT is read-only:
-    #                        an allowlist of read,grep,find,ls (no bash, no write) so an
-    #                        UNATTENDED run (e.g. `ai review --agentic`) cannot touch the
-    #                        repo. This is the safe default a review needs.
-    #   --exclude-tools LIST override the policy with a pi denylist instead (e.g.
-    #                        "edit,write" keeps bash on for an attended `ai code` session).
-    #   --no-session         ephemeral run (don't persist a pi session)
+function _ai_agent_pi --description "Runner: pi (any provider in pi's own config, local or cloud)"
+    # Runner contract (docs/refactoring.md §4):
+    #   --provider P --model M   pi resolves P/M in ~/.pi/agent/models.json (M may already be "P/id")
+    #   --tools none|read|edit   none: no tools; read: read,grep,find,ls — interactive also keeps
+    #                            bash, since a person is watching; edit: full toolset.
+    #                            Default: read (an unattended run must not touch the repo).
+    #   --skill FILE             appended to the system prompt
+    #   --interactive            pi TUI (with --continue / --resume); otherwise `pi -p` reads
+    #                            the prompt from stdin and streams the answer to stdout
+    #   --no-session             don't persist a pi session
     # Any remaining argv is passed straight to pi (e.g. @files).
-    argparse 'interactive' 'provider=' 'model=' 'edit' 'exclude-tools=' 'no-session' -- $argv; or return 1
+    argparse 'provider=' 'model=' 'tools=' 'skill=' 'interactive' 'continue' 'resume' 'no-session' -- $argv; or return 1
 
     if not command -q pi
         set_color red
@@ -28,32 +22,39 @@ function _ai_agent_pi --description "AI agent-runner plugin: pi (agentic, tool-u
         _ai_ensure_running; or return 1
     end
 
-    # Tool policy: explicit denylist > --edit (full) > default read-only allowlist.
-    set -l tool_args
-    if set -q _flag_exclude_tools
-        set tool_args --exclude-tools $_flag_exclude_tools
-    else if set -q _flag_edit
-        set tool_args
-    else
-        set tool_args --tools read,grep,find,ls
+    set -l args
+    switch "$_flag_tools"
+        case none
+            set args --exclude-tools '*'
+        case read ''
+            if set -q _flag_interactive
+                set args --exclude-tools edit,write
+            else
+                set args --tools read,grep,find,ls
+            end
+        case edit
+        case '*'
+            echo "pi: unknown tool profile '$_flag_tools' (none|read|edit)" >&2
+            return 1
     end
-    set -q _flag_no_session; and set -a tool_args --no-session
 
-    set -l model_args
+    # pi's --provider needs --model, so the provider travels inside the model spec
     if test -n "$_flag_model"
-        if string match -q '*/*' -- $_flag_model
-            set model_args --model $_flag_model            # already a full provider/id spec
-        else if test -n "$_flag_provider"
-            set model_args --model $_flag_provider/$_flag_model
+        if string match -q '*/*' -- $_flag_model; or test -z "$_flag_provider"
+            set -a args --model $_flag_model
         else
-            set model_args --model $_flag_model
+            set -a args --model $_flag_provider/$_flag_model
         end
     end
 
+    set -q _flag_skill; and set -a args --append-system-prompt $_flag_skill
+    set -q _flag_no_session; and set -a args --no-session
+
     if set -q _flag_interactive
-        pi $tool_args $model_args $argv
+        set -q _flag_continue; and set -a args --continue
+        set -q _flag_resume; and set -a args --resume
+        pi $args $argv
     else
-        # -p: non-interactive. pi reads the prompt from stdin when no message args.
-        pi -p $tool_args $model_args $argv
+        pi -p $args $argv
     end
 end

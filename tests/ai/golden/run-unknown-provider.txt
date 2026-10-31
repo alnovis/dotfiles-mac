@@ -1,0 +1,2 @@
+Provider nosuch: unknown to runner pi — configure it in pi, or pick another provider (ai providers)
+[exit 1]

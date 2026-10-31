@@ -1,13 +1,9 @@
-function _ai_default_agent --description "Resolve the agent-runner: project/global config > default (pi)"
-    # Symmetric with _ai_default_provider. Which runner backs --agentic for a
-    # non-agentic provider. Only pi ships today; opencode/cline can drop in as
-    # _ai_agent_<name> and be selected here.
+function _ai_default_agent --description "Resolve the runner for non-claude providers: project/global config key agent > pi"
     set -l a (_ai_config_read agent)
-    if test $status -eq 0; and test -n "$a"
-        echo $a
-    else
-        # Native ollama tool-loop is the default agentic backend: dynamic per-request
-        # num_ctx, reads the repo, clean output, live progress. pi stays for `ai code`.
-        echo ollama
+    test -n "$a"; or set a pi
+    if not contains -- $a (_ai_agents)
+        echo "Unknown runner '$a' in config key agent (valid: "(string join ", " (_ai_agents))")" >&2
+        return 1
     end
+    echo $a
 end

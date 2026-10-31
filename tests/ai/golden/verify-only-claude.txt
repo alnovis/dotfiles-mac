@@ -2,7 +2,7 @@ Verify-only: <SANDBOX>/review.md
 Verify provider: claude
 Output: <SANDBOX>/review.verify.md
 ---
---- dry-run: prompt that would be sent to claude ---
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 IMPORTANT: Write your response in English.
 
 You are the second-opinion reviewer. A first-pass review produced the findings below. Assume each finding is WRONG until you have personally confirmed it in the actual source. Your job is to try to KILL each finding, not to agree with it.

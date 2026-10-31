@@ -2,7 +2,7 @@ File: <SANDBOX>/fixture/leetcode/LeetCode.scala
 Provider: ollama
 Language: English
 ---
---- dry-run: prompt that would be sent to ollama ---
+--- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your entire response in English.
 
 Give a brief summary of this file in 3-5 bullet points: what it does, how it is structured, and the main risks or problems. Be concise.

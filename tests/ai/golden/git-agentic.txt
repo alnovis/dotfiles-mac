@@ -7,7 +7,7 @@ Language: English
 Changes (HEAD~1..HEAD):
  fish/.config/fish/functions/gbranch.fish | 43 ++++++++++++++++++++++++--------
  1 file changed, 33 insertions(+), 10 deletions(-)
---- dry-run: prompt that would be sent to ollama ---
+--- dry-run: prompt that would be sent to ollama via pi (profile read) ---
 IMPORTANT: Write your final response in English. You may think in English, but the output must be in English.
 
 You are reviewing a git diff. The diff shows lines added (+), removed (-), and surrounding context.

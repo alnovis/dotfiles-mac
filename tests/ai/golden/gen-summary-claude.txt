@@ -2,7 +2,7 @@ Project: leetcode
 Provider: claude
 Language: English
 ---
---- dry-run: prompt that would be sent to claude ---
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 IMPORTANT: Write your entire response in English.
 
 Generate a project summary for the codebase below. Audience: a developer new to the project who needs to know what it is and how to start working with it.

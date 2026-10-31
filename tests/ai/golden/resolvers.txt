@@ -1,5 +1,5 @@
-providers: claude ollama
-agents: ollama pi
+providers: claude ollama testcloud
+agents: pi opencode
 chat: ollama / default-model
 code: ollama / default-model
 review: ollama / review-model

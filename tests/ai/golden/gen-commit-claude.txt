@@ -1,4 +1,4 @@
---- dry-run: prompt that would be sent to claude ---
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 IMPORTANT: Write the commit message in English.
 
 Generate a git commit message for the staged changes shown below.

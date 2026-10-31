@@ -1,4 +1,4 @@
---- dry-run: prompt that would be sent to claude ---
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 hello
 
 [exit 0]

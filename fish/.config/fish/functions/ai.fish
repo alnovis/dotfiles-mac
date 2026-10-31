@@ -35,7 +35,7 @@ function _ai_help
     echo "Options (for chat mode):"
     echo "  -m, --model MODEL       Use specific model"
     echo "  -t, --think             Enable thinking mode (ollama only)"
-    echo "  --provider PROVIDER     Override provider (ollama, claude)"
+    echo "  --provider PROVIDER     Override provider (ollama, claude, or one the runner knows)"
     echo "  --dry-run               Print the assembled prompt without invoking the model"
     echo
     echo "Examples:"

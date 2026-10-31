@@ -1,4 +1,4 @@
---- dry-run: prompt that would be sent to ollama ---
+--- dry-run: prompt that would be sent to ollama (native) ---
 question
 
 context line

@@ -102,7 +102,7 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     if test -n "$thinking_out"; and test "$think" = true
         # Sidecar split: reasoning is real (think:true) and a destination was given, so
         # route .thinking -> file and .response -> stdout. Done as a per-chunk read loop
-        # (like _ai_agent_ollama) because jq writes one output stream — two sinks need
+        # because jq writes one output stream — two sinks need
         # two extractions per NDJSON line. fish pipeline bodies run in a subshell (locals
         # are lost), so the error signal is captured to a FILE and checked afterwards.
         : >$thinking_out

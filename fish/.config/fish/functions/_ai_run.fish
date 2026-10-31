@@ -1,10 +1,11 @@
-function _ai_run --description "Dispatch a prompt to the configured AI provider"
+function _ai_run --description "Dispatch a prompt to the executor for the configured provider"
     # Usage: echo "prompt" | _ai_run [flags]
     #    or: _ai_run [flags] "prompt text"
     #
-    # Flags: --provider P  --model M  --think  --workdir DIR  --output FILE  --dry-run
-    # Provider resolution: --provider flag > config file > default (ollama)
-    # Providers are auto-discovered as _ai_provider_<name> functions (see _ai_providers).
+    # Flags: --provider P  --model M  --think  --no-think  --agentic  --workdir DIR
+    #        --output FILE  --thinking-output FILE  --dry-run
+    # Provider resolution: --provider flag > config file > default (ollama).
+    # Executor selection (claude CLI / native ollama / runner): _ai_select_executor.
 
     argparse 'provider=' 'model=' 't/think' 'no-think' 'agentic' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
 
@@ -15,12 +16,24 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
         set provider (_ai_config_read provider; or echo ollama)
     end
 
-    set -l provider_fn _ai_provider_$provider
-    if not functions -q $provider_fn
-        set_color red
-        echo "Unknown provider: $provider (valid: "(string join ", " (_ai_providers))")" >&2
-        set_color normal
-        return 1
+    # --agentic = explore the repo read-only; otherwise a plain completion
+    set -l profile none
+    set -q _flag_agentic; and set profile read
+
+    set -l sel (_ai_select_executor $provider $profile); or return 1
+    set -l dispatch $sel[1]
+    set -l label $sel[2]
+
+    # A runner needs a model: the default ollama model for ollama, otherwise the first
+    # model the runner lists for the provider (claude: the CLI picks its own default)
+    set -l model $_flag_model
+    if test -z "$model"; and test "$dispatch" != _ai_provider_ollama; and test "$provider" != claude
+        if test "$provider" = ollama
+            set model (_ai_default_model "" ollama)
+        else
+            set -l runner (string replace _ai_agent_ '' -- $dispatch)
+            set model (_ai_agent_{$runner}_models | string match -r -g (printf '^%s\t(.+)$' (string escape --style=regex -- $provider)))[1]
+        end
     end
 
     set -l prompt (string join " " $argv)
@@ -28,11 +41,11 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
 
     # Reasoning sidecar. Explicit --thinking-output (from _ai_run_watched, already an
     # absolute path) wins and the CALLER owns cleanup. Otherwise, for a direct
-    # --output on the ollama provider, derive one here and own its cleanup ourselves
-    # (covers `ai gen commit -o`, `ai … -o`). Only ollama supports the flag.
+    # --output on the native ollama driver, derive one here and own its cleanup ourselves
+    # (covers `ai gen commit -o`, `ai … -o`). Only the native driver supports the flag.
     set -l thinking_out $_flag_thinking_output
     set -l thinking_owned 0
-    if test -z "$thinking_out"; and test -n "$output"; and test "$provider" = ollama; and not set -q _flag_agentic
+    if test -z "$thinking_out"; and test -n "$output"; and test "$dispatch" = _ai_provider_ollama
         set thinking_out (_ai_thinking_output_path $output)
         set thinking_owned 1
     end
@@ -54,7 +67,7 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
             echo "[dry-run] interactive mode — no prompt to preview" >&2
         else
             set_color cyan >&2
-            echo "--- dry-run: prompt that would be sent to $provider ---" >&2
+            echo "--- dry-run: prompt that would be sent to $label ---" >&2
             set_color normal >&2
             _ai_pipe_input "$prompt"
         end
@@ -62,37 +75,44 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
         return 0
     end
 
-    # Dispatch target: normally the provider. With --agentic on a NON-native provider
-    # (e.g. ollama), route through an agent-runner so the model explores the repo with
-    # tools; a native provider (claude -p) already does, so it stays as-is.
-    set -l dispatch $provider_fn
-    set -l dispatch_args
-    test -n "$_flag_model"; and set -a dispatch_args --model $_flag_model
-    set -q _flag_think; and set -a dispatch_args --think
-    set -q _flag_agentic; and set -a dispatch_args --agentic
-
-    if set -q _flag_agentic; and not _ai_agentic_native $provider
-        set -l agent (_ai_default_agent)
-        set -l agent_fn _ai_agent_$agent
-        if not functions -q $agent_fn
-            echo "Unknown agent-runner: $agent (valid: "(string join ", " (_ai_agents))")" >&2
-            cd $prev_pwd
-            return 1
+    # Unreachable runner provider: find out in ≤2 s before starting the runner, which
+    # would otherwise spend 14–50+ s failing (docs/refactoring.md §5a). ollama is started
+    # on demand and claude owns its connectivity, so neither is probed.
+    if string match -q '_ai_agent_*' -- $dispatch; and not contains -- $provider ollama claude
+        set -l runner (string replace _ai_agent_ '' -- $dispatch)
+        if functions -q _ai_agent_{$runner}_probe
+            _ai_agent_{$runner}_probe $provider
+            if test $status -eq 1
+                set -l fb (_ai_fallback_prompt $provider $runner)
+                if test -z "$fb"
+                    cd $prev_pwd
+                    return 1
+                end
+                set -l from $provider
+                set provider ollama
+                set model $fb
+                set sel (_ai_select_executor ollama $profile); or begin
+                    cd $prev_pwd
+                    return 1
+                end
+                set dispatch $sel[1]
+                set label "$sel[2], fallback from $from"
+                echo "  ↳ running on ollama/$model ($label)" >&2
+            end
         end
-        set dispatch $agent_fn
-        # The runner takes provider+model (maps to pi's <provider>/<model>), runs
-        # read-only and ephemeral. It does not understand --think/--agentic.
-        set dispatch_args --provider $provider --no-session
-        test -n "$_flag_model"; and set -a dispatch_args --model $_flag_model
     end
 
-    # Reasoning sidecar is an ollama-provider feature (not the agent runners, not
-    # claude which owns its own thinking). Forward it only when dispatching there.
+    # Executor arguments: the native driver takes thinking options; runners take the
+    # provider, the tool profile, and run without persisting a session.
+    set -l dispatch_args
+    test -n "$model"; and set -a dispatch_args --model $model
     if test "$dispatch" = _ai_provider_ollama
-        test -n "$thinking_out"; and set -a dispatch_args --thinking-output $thinking_out
-        # --no-think is an ollama-provider option (the fast path); other providers and
-        # the agent runners don't accept it, so forward it only here.
+        set -q _flag_think; and set -a dispatch_args --think
         set -q _flag_no_think; and set -a dispatch_args --no-think
+        test -n "$thinking_out"; and set -a dispatch_args --thinking-output $thinking_out
+    else
+        set -a dispatch_args --provider $provider --tools $profile
+        test $interactive -eq 0; and set -a dispatch_args --no-session
     end
 
     set -l rc 0

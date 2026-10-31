@@ -9,7 +9,7 @@ Changes (d6f255bd1edf7482bb244216cdcfd69dee4c1e9f..HEAD):
  fish/.config/fish/functions/gbranch.fish |  43 +++++--
  2 files changed, 182 insertions(+), 53 deletions(-)
 Context window: 393 lines across 2 files (budget 2000)
---- dry-run: prompt that would be sent to ollama ---
+--- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your final response in English. You may think in English, but the output must be in English.
 
 You are reviewing a git diff. The diff shows lines added (+), removed (-), and surrounding context.

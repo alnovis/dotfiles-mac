@@ -5,7 +5,7 @@ Note: no code embedded — a local verifier reasons from the findings text alone
   Pass --file DIFF for grounding (or use --provider claude, which reads the repo itself).
 Output: <SANDBOX>/review.verify.md
 ---
---- dry-run: prompt that would be sent to ollama ---
+--- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your response in English.
 
 You are the second-opinion reviewer. A first-pass review produced the findings below. Assume each finding is WRONG until you have personally confirmed it in the actual source. Your job is to try to KILL each finding, not to agree with it.

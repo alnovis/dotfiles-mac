@@ -3,7 +3,7 @@ Provider: claude
 Language: English
 Project context: yes
 ---
---- dry-run: prompt that would be sent to claude ---
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 Target file: LeetCode.scala
 Review this file. You may briefly consult neighboring files in the parent project for context if needed.
 

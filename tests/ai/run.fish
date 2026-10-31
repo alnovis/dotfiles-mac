@@ -36,6 +36,16 @@ ln -s $root/fish/.config/fish/prompts $sb/home/.config/fish/prompts
 printf '%s\n' provider=ollama review_model=review-model commit_model=commit-model >$sb/home/.config/ai/config
 cp $root/tests/ai/fixtures/review.md $sb/review.md
 
+# pi config for the runner paths: ollama, plus a cloud provider on a dead address so the
+# reachability probe fails at once (connection refused) and no model is ever called
+mkdir -p $sb/home/.pi/agent
+echo '{"providers": {
+  "ollama":    {"baseUrl": "http://127.0.0.1:11434/v1", "api": "openai-completions", "apiKey": "x",
+                "models": [{"id": "review-model"}, {"id": "default-model"}]},
+  "testcloud": {"baseUrl": "http://127.0.0.1:9/v1", "api": "openai-completions", "apiKey": "x",
+                "models": [{"id": "cloud-model"}]}
+}}' >$sb/home/.pi/agent/models.json
+
 git clone -q --no-hardlinks $root $sb/fixture; or exit 1
 # No remote: git review prefers origin/<base>, which would follow the real repo's master
 git -C $sb/fixture remote remove origin
@@ -82,6 +92,9 @@ set -g golden_cases \
     'run-prompt|fixture|ai --dry-run hello' \
     'run-pipe|fixture|printf "context line\n" | ai --dry-run question' \
     'run-claude|fixture|ai --provider claude --dry-run hello' \
+    'run-runner|fixture|ai --provider testcloud --dry-run hello' \
+    'run-unknown-provider|fixture|ai --provider nosuch --dry-run hello' \
+    'run-unreachable|fixture|ai --provider testcloud hello' \
     'config-status|fixture|ai config status' \
     'resolvers|fixture|echo providers: (_ai_providers); echo agents: (_ai_agents); for t in (_ai_tasks); set -l p (_ai_default_provider $t); echo "$t: $p / "(_ai_default_model $t $p); end'
 
@@ -99,7 +112,9 @@ set -g smoke_cases \
 
 function _harness_run --argument-names dir cmd
     # stdin from /dev/null: no case may depend on the terminal it was started from
+    # AI_NONINTERACTIVE: never ask on /dev/tty (the fallback prompt), even from a terminal
     env -i HOME=$sb/home PATH=(string join : $PATH) TERM=dumb LANG=en_US.UTF-8 AI_DEFAULT_MODEL=default-model \
+        AI_NONINTERACTIVE=1 PI_OFFLINE=1 \
         fish --no-config -c "set -p fish_function_path $fn_dir; cd $sb/$dir; and begin; $cmd; end; echo \"[exit \$status]\"" \
         </dev/null 2>&1 \
         | SB=$sb SB_SHORT=(string replace -r '^/private' '' -- $sb) \

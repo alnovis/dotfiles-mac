@@ -2,7 +2,7 @@ File: <SANDBOX>/fixture/leetcode/LeetCode.scala
 Provider: claude
 Language: English
 ---
---- dry-run: prompt that would be sent to claude ---
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 Target file: LeetCode.scala
 Review ONLY this single file. Do not explore neighboring files.
 
