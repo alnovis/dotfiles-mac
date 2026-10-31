@@ -23,12 +23,12 @@ function _ai_session_chat --description "Run interactive REPL for session NAME (
         end
     end
 
-    # Resolve model: explicit flag → pin (latest config block with pinned:true) → task config → fallback
+    # Resolve model: explicit flag → pin (latest config block, if it is a pin) → task config → fallback
     set -l model $_flag_model
     set -l pin_active 0
     if test -z "$model"
         if test -f $file
-            set -l pinned (jq -s 'last(.[] | select(.t == "config" and .pinned == true)) // empty' $file 2>/dev/null)
+            set -l pinned (jq -s 'last(.[] | select(.t == "config")) | select(.pinned == true)' $file 2>/dev/null)
             if test -n "$pinned"; and test "$pinned" != null
                 set -l pin_model (echo $pinned | jq -r '.model // empty')
                 if test -n "$pin_model"; and test "$pin_model" != null
@@ -94,12 +94,12 @@ function _ai_session_chat --description "Run interactive REPL for session NAME (
         # Stream the assistant turn
         set -l meta_tmp (mktemp -t ai-chat.XXXXX)
         echo
-        _ai_provider_ollama_chat --model $model --messages $messages --meta-file $meta_tmp
+        _ai_ollama_chat --model $model --messages $messages --meta-file $meta_tmp
         echo
 
         # Append assistant turn
         if test -f $meta_tmp; and test -s $meta_tmp
-            set -l content (jq -r '.content' $meta_tmp)
+            set -l content (jq -r '.content' $meta_tmp | string collect)
             set -l usage (jq -c '.usage' $meta_tmp)
             set -l now2 (date -u +"%Y-%m-%dT%H:%M:%SZ")
             jq -nc --arg c "$content" --arg ts "$now2" --arg m "$model" --argjson u "$usage" \

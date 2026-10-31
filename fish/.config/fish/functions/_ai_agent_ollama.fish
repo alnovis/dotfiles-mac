@@ -16,11 +16,9 @@ function _ai_agent_ollama --description "AI agent-runner: native ollama tool-loo
     # progress goes to stderr (we own the loop, so it is free).
     argparse 'model=' 'workdir=' 'think' 'max-iters=' 'provider=' 'edit' 'no-session' 'interactive' -- $argv; or return 1
 
+    # Same fallback as _ai_provider_ollama, so `ai --agentic "…"` works without -m.
     set -l model $_flag_model
-    if test -z "$model"
-        echo "_ai_agent_ollama: --model is required" >&2
-        return 1
-    end
+    test -z "$model"; and set model (_ai_default_model)
     set -l workdir $_flag_workdir
     test -z "$workdir"; and set workdir $PWD
     set -l max_iters 24

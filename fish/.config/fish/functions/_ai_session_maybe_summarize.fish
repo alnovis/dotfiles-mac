@@ -48,7 +48,7 @@ function _ai_session_maybe_summarize --description "If session FILE exceeds toke
     set_color normal >&2
 
     set -l t0 (date +%s)
-    set -l summary_text (_ai_session_summarize $summary_model $to_summarize_msgs)
+    set -l summary_text (_ai_session_summarize $summary_model $to_summarize_msgs | string collect)
     set -l t1 (date +%s)
 
     if test -z "$summary_text"

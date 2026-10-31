@@ -25,11 +25,11 @@ function _ai_help
     echo "  (none) [PROMPT]      Interactive chat or one-shot prompt"
     echo "  gen                  Generate: commit, summary"
     echo "  config               View or set AI config (provider, etc.)"
-    echo "  models               Manage models (list, install, rm, use, update, info, prune)"
+    echo "  models               Manage models (list, install, rm, use, update, info, prune, running, label)"
     echo "  review               AI code review — project state (path) or git changes"
     echo "  code                 AI-assisted coding with pi"
     echo "  chat                 Chat model (--session NAME for persistent REPL, ollama only)"
-    echo "  sessions             Manage chat sessions (ls, show, info, rm, rename)"
+    echo "  sessions             Manage chat sessions (ls, show, search, pin, archive, … — ai sessions --help)"
     echo "  stop                 Stop running models or server"
     echo
     echo "Options (for chat mode):"

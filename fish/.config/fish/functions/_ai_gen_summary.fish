@@ -63,7 +63,7 @@ function _ai_gen_summary --description "AI project summary"
     set -l template_file ~/.config/fish/prompts/meta-summary.md
     set -l prompt
     if test -f $template_file
-        set prompt (cat $template_file)
+        set prompt (cat $template_file | string collect)
     else
         set prompt "Generate a concise project summary: purpose, tech stack, structure, and how to get started."
     end

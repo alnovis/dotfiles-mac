@@ -1,17 +1,25 @@
-function _ai_sessions_search --description "Search QUERY across session messages; case-insensitive substring"
+function _ai_sessions_search --description "Search QUERY across session messages; case-insensitive substring (or --regex)"
     argparse 'name=' 'since=' 'a/all' 'archived' 'regex' -- $argv; or return 1
 
     set -l query $argv[1]
     if test -z "$query"
         set_color red
-        echo "Error: query required — ai sessions search QUERY [--name PAT] [--since DATE] [--archived|--all]"
+        echo "Error: query required — ai sessions search QUERY [--name PAT] [--since DATE] [--regex] [--archived|--all]"
         set_color normal
         return 1
     end
 
+    # Same scoping as `ai sessions ls`: --archived = archived only, --all = both
+    set -l show_active 1
     set -l show_archived 0
-    set -q _flag_archived; and set show_archived 1
-    set -q _flag_all; and set show_archived 1
+    if set -q _flag_all
+        set show_archived 1
+    else if set -q _flag_archived
+        set show_active 0
+        set show_archived 1
+    end
+    set -l use_regex false
+    set -q _flag_regex; and set use_regex true
 
     set -l name_pat $_flag_name
     set -l since_ts
@@ -34,7 +42,7 @@ function _ai_sessions_search --description "Search QUERY across session messages
             break
         end
         if test -d "$dir/.ai/sessions"
-            set -a dirs "$dir/.ai/sessions:project"
+            test $show_active -eq 1; and set -a dirs "$dir/.ai/sessions:project"
             if test $show_archived -eq 1; and test -d "$dir/.ai/sessions/archived"
                 set -a dirs "$dir/.ai/sessions/archived:project-archived"
             end
@@ -47,7 +55,7 @@ function _ai_sessions_search --description "Search QUERY across session messages
     end
 
     if test -d ~/.config/ai/sessions
-        set -a dirs ~/.config/ai/sessions:global
+        test $show_active -eq 1; and set -a dirs ~/.config/ai/sessions:global
         if test $show_archived -eq 1; and test -d ~/.config/ai/sessions/archived
             set -a dirs ~/.config/ai/sessions/archived:global-archived
         end
@@ -87,10 +95,10 @@ function _ai_sessions_search --description "Search QUERY across session messages
 
             set total_sessions (math $total_sessions + 1)
 
-            # Find matches (case-insensitive substring on .content for user/assistant)
-            set -l hits (jq -sr --arg q "$query" '
+            # Find matches (case-insensitive substring, or regex with --regex, on .content for user/assistant)
+            set -l hits (jq -sr --arg q "$query" --argjson re $use_regex '
                 [.[] | select(.t == "user" or .t == "assistant")] | to_entries | map(
-                    select(.value.content // "" | ascii_downcase | contains($q | ascii_downcase))
+                    select(.value.content // "" | if $re then test($q; "i") else ascii_downcase | contains($q | ascii_downcase) end)
                 ) | .[] | "\(.key+1)|\(.value.t)|\(.value.content)"
             ' $file 2>/dev/null)
 

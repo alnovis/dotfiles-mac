@@ -6,7 +6,7 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
     # Provider resolution: --provider flag > config file > default (ollama)
     # Providers are auto-discovered as _ai_provider_<name> functions (see _ai_providers).
 
-    argparse 'provider=' 'model=' 'think' 'no-think' 'agentic' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
+    argparse 'provider=' 'model=' 't/think' 'no-think' 'agentic' 'workdir=' 'output=' 'thinking-output=' 'dry-run' -- $argv; or return 1
 
     set -l provider
     if set -q _flag_provider
@@ -71,7 +71,7 @@ function _ai_run --description "Dispatch a prompt to the configured AI provider"
     set -q _flag_think; and set -a dispatch_args --think
     set -q _flag_agentic; and set -a dispatch_args --agentic
 
-    if set -q _flag_agentic; and not _ai_provider_agentic_native $provider
+    if set -q _flag_agentic; and not _ai_agentic_native $provider
         set -l agent (_ai_default_agent)
         set -l agent_fn _ai_agent_$agent
         if not functions -q $agent_fn

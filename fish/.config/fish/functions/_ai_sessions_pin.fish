@@ -1,10 +1,10 @@
-function _ai_sessions_pin --description "Pin provider/model for session NAME; subsequent runs use these regardless of task defaults"
+function _ai_sessions_pin --description "Pin the model for session NAME; subsequent runs use it regardless of task defaults"
     argparse 'provider=' 'model=' -- $argv; or return 1
 
     set -l name $argv[1]
     if test -z "$name"
         set_color red
-        echo "Error: name required — ai sessions pin NAME [--provider P] [--model M]"
+        echo "Error: name required — ai sessions pin NAME --model M"
         set_color normal
         return 1
     end
@@ -20,9 +20,17 @@ function _ai_sessions_pin --description "Pin provider/model for session NAME; su
     set -l provider $_flag_provider
     set -l model $_flag_model
 
-    if test -z "$provider"; and test -z "$model"
+    # Sessions always run on ollama, so only the model is a meaningful pin.
+    # --provider ollama is accepted (and recorded) for symmetry; anything else is an error.
+    if test -n "$provider"; and test "$provider" != ollama
         set_color red
-        echo "Error: specify --provider and/or --model to pin"
+        echo "Error: sessions are ollama-only — cannot pin provider '$provider'"
+        set_color normal
+        return 1
+    end
+    if test -z "$model"
+        set_color red
+        echo "Error: specify --model to pin"
         set_color normal
         return 1
     end

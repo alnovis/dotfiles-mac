@@ -1,5 +1,5 @@
-function _ai_provider_ollama_chat --description "Stream chat completion via Ollama /api/chat; prints response, captures meta to --meta-file"
-    # Usage: _ai_provider_ollama_chat --model M --messages JSON [--meta-file FILE]
+function _ai_ollama_chat --description "Stream chat completion via Ollama /api/chat; prints response, captures meta to --meta-file"
+    # Usage: _ai_ollama_chat --model M --messages JSON [--meta-file FILE]
     # MESSAGES is a JSON array string. Streams response to stdout. Captures full
     # content + token usage to meta-file (JSON: {content, usage:{eval_count,prompt_eval_count}}).
 
@@ -34,7 +34,7 @@ function _ai_provider_ollama_chat --description "Stream chat completion via Olla
     echo
 
     if test -n "$meta_file"
-        set -l full_content (cat $buf_file)
+        set -l full_content (cat $buf_file | string collect)
         set -l usage (cat $usage_file 2>/dev/null; or echo "{}")
         jq -nc --arg c "$full_content" --argjson u "$usage" '{content:$c, usage:$u}' >$meta_file
     end

@@ -95,10 +95,10 @@ function _ai_sessions_ls_print --argument-names dir
         set -l turns $parts[4]
         set -l models $parts[5]
 
-        # Detect pin from any config record with pinned:true
-        set -l pinned (jq -s '[.[] | select(.t == "config" and .pinned == true)] | length' $file 2>/dev/null)
+        # Pinned iff the latest config record is a pin (unpin appends pinned:false)
+        set -l pinned (jq -s 'last(.[] | select(.t == "config")) | .pinned == true' $file 2>/dev/null)
         set -l pin_marker ""
-        if test -n "$pinned"; and test "$pinned" -gt 0
+        if test "$pinned" = true
             set pin_marker " [pinned]"
         end
 

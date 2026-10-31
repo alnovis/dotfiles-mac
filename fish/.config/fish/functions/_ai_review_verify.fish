@@ -30,7 +30,7 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     if test -f $vfile
         set vprompt (cat $vfile | string collect)
     else
-        set vprompt "You are a second-opinion reviewer. Assume each finding below is wrong until confirmed in the source. For each, output a verdict: [CONFIRMED N/10] | [REFUTED N/10 — reason] | [UNCERTAIN — what's missing], keyed to the finding. Do not add new findings."
+        set vprompt "You are a second-opinion reviewer. Assume each finding below is wrong until confirmed in the source. For each finding, write one line keyed to it with exactly one verdict — [CONFIRMED N/10], [REFUTED N/10] or [UNCERTAIN] (N = your confidence digit) — then a 'why:' line citing what you found in the code. Do not add new findings. End with: Verify: X confirmed, Y refuted, Z uncertain"
     end
 
     set -l lang_prefix ""

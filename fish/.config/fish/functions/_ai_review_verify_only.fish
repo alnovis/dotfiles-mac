@@ -8,11 +8,12 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #   --verify-output FILE explicit output (default: <review>.verify.<ext>)
     #   -o/--output FILE     alias for --verify-output here (there is no review to write)
     #   --file FILE          optional code/diff file to embed for the verifier
-    #   --agentic            accepted for interface symmetry (claude reads the repo by
-    #                        default; local agentic runners are roadmap)
+    #   --agentic            passed to the verifier (claude reads the repo anyway;
+    #                        ollama goes through the agent-runner, see _ai_default_agent)
+    #   --no-think           passed to the verifier (fast pass, think:false)
     #   --lang L, --dry-run
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
-             'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'dry-run' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'no-think' 'dry-run' -- $argv; or return 1
 
     set -l review_file $_flag_verify_only
     if test -z "$review_file"; or not test -f "$review_file"
@@ -63,6 +64,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $review_file --lang $lang_full
     test -n "$vmodel"; and set -a vargs --model $vmodel
     set -q _flag_agentic; and set -a vargs --agentic
+    set -q _flag_no_think; and set -a vargs --no-think
     if set -q _flag_file; and test -f "$_flag_file"
         set -a vargs --code-file (realpath $_flag_file)
     end

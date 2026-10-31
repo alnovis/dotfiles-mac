@@ -32,10 +32,10 @@ function _ai_gen_commit --description "Generate commit message from uncommitted 
     end
 
     # Get changes: staged first, then unstaged
-    set -l diff (git diff --staged)
+    set -l diff (git diff --staged | string collect)
     set -l diff_source "staged"
     if test -z "$diff"
-        set diff (git diff)
+        set diff (git diff | string collect)
         set diff_source "unstaged"
     end
     if test -z "$diff"
@@ -61,7 +61,7 @@ function _ai_gen_commit --description "Generate commit message from uncommitted 
     set -l template_file ~/.config/fish/prompts/meta-commit.md
     set -l prompt
     if test -f $template_file
-        set prompt (cat $template_file)
+        set prompt (cat $template_file | string collect)
     else
         set prompt "Generate a concise git commit message for these changes. Use conventional commit format. First line max 72 chars, imperative mood. Output ONLY the commit message."
     end

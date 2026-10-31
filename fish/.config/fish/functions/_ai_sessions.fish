@@ -80,7 +80,7 @@ function _ai_sessions_print_help
     echo "  import PATH [--name N]     Import a session file"
     echo ""
     echo "Pinning:"
-    echo "  pin NAME --provider P --model M    Lock provider/model"
+    echo "  pin NAME --model M                 Lock the model (sessions are ollama-only)"
     echo "  unpin NAME                         Revert"
     echo ""
     echo "Resolving NAME: walk-up project .ai/sessions/, then global ~/.config/ai/sessions/."
