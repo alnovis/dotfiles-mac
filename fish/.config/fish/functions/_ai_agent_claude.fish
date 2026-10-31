@@ -25,7 +25,7 @@ function _ai_agent_claude --description "Runner: claude CLI (Anthropic models, s
     if set -q _flag_interactive
         set -q _flag_continue; and set -a args --continue
         set -q _flag_resume; and set -a args --resume
-        claude $args
+        claude $args $argv
         return
     end
 

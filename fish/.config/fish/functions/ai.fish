@@ -25,7 +25,7 @@ end
 function _ai_help
     echo "Usage: ai [COMMAND] [OPTIONS] [PROMPT]"
     echo
-    echo "AI toolkit — local (Ollama) and cloud (Claude) providers."
+    echo "AI toolkit — local and cloud models: native ollama, the claude CLI, and runners (pi, opencode)."
     echo
     echo "Commands:"
     echo "  (none) [PROMPT]      Interactive chat or one-shot prompt"
@@ -58,6 +58,6 @@ function _ai_help
     echo "  ai gen summary                    Generate project summary"
     echo "  ai config provider claude         Set default provider"
     echo "  ai models list coder              List coding models"
-    echo "  ai code -e @src/main/             Edit code with pi"
+    echo "  ai code -e @src/main/             Coding session with edits allowed"
     echo "  ai stop                           Stop all models"
 end

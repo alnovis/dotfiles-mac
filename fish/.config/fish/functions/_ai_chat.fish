@@ -14,7 +14,7 @@ function _ai_chat --description "Interactive chat with the chat task's provider;
         echo "  -r, --resume         Pick a past chat to resume"
         echo "  --dry-run            Show which executor would start, then exit"
         echo ""
-        echo "For a bare 'ollama run' with no history: ai (no arguments)."
+        echo "For a bare 'ollama run' with no history: ai --provider ollama (no prompt)."
         return 0
     end
 

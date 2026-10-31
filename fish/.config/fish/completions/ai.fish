@@ -12,8 +12,8 @@ complete -c ai -n "__fish_seen_subcommand_from providers; and not __fish_seen_su
 complete -c ai -n "__fish_seen_subcommand_from providers; and __fish_seen_subcommand_from check" -x -a "(_ai_providers)"
 complete -c ai -n __fish_use_subcommand -a models -d "Manage models"
 complete -c ai -n __fish_use_subcommand -a review -d "AI code review"
-complete -c ai -n __fish_use_subcommand -a code -d "AI-assisted coding (pi)"
-complete -c ai -n __fish_use_subcommand -a chat -d "Chat (--session for persistent REPL)"
+complete -c ai -n __fish_use_subcommand -a code -d "Interactive coding session"
+complete -c ai -n __fish_use_subcommand -a chat -d "Interactive chat (-c continue, -r resume)"
 complete -c ai -n __fish_use_subcommand -a stop -d "Stop models or server"
 complete -c ai -n __fish_use_subcommand -a help -d "Show help"
 

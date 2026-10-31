@@ -1,422 +1,496 @@
 # AI toolkit architecture
 
-> See also: [Toolkit reference](toolkit.md) · [Sessions](sessions.md) · [How-to](howto.md)
+> See also: [Toolkit reference](toolkit.md) · [How-to](howto.md)
 
-This document describes the design of the `ai` toolkit — its layers, contracts, and the invariants that should remain true as the code evolves. Command names appear only as illustrations; user-facing behavior is documented in [toolkit.md](toolkit.md).
+This document describes how the `ai` toolkit is put together: its layers, the two kinds of
+executor behind every model call, the contracts between them, and the invariants that should stay
+true as the code changes. Command names appear only as illustrations; user-facing behavior is in
+[toolkit.md](toolkit.md).
 
 ## Goals
 
-The `ai` toolkit is a fish-native CLI front-end to multiple AI providers. It exists to:
+`ai` is a fish-native front end for local (Ollama) and cloud models. It exists to:
 
-1. Give one consistent command surface regardless of underlying provider (Ollama, Claude, future providers).
-2. Persist preferences (provider, model, prompts) per task and per project — not just globally.
-3. Support stateful conversations (sessions) for providers that don't have native session management.
-4. Keep prompt engineering user-editable without touching shell code.
-5. Stay fish-shell idiomatic — autoloaded functions, no heavy dependencies, `stow` symlinks.
-
-The architecture is a stack of independent layers. Each layer has one responsibility, knows about the layer directly below it, and exposes a stable contract upward.
+1. Own the parts nobody else does: **review orchestration** (which diff, context budget, lenses,
+   two-pass verify with separate files), `ai gen`, and a **native ollama call** with per-request
+   `num_ctx` sizing and thinking quarantine.
+2. Hand everything else to tools that already do it: agent loops, sessions, cloud providers and
+   their keys live in agent CLIs (pi, opencode, claude). `ai` passes them a provider/model name
+   and a tool profile, nothing more.
+3. Keep preferences per task and per project, with one place that shows where each value came
+   from (`ai config status`).
+4. Keep prompts user-editable (`prompts/*.md`, `prompts/lenses/*.md`) without touching shell code.
+5. Stay fish-idiomatic: autoloaded functions, `stow` symlinks, no heavy dependencies (`jq`,
+   `curl`, `tree` and the agent CLIs you choose to install).
 
 ## System overview
 
 ```mermaid
 flowchart TD
-    subgraph L5["Layer 5 — command handlers"]
-        cmd_gen["ai gen commit<br/>ai gen summary<br/>ai review"]
-        cmd_chat["ai chat<br/>ai code"]
-        cmd_sess["ai chat --session<br/>ai sessions ..."]
+    subgraph ORCH["Commands — orchestration (decides WHAT to send)"]
+        review["ai review<br/>+ verify pass"]
+        gen["ai gen commit<br/>ai gen summary"]
+        top["ai [PROMPT]"]
+        inter["ai code<br/>ai chat"]
     end
 
-    subgraph L4["Layer 4 — prompt assembly"]
-        assembly["template + language prefix<br/>+ provider-specific context"]
-    end
+    run["_ai_run<br/>single-shot or --agentic;<br/>workdir, output, dry-run"]
+    interactive["_ai_interactive<br/>interactive session;<br/>--continue / --resume"]
+    sel{"_ai_select_executor<br/>provider + tool profile"}
 
-    subgraph L3["Layer 3 — dispatcher"]
-        dispatch["_ai_run<br/>provider selection, --agentic routing,<br/>workdir, output, dry-run"]
-    end
+    review --> run
+    gen --> run
+    top --> run
+    inter --> interactive
+    run --> sel
+    interactive --> sel
 
-    subgraph L2["Layer 2 — plug-ins (auto-discovered)"]
-        p_ollama["_ai_provider_ollama"]
-        p_claude["_ai_provider_claude"]
-        a_ollama["_ai_agent_ollama<br/>(agent runner, default)"]
-        a_pi["_ai_agent_pi<br/>(agent runner)"]
-    end
+    sel -->|"claude"| claude["_ai_agent_claude<br/>claude CLI"]
+    sel -->|"ollama, profile none"| native["_ai_provider_ollama<br/>native driver"]
+    sel -->|"anything else<br/>(config key agent)"| runner["_ai_agent_pi<br/>_ai_agent_opencode"]
 
-    subgraph L1["Layer 1 — external tools"]
-        t_ollama["ollama server<br/>/api/generate, /api/chat,<br/>ollama show / run"]
-        t_claude["claude CLI<br/>claude -p"]
-        t_pi["pi CLI<br/>pi -p"]
-    end
+    run -.->|"runner provider:<br/>probe, at most 2 s"| probe["_ai_agent_&lt;runner&gt;_probe"]
+    probe -.->|"unreachable, on a tty"| fallback["_ai_fallback_prompt<br/>offer ollama instead"]
 
-    sessions_pipeline["sessions pipeline<br/>(parallel — see below)"]
-
-    cmd_gen --> assembly
-    assembly --> dispatch
-    cmd_chat --> dispatch
-    cmd_sess --> sessions_pipeline
-    dispatch --> p_ollama
-    dispatch --> p_claude
-    dispatch -.->|"--agentic (ollama)"| a_ollama
-    dispatch -.->|"--agentic, agent=pi"| a_pi
-    sessions_pipeline -.-> t_ollama
-    p_ollama --> t_ollama
-    a_ollama --> t_ollama
-    a_pi --> t_pi
-    p_claude --> t_claude
+    native -->|"/api/generate, num_ctx"| ollama[("ollama server<br/>OLLAMA_HOST")]
+    runner -->|"provider ollama (/v1)"| ollama
+    runner -->|"other providers"| cloud[("providers in the<br/>runner's own config")]
+    claude --> anthropic[("Anthropic")]
 ```
 
-(Simplification: of the interactive entry points, only top-level `ai` goes through
-`_ai_run`. Stateless `ai chat` runs `ollama run MODEL` itself, and `ai code` calls
-`_ai_agent_pi --interactive` directly.)
+**Layers (top-down):**
 
-**Layer responsibilities (bottom-up):**
-
-| Layer | Responsibility | Knows about |
+| Layer | Responsibility | Lives in |
 |---|---|---|
-| 1 (boundary) | The external tool itself | — (external) |
-| 2 (plug-ins) | How to invoke this specific tool — a *provider* answers from the prompt; an *agent runner* explores the repo with tools | The tool's CLI/API |
-| 3 (dispatcher) | Provider selection, `--agentic` routing, workdir, output, dry-run | All providers and runners via discovery |
-| 4 (prompt assembly) | Build the prompt with context for the chosen provider | The task domain + provider capabilities |
-| 5 (command handler) | The user-facing command | The task (commit/review/etc) |
+| Command handlers | The user-facing command: resolve task provider/model, assemble the prompt and its context (by mode, see [Context policy](#context-policy)) | `_ai_review*`, `_ai_gen_*`, `_ai_code`, `_ai_chat`, `ai` |
+| Prompt templates | What to say — review rules, lenses, verify rules, commit/summary prompts | `prompts/meta-*.md`, `prompts/lenses/*.md` |
+| Dispatch | Single-shot: `_ai_run` (and `_ai_run_watched` for file output with progress). Interactive: `_ai_interactive` | `_ai_run`, `_ai_run_watched`, `_ai_interactive` |
+| Executor selection | Which executor serves this provider and profile; which model it gets | `_ai_select_executor`, `_ai_executor_model` |
+| Executors | How to invoke one tool | `_ai_provider_ollama` (native driver), `_ai_agent_{pi,opencode,claude}` (runners) |
+| Config | Pure resolvers over `key=value` files (project walk-up, then global) | `_ai_config_*`, `_ai_default_*`, `_ai_origin_*` |
 
-Sessions sit beside this stack as a parallel pipeline with its own storage and context management — described in [sessions.md](sessions.md).
+## Executors
 
-## Layer 2: provider plugins
+Every model call goes through one of two executor kinds.
 
-The toolkit treats providers as plug-ins. Each provider is a single fish function named `_ai_provider_<name>` that knows nothing about the broader system — only how to invoke its specific tool.
+**Native ollama driver** — `_ai_provider_ollama`. Single-shot only, no tools. It is the one path
+that cannot be handed to another tool: only ollama's native `/api/generate` honours a
+per-request `num_ctx`. The OpenAI-compatible `/v1` endpoint that pi and opencode use loads the
+server's full `OLLAMA_CONTEXT_LENGTH` window every time. See
+[Native ollama driver](#native-ollama-driver).
 
-**Contract** (called by the dispatcher):
+**Runners** — agent CLIs behind one narrow contract: **pi**, **opencode**, **claude**. They do
+everything with tools (agentic review/verify, `ai code`), every interactive chat with history,
+and every single-shot call to a provider other than ollama.
+
+- `--provider claude` always means the claude CLI directly; pi and opencode are never involved.
+- **Providers and keys belong to the runner** — pi `~/.pi/agent/models.json`, opencode
+  `~/.config/opencode/config.json`. `ai` keeps no registry and no copy of a key; it passes a
+  `provider` and `model` name. A provider the runner doesn't know is an error that names the
+  runner.
+
+### Executor selection
+
+`_ai_select_executor PROVIDER PROFILE [runner]` prints the executor function and a label. The
+profile says what the executor may do: `none` (plain completion), `read` (explore the repo
+read-only), `edit` (may change files).
+
+| provider | profile `none` | profile `read` / `edit` |
+|---|---|---|
+| `claude` | claude runner | claude runner |
+| `ollama` | **native driver** | runner from config key `agent`, provider `ollama` |
+| anything else | runner from `agent` (must know the provider) | runner from `agent` |
+
+`agent` is `pi` (default) or `opencode`; `_ai_agents` is that explicit list. The optional third
+argument `runner` skips the native driver even for `ollama`/`none` — `ai chat` uses it, because
+only a runner keeps chat history.
+
+Which profile each command asks for:
+
+| Command | Profile |
+|---|---|
+| `ai [PROMPT]`, `ai gen …`, `ai review` (default), its verify pass | `none` |
+| `--agentic` (on `ai review`, `--verify-only`, or top-level `ai`) | `read` |
+| `ai code` | `read`; `ai code -e` → `edit` |
+| `ai chat` | `none`, through a runner (never `ollama run`) |
+
+The label shows up in dry-run headers and `would start:` lines:
+
+| Executor | Label |
+|---|---|
+| native driver | `ollama (native)` |
+| claude | `claude (runner claude, profile none)` |
+| runner | `litellm via pi (profile read)` |
+| + injected skill | `…, skill ai-review` |
+| + fallback | `ollama (native), fallback from litellm` |
+
+A provider unknown to the runner fails before anything runs:
 
 ```
-_ai_provider_<name> [--interactive] [--model M] [--think] [--agentic]
-                    [--no-think] [--thinking-output FILE]     (ollama only)
-
-Non-interactive (default):
-  reads stdin (prompt + piped input as a single stream)
-  writes the response to stdout
-  returns the tool's exit status
-
-Interactive (--interactive):
-  takes over TTY (no stdin to consume)
-  ignores --model if the tool doesn't support one
+Provider nosuch: unknown to runner pi — configure it in pi, or pick another provider (ai providers)
 ```
 
-`--think` and `--agentic` are accepted by every provider for interface symmetry. claude
-ignores `--think`, and `--agentic` is a no-op for it (`claude -p` is always tool-grounded).
-The ollama provider gates thinking on the model's capability (from `ollama show`): a
-thinking-capable model gets `think:true` by default, and `--think` on a non-thinking model
-prints a warning (`does not support thinking — ignoring --think`) rather than failing.
-`--no-think` and `--thinking-output` exist only on the ollama provider; the dispatcher
-forwards them only when it dispatches there.
+**Model for the executor** (`_ai_executor_model`, shared by `_ai_run` and `_ai_interactive`): an
+explicit model wins. With none, the native driver and claude resolve their own default (claude:
+the CLI's default). A runner needs a model: for `ollama` it is the default ollama model (or the
+error `ollama: no model configured — set one with: ai models use MODEL`); for any other provider
+it is the first model the runner lists for that provider.
 
-**The ollama provider** talks to the server over HTTP, not the CLI: non-interactive calls
-POST to `/api/generate` with `stream:true` and an explicit `think` boolean, size
-`options.num_ctx` to the prompt (≈chars/3 + 8k output reserve, floor 8k, ceiling
-`AI_OLLAMA_MAX_CTX` = 131072 by default — over the ceiling it errors instead of
-truncating), and stream `.response` through `jq --unbuffered`. With `--thinking-output`
-the `.thinking` channel is written to that file (the reasoning sidecar). It honors
-`OLLAMA_HOST`. Interactive mode uses `ollama run --think=true|false`. `/api/chat` is used
-only by the sessions pipeline and the built-in agent runner.
-
-**Discovery.** `_ai_providers` enumerates plugin functions via `functions -an`, filters to names matching `^_ai_provider_(?<name>.+)$`, then validates each is loadable with `functions -q`. The result is the canonical list of available providers — used by completions, config validation, and the dispatcher.
-
-**Adding a provider.** Create one file:
+## Runner contract
 
 ```
-fish/.config/fish/functions/_ai_provider_<name>.fish
+_ai_agent_<runner> --provider P --model M
+                   --tools none|read|edit       # profile; default read (unattended runs must not edit)
+                   [--skill FILE]               # SKILL.md injected as an instruction
+                   [--interactive [--continue | --resume]]
+                   [--no-session]               # don't persist the run as a session
+                   [ARGS...]                    # passed to the tool (pi, opencode)
+    non-interactive: prompt on stdin → answer on stdout
+
+_ai_agent_<runner>_models          # "provider<TAB>model" lines from the runner's own config
+_ai_agent_<runner>_probe PROVIDER  # optional; exit 0 reachable, 1 unreachable, 2 can't tell
 ```
 
-It is picked up automatically. No registration step, no code changes elsewhere. The function is autoloaded on first invocation by fish. Internal helpers that are not providers deliberately avoid the `_ai_provider_` prefix (e.g. `_ai_ollama_chat`, `_ai_agentic_native`), so `_ai_providers` returns exactly `claude ollama`.
+The dispatcher passes `--no-session` on every non-interactive run, and `cd`s into the working
+directory before calling the runner (runners take no `--workdir`).
 
-### Agent runners (second plug-in family)
+**Per-runner mapping:**
 
-A provider answers from the prompt alone; an **agent runner** explores the repo with
-tools. Runners are discovered the same way — `_ai_agents` lists `_ai_agent_<name>`
-functions (today: `ollama`, `pi`).
+| | pi | opencode | claude |
+|---|---|---|---|
+| Non-interactive | `pi -p`, prompt on stdin | `opencode run`, prompt on stdin | `claude -p`, prompt on stdin |
+| Provider / model | `--model P/M` | `-m P/M` | `--model M` (provider is always claude) |
+| `none` | `--exclude-tools '*'` | `--agent ai-none` | `--strict-mcp-config --tools ""` |
+| `read` | `--tools read,grep,find,ls` | `--agent ai-read` | `--strict-mcp-config --tools Read Grep Glob` |
+| `edit` | full toolset | `--agent ai-edit` | default tools |
+| `--skill FILE` | `--append-system-prompt FILE` | prepended to the stdin prompt | `--append-system-prompt-file FILE` |
+| `--interactive` | pi TUI with the profile's tools (`read` uses `--exclude-tools edit,write`, so bash stays and pi prompts for it); `--continue` / `--resume` | opencode TUI, `--continue`; agent and model are picked in the TUI | claude REPL, `--continue` / `--resume`; claude's own permission prompts (no tool restriction) |
+| `--no-session` | `--no-session` | accepted, no effect (`opencode run` always keeps a session) | `--no-session-persistence` |
+| Extra args | passed to pi (e.g. `@files`) | passed to opencode | ignored |
+| `_models` | `pi --offline --list-models` | `opencode models` | static: `sonnet`, `opus`, `haiku` |
+| `_probe` | `.providers[P].baseUrl` in `~/.pi/agent/models.json` | `.provider[P].options.baseURL` in `~/.config/opencode/opencode.json` or `config.json` | none |
+| Before an `ollama` run | `_ai_ensure_running` | `_ai_ensure_running` | — |
+
+Details worth knowing:
+
+- **Model ids with a slash.** The provider is prefixed only when the id does not already start
+  with `P/`, so `huihui_ai/glm…` under `ollama` becomes `ollama/huihui_ai/glm…`, not a provider
+  named `huihui_ai`.
+- **claude `--tools` is variadic.** `claude -p --tools "" "prompt"` would swallow the prompt as a
+  tool name, so the prompt always goes on stdin and `--tools` comes last. Without
+  `--strict-mcp-config`, `--tools ""` would still leave claude.ai MCP connectors available.
+- **opencode runs through its background service.** `opencode run --standalone` doesn't load the
+  ollama provider; the default mode talks to the service opencode starts on first use.
+- **opencode profiles are agent files** shipped in this repo (`agents/.config/opencode/agents/`):
+  `ai-none.md` (`"*": deny`), `ai-read.md` (`"*": deny` plus read/grep/glob/list allow),
+  `ai-edit.md` (`"*": allow`). The body of each is its system prompt.
+
+**Adding a runner:** `_ai_agent_<name>.fish` implementing the contract, `_ai_agent_<name>_models`,
+optionally `_ai_agent_<name>_probe`, and the name added to `_ai_agents`.
+
+### Unreachable providers and fallback
+
+Runners fail slowly and opaquely when a provider is unreachable (pi: 14 s on a DNS failure, a
+hang of 50 s or more on a closed port, exit 1 for every error). So the check happens **before**
+the runner starts, and runner stderr is never parsed.
+
+1. For a runner provider other than `ollama`/`claude`, `_ai_run` calls the runner's `_probe`. The
+   probe reads the provider URL from the runner's own config and calls `_ai_url_reachable`
+   (`curl --connect-timeout 2 -m 4`; any HTTP status, even 401/404, counts as reachable). No URL
+   known (a runner's built-in providers) → "can't tell" → run normally.
+2. Unreachable → `_ai_fallback_prompt` asks on `/dev/tty` (stdin is the prompt pipe and stderr
+   may be a log):
+   `litellm unreachable (via pi) — off-network? Run on ollama/<model> instead? [y/N or a model name]`
+   - `y` → the default ollama model; a typed name → that model; empty / `n` → exit 1.
+   - The run is re-selected with provider `ollama` and the same profile (native driver for
+     `none`, the runner's ollama for `read`), and a stderr line records it:
+     `↳ running on ollama/<model> (ollama (native), fallback from litellm)`.
+3. No terminal, `AI_NONINTERACTIVE` set, or no default ollama model → no prompt, just
+   `litellm unreachable (via pi) — off-network? Rerun with --provider ollama` and exit 1.
+
+The probe and fallback live in `_ai_run` only: interactive `ai code` / `ai chat` are not probed.
+`ai providers check NAME` runs the same probe on demand.
+
+## Context policy
+
+**What gets embedded is decided by the mode, never by the provider.** Every executor gets the
+same prompt for the same command; only the `Provider:` / `Model:` header and the executor label differ.
+
+| Path | Default (profile `none`) | `--agentic` (profile `read`) | `--brief` |
+|---|---|---|---|
+| git review | diff (capped by `--max-lines`) + full changed files within `--context-lines` (default 2000) | diff only | diff only, short prompt |
+| target review, file | scope note + the file (+ tree + README with `--with-project-context`) | scope note + the file | as default, short prompt |
+| target review, directory | tree (`tree -L 4`) + README (first 100 lines) | the directory path only | as default, short prompt |
+| `ai gen summary` | tree + README | — (no flag) | — |
+| `ai gen commit` | staged diff (else unstaged) | — | — |
+| verify pass | findings + the code the review saw: the diff (git), the file (target file); nothing for a directory target | same, plus read tools | skipped |
+| `--verify-only` | findings (+ `--file` if given) | same, plus read tools | — |
+
+- Embedded content is a **floor, not a ceiling**: an executor with tools (profile `read`) may read
+  more on top.
+- The user picks with one flag (`--agentic` = "explore yourself"), not by which provider happens
+  to be configured.
+- The target-file scope note ("Review ONLY this single file…", relaxed by
+  `--with-project-context`) goes to every executor: harmless without tools, and it keeps a
+  tool-using one on target.
+- `--agentic` also injects a skill (`ai-review` / `ai-verify`) into the runner or claude — see
+  [Skills](#skills).
+
+## Native ollama driver
+
+`_ai_provider_ollama` plus the `_ai_ollama_*` helpers. Every ollama setting has one home:
+
+| Value | Where it comes from |
+|---|---|
+| Host | `_ai_ollama_host`: `OLLAMA_HOST` (bare `host:port` accepted, like the ollama CLI), else `http://localhost:11434`. No `ai` config key |
+| Default model | config key `model` (project, then global; written by `ai models use MODEL`). `AI_DEFAULT_MODEL` is a one-off override. **No literal fallback**: nothing configured → `ollama: no model configured — set one with: ai models use MODEL`, reported before the server is touched |
+| Context ceiling | `_ai_ollama_max_ctx`: `AI_OLLAMA_MAX_CTX` > config key `ollama_max_ctx` > 131072 |
+| Sizing internals | named constants at the top of `_ai_ollama_num_ctx` (below) |
+| `OLLAMA_CONTEXT_LENGTH` | the **server's** default window (`conf.d/env.fish`, 131072). Used by runners and `ollama run`; the native driver bypasses it by sending its own `num_ctx` |
+
+**Server.** `_ai_ensure_running` starts a local server on demand (`ollama serve` in the
+background, waiting up to 10 s). A remote `OLLAMA_HOST` is only checked for reachability, never
+started.
+
+**Context sizing** (`_ai_ollama_num_ctx CHARS`):
 
 ```
-_ai_agent_<name> [--interactive] [--provider P] [--model M] [--no-session] [--edit] ...
-
-Non-interactive: reads the prompt from stdin, streams the final answer to stdout,
-                 live progress to stderr. Read-only unless --edit.
+prompt_tokens = round(chars / 3)                 # 3 chars/token deliberately over-estimates
+num_ctx       = max(8192, ceil((prompt_tokens + 8192) / 4096) * 4096)
+                                                 # 8192 = room for the answer; step 4096 lets
+                                                 # similar prompts reuse one loaded size
+num_ctx > ceiling → error, never truncation
 ```
 
-- `_ai_agent_ollama` — the default. Drives ollama's `/api/chat` tool-calling loop itself
-  with four read-only tools (`read_file`, `grep`, `find_files`, `list_dir`) executed in
-  the working directory (relative paths; not a sandbox — absolute paths are not
-  rejected; outputs are byte-capped), re-sizing `num_ctx` every turn to the growing history (clamped
-  to `min(model native context, AI_OLLAMA_MAX_CTX)`), thinking off, max 24 turns.
-- `_ai_agent_pi` — wraps `pi -p` with a read-only allowlist (`read,grep,find,ls`) and
-  `--no-session`; context is the server's static `OLLAMA_CONTEXT_LENGTH`. `ai code` also
-  uses it, interactively, with its own tool policy.
+A 3000-character prompt gets `num_ctx=12288`. Over the ceiling the driver refuses, because a
+truncated single-shot prompt makes the model return nothing:
 
-`_ai_agentic_native PROVIDER` says whether a provider is already tool-grounded (today:
-`claude`) and therefore needs no runner. `_ai_default_agent` picks the runner: the `agent`
-config key (project → global), default `ollama`. Adding a runner is one
-`_ai_agent_<name>.fish` file plus `agent=<name>` in config.
+```
+ollama: prompt ~200000 tokens needs ~208896 context, over the 131072 ceiling. A single-shot would truncate the prompt and the model would return nothing. Use --context-lines 0 (diff-only) or a smaller commit — or raise ollama_max_ctx / AI_OLLAMA_MAX_CTX if you have the RAM.
+```
 
-## Layer 3: dispatcher
+(With reserve = floor = 8192 the floor never binds; the smallest window is 12288.)
 
-`_ai_run` argparses common flags (`--provider`, `--model`, `-t/--think`, `--no-think`, `--agentic`, `--workdir`, `--output`, `--thinking-output`, `--dry-run`), takes the provider from `--provider` or else the **top-level `provider` key only** (`_ai_config_read provider`, default `ollama` — per-task resolution is the caller's job, see [Per-task resolution](#per-task-model-and-provider-resolution)), validates it via `functions -q _ai_provider_$provider`, then:
+**Thinking quarantine.** The driver always sends an explicit `think` boolean. Omitting the field
+lets a thinking-capable model reason straight into `.response` (the "reasoning leaks into the
+review" bug). Capability comes from `ollama show`:
 
-- If `--dry-run`: prints the assembled prompt to stdout, label to stderr, returns 0 without invoking the plugin.
-- Picks the dispatch target: normally the provider. With `--agentic` on a provider that is **not** natively tool-grounded (`_ai_agentic_native` false — i.e. ollama), it dispatches to `_ai_agent_<agent>` instead, passing `--provider P --no-session [--model M]` (the runner does not take `--think`/`--agentic`).
-- Forwards `--no-think` and the reasoning-sidecar path (`--thinking-output`) only when the target is `_ai_provider_ollama`. For a direct `--output` on ollama (non-agentic) it derives the sidecar path itself, reports it, and deletes it if empty.
-- If interactive (no prompt, no piped stdin, no output redirect): calls the target with `--interactive`.
-- Otherwise: pipes `_ai_pipe_input "$prompt"` (which emits the prompt argument followed by stdin if piped) into the target, and redirects stdout to the `--output` file — or, with no file, simply inherits fd 1. It deliberately does **not** write via `/dev/stdout`: that reopens the controlling terminal and escapes an enclosing pipe (e.g. `_ai_run_watched`'s `tee`).
+| Model | Sent | Result |
+|---|---|---|
+| thinking-capable | `think:true` | reasoning goes to the separate `.thinking` channel; only `.response` is printed |
+| thinking-capable + `--no-think` | `think:false` | no reasoning: faster, shallower |
+| not thinking-capable | `think:false` | harmless no-op; `--think` prints a warning instead of failing |
 
-`--workdir` is honored at the dispatcher level: `cd` before invocation, restore original PWD on exit. This is how Claude — and an agent runner under `--agentic` — reads project files in `ai review` (both modes).
+**Reasoning sidecar.** With a destination file (`--thinking-output F`, set by `_ai_run_watched`
+or derived by `_ai_run` for a direct `--output`), `.thinking` is streamed to the file and
+`.response` to stdout via a per-chunk loop. An empty sidecar is deleted. Runners have no such
+channel, so runner paths never produce one.
 
-`_ai_run_watched` wraps `_ai_run` for file output with a progress readout: one foreground pipeline (`_ai_run | tee FILE`) so Ctrl-C reaches `curl` and actually stops the model; on the agentic path it lets the runner's own live trace through instead.
+**Request.** `POST $host/api/generate` with `stream:true`, `options.num_ctx`, and `think`; the
+stream goes through `jq --unbuffered`. The driver prints `ollama: num_ctx=N (prompt ~T tokens,
+model M)` to stderr. Interactive mode is `ollama run --think=false|true MODEL` (no history).
 
 ## Configuration
 
-Configuration is not a layer of the stack above — it is a set of pure resolvers that the dispatcher (Layer 3) and the command handlers (Layer 5) consult. It is layered, not monolithic. A value can be set globally, scoped to a project, or scoped to a specific task. The resolver returns the most specific match.
+Plain `key=value` files, read by pure resolvers.
 
-**Files:**
+| Location | Scope |
+|---|---|
+| `<project>/.ai/config` (walk-up) | project |
+| `~/.config/ai/config` | global |
 
-| Location | Scope | Owns |
-|---|---|---|
-| `<project>/.ai/config` (walk-up) | Project | Per-project + per-task-per-project overrides |
-| `~/.config/ai/config` | Global | Global + per-task global overrides |
-| `$AI_DEFAULT_MODEL` env | Shell | Legacy global model fallback |
+**Keys:** `provider`, `<task>_provider`, `<task>_model`, `model`, `agent`, `ollama_max_ctx`,
+`review_verify` — see the [key table](toolkit.md#config-keys). Tasks: `chat`, `code`, `review`,
+`verify`, `commit`, `summary` (`_ai_tasks`).
 
-**Format.** Plain `key=value` lines. Schema:
+**Walk-up** (`_ai_project_config_file`): from `$PWD` upwards; stop at `$HOME` or `/` (so
+`~/.ai/config` is never a project config); return the first `.ai/config`; a directory with `.git`
+is checked and then the walk stops (the git root is the project boundary).
 
-| Key | Scope | Notes |
-|---|---|---|
-| `provider` | Top-level | Default provider for unspecified tasks |
-| `<task>_provider` | Per-task | Override for a specific task |
-| `<task>_model` | Per-task | Model for a specific task — used only while the provider in use is the task's configured provider |
-| `review_verify` | Review | Truthy (`1`/`true`/`yes`/`on`) → `ai review` runs the verify pass by default |
-| `agent` | Agentic | Agent runner behind `--agentic` for non-native providers: `ollama` (default) or `pi` |
-| `sessions_recent_turns` | Sessions | Sliding-window target |
-| `sessions_token_threshold` | Sessions | Truncation threshold (fraction of context window) |
-| `sessions_summary_model` | Sessions | Override model used for rolling summary |
+**Read chain** (`_ai_config_read KEY`): project file, then global file. An empty value in the
+project file falls through to global.
 
-`review_verify`, `agent`, and the `sessions_*` keys have no `ai config` setter — they are edited by hand.
+**Write target:** global unless `--project`; with `--project`, the existing project config, else
+`<git-root>/.ai/config`, else `$PWD/.ai/config`.
 
-Known tasks: `chat`, `code`, `review`, `verify`, `commit`, `summary` (enumerated by `_ai_tasks`). The `verify` task configures the second-opinion pass of `ai review --verify` independently of the review task itself (so you can review with one provider/model and verify with another).
-
-**Walk-up resolution.** Project config is discovered by `_ai_project_config_file`: from `$PWD`, walk up the directory tree checking each ancestor for `.ai/config`. Stop conditions, in order:
-
-1. `$dir == $HOME` or `$dir == /` → no project config.
-2. `$dir/.ai/config` exists → return it.
-3. `$dir/.git/` exists → check this dir only (git root is the project boundary), then stop.
-
-This means a session or config can live at the git root and apply to all subdirectories without explicit per-folder setup.
-
-**Read resolver chain** (`_ai_config_read KEY`):
+### Resolution chain
 
 ```
-1. project .ai/config → if KEY present, return it
-2. ~/.config/ai/config → if KEY present, return it
-3. (caller falls back to env var or hardcoded default)
+provider for TASK   --provider  >  <task>_provider  >  provider  >  ollama
+model for TASK      --model
+                    >  <task>_model         only while the provider in use is the task's
+                                            configured provider (a model name is provider-specific)
+                    >  AI_DEFAULT_MODEL     ollama only (one-off override)
+                    >  model                ollama only
+                    >  (none) → ollama: error · claude: the CLI's default ·
+                                 runner provider: the runner's first model for it
+runner              agent  >  pi            (unknown value → error listing pi, opencode)
+num_ctx ceiling     AI_OLLAMA_MAX_CTX  >  ollama_max_ctx  >  131072
+ollama host         OLLAMA_HOST  >  http://localhost:11434
 ```
 
-This is implemented in a single function and shared by all higher-level resolvers (`_ai_default_provider`, `_ai_default_model`, `_ai_origin_*`).
+Special cases:
 
-**Write target.** Writes don't follow the same chain — they go to one specific file:
+- **Top-level `ai`** has no task: provider = `--provider` > `provider` > ollama; model = `--model` >
+  the default model.
+- **Verify pass**: provider = `--verify-provider` > `verify_provider` > the review's provider;
+  model = `--verify-model` > `verify_model` (guarded as above) > the default model (ollama only).
+- **`--verify-only`**: provider = `--verify-provider` > `--provider` > `verify_provider` > the
+  `review` task's provider; model = `--verify-model` > `--model` > `verify_model` > default.
+- Command handlers resolve **before** any `cd` into a working directory, so project config comes
+  from where the user ran the command.
 
-- Without `--project`: always `~/.config/ai/config`.
-- With `--project`: `_ai_project_config_target` returns either the existing project config path (if walk-up finds one) or computes a new one (`<git-root>/.ai/config`, or `<cwd>/.ai/config` if not in a repo).
+**Origin tracking** (`_ai_origin_provider`, `_ai_origin_model`) mirrors the chain and returns a
+label for `ai config status`. Provider: `project`, `global` (a per-task key), `project+top` /
+`global+top` (that layer's top-level `provider`), `default`. Model: `project`, `global`, `env`
+(`AI_DEFAULT_MODEL`), `—` (nothing set).
 
-So once a project has a `.ai/config`, both reads and writes to it are sticky.
+## Skills
 
-**`move` semantics.** `ai config move --task X --to {project|global}` is shorthand for "read keys from the opposite layer, write to the target layer, remove from source". Conflict resolution: target's value is overwritten by source's. The user said "move", which means the source value wins.
+Two skills hold the **agentic procedure** for review and verify:
 
-## Per-task model and provider resolution
+| Skill | Role |
+|---|---|
+| `ai-review` | Read-only agentic review of a git change or a file/directory |
+| `ai-verify` | Read-only adversarial second pass: try to refute each finding |
 
-Tasks are an axis of personalization. The user may want:
-
-- `chat` → ollama qwen3.5:9b (fast)
-- `code` → ollama qwen2.5-coder:32b (specialized)
-- `review` → claude (better at judgment)
-- `commit` → ollama qwen2.5-coder:7b (small + fast for short messages)
-
-Each command handler knows its task identifier and passes it into resolvers.
-
-**Resolver contract:**
-
-```fish
-_ai_default_provider [TASK]
-  TASK   optional task identifier
-  Returns: provider name (always non-empty)
-  Chain:
-    1. <task>_provider from config (if TASK given)
-    2. provider from config
-    3. "ollama"
-
-_ai_default_model [TASK] [PROVIDER]
-  TASK     optional task identifier
-  PROVIDER optional provider hint
-  Returns: model name (may be empty for non-ollama)
-  Chain:
-    1. <task>_model from config (if TASK given) — only if PROVIDER is
-       unspecified or equals _ai_default_provider TASK (a model name is
-       provider-specific, so a --provider override must not leak it)
-    2. $AI_DEFAULT_MODEL env (only if PROVIDER is ollama or unspecified)
-    3. Hardcoded fallback "qwen3.5:9b" (only if PROVIDER is ollama or unspecified)
-  Non-ollama with no per-task model → empty result; caller passes no
-  --model and lets the provider use its native default.
-```
-
-The provider-match guard cuts both ways: switching a task's provider (`ai config provider claude --task review`) makes an existing `review_model` apply to the *new* provider, so the two keys should be changed together.
-
-**Origin tracking** (`_ai_origin_provider`, `_ai_origin_model`) mirrors the same logic but returns a label instead of the value. Provider labels: `project`, `global` (per-task key), `project+top`, `global+top` (inherited from that layer's top-level `provider`), `default`. Model labels: `project`, `global`, `env`, `default`, or `—` (non-ollama provider, no model → provider default). This is what powers the resolved view (`ai config status`).
-
-**Where callers use this.** Each command handler resolves before any side effects:
+**Source** (stow package `agents`):
 
 ```
-provider = --provider flag       OR _ai_default_provider <task>
-model    = --model flag          OR _ai_default_model <task> <provider>
+agents/
+├── .agents/skills/
+│   ├── ai-review/SKILL.md
+│   │   └── references/  meta-review.md, meta-review-diff.md, lenses/   (relative symlinks
+│   └── ai-verify/SKILL.md                                               to fish/.config/fish/prompts)
+│       └── references/  meta-verify.md
+├── .claude/skills/{ai-review,ai-verify} -> ../../.agents/skills/<name>
+└── .config/opencode/agents/{ai-none,ai-read,ai-edit}.md
 ```
 
-This pre-resolution happens BEFORE any `cd $workdir` or session loading, so resolvers see the user's invocation PWD (not the internal workdir).
+`install.sh` creates `~/.config/opencode/agents`, `~/.agents/skills` and `~/.claude/skills` first,
+then `stow agents`, so stow links each entry instead of folding a whole directory into the repo.
+pi reads `~/.agents/skills`, claude `~/.claude/skills`, opencode either.
 
-## Layer 4: prompt templates
+**Rules are not duplicated.** A `SKILL.md` describes only the procedure: what to review, the
+read-only rule, steps (get the change → read the rules → apply named lenses → read whole changed
+files, callers and tests → write the review citing `file:line`), and a budget of 30 tool calls.
+The review rules stay in `prompts/meta-review*.md`, `meta-verify.md` and `lenses/`, which the
+skill reaches through `references/` symlinks. A lens added to `prompts/lenses/` is available to
+the skill at once.
 
-Prompts are user-editable, not buried in shell code. Each generation/review command has a template file:
+**Our runs inject the skill explicitly** instead of relying on a runner to auto-load it.
+`_ai_run --skill NAME` resolves `~/.agents/skills/NAME/SKILL.md` (`_ai_skill_file`) and passes it
+to the runner or claude as `--skill FILE` (never to the native driver, which has no tools).
+`ai review --agentic` passes `--skill ai-review`, its verify pass `--skill ai-verify`. A missing
+skill prints `Note: skill ai-review is not installed (stow agents) — running without it`. When the
+request already contains the rules and the diff (as in our runs), the skill says to review
+exactly that.
+
+**Manual use.** Frontmatter `disable-model-invocation: true` keeps both skills out of unrelated
+sessions: they load only when invoked (`/ai-review --last 2 --lens crypto` in claude,
+`/skill:ai-review …` in pi). Without our orchestration, the model picks the diff with git and
+reads lenses from `references/lenses/` itself. In `claude -p` the file tools are confined to the
+working directory, so reading `references/` needs `--add-dir ~/.claude/skills`; an interactive
+session asks once.
+
+## Prompt assembly
+
+Templates are the "what to say" part; each command handler assembles the final prompt:
 
 ```
-~/.config/fish/prompts/
-├── meta-commit.md           (ai gen commit)
-├── meta-summary.md          (ai gen summary)
-├── meta-review.md           (ai review PATH — target mode)
-├── meta-review-diff.md      (ai review — git mode)
-├── meta-verify.md           (verify pass: ai review --verify / --verify-only)
-├── meta-session-summary.md  (rolling summary for long sessions)
-└── lenses/                  (ai review --lens NAME — one <name>.md checklist each,
-                              discovered by _ai_review_lens; README.md excluded)
+language instruction + template (meta-*.md, or a short --brief prompt)
+  + lens block(s)          ai review --lens (not with --brief)
+  + custom instruction     "Additional instructions: …" from the positional prompt
+  + context                by mode, see Context policy
 ```
 
-(These are symlinked from the dotfiles repo via stow.)
+Every template load has an inline fallback, so deleting a `.md` still leaves a working command.
+Lenses are discovered by `_ai_review_lens` from `prompts/lenses/*.md` (minus `README.md`); an
+unknown name is an error listing the available ones.
 
-**Loader pattern.** Every command that uses a template follows the same shape:
+## Dispatch details
 
-```fish
-set -l template_file ~/.config/fish/prompts/meta-<name>.md
-set -l prompt
-if test -f $template_file
-    set prompt (cat $template_file | string collect)
-else
-    set prompt "<minimal inline fallback>"
-end
-```
+**`_ai_run`** — flags `--provider`, `--model`, `-t/--think`, `--no-think`, `--agentic`,
+`--skill`, `--workdir`, `--output`, `--thinking-output`, `--dry-run`.
 
-If the user deletes or moves a template, the command still works with a compact built-in default. The user can iterate on prompt engineering without touching fish code, just by editing the `.md` file.
+1. Provider from `--provider`, else the top-level `provider` key, else `ollama` (per-task
+   resolution is the caller's job).
+2. Profile `read` with `--agentic`, else `none`; select the executor; resolve skill and model.
+3. Interactive iff stdin is a tty, there is no prompt and no `--output`.
+4. `--dry-run`: the label to stderr, the assembled prompt to stdout, exit 0.
+5. Probe and fallback for runner providers.
+6. Executor args: the native driver gets `--think` / `--no-think` / `--thinking-output`; runners
+   get `--provider`, `--tools`, `--skill`, and `--no-session` when non-interactive.
+7. Pipe prompt + stdin into the executor; with `--output`, redirect stdout to the file. It never
+   writes via `/dev/stdout`, which would reopen the terminal and escape an enclosing pipe.
 
-**Where assembly happens.** Templates are the "what to say" part. Assembly (combining template + context + language instruction + custom user prompt + the actual content) is the responsibility of each command handler (Layer 5). See [Layer 4: provider-specific assembly](#layer-4-provider-specific-assembly).
+**`_ai_run_watched`** wraps `_ai_run` for file output: one foreground pipeline
+(`_ai_run | tee FILE`), so Ctrl-C reaches `curl` and actually stops the model. It prints a
+prefill estimate, then a live line count, then `done | Ns | N lines -> FILE`. On `--agentic` it
+lets the runner's own output through and skips the sidecar.
 
-## Layer 4: provider-specific assembly
+**`_ai_interactive`** (`ai code`, `ai chat`) — `--task`, `--profile`, `--provider`, `--model`,
+`--runner`, `--continue`, `--resume`, `--dry-run`; resolves the task's provider/model, selects
+the executor, and starts it with `--interactive`. `--dry-run` prints
+`would start: <label>, interactive[, continue last | , resume (pick)], model M`.
 
-Different providers have different capabilities. Claude CLI can read files from the working directory. The ollama provider (invoked via HTTP API) has no filesystem access — unless `--agentic` routes the call to an agent runner. The prompt assembly must reflect that.
+## Where files live
 
-**The split.** Inside a command handler:
-
-- Common: load template, resolve task model, build language prefix, attach custom prompt suffix.
-- Provider-specific: build the final `full_prompt` string.
-  - **Claude**: just the template + custom instructions. Tell it to review/summarize the target. The actual file content is read by Claude itself (it has access to the working directory).
-  - **Ollama**: template + embedded context (tree output, README excerpt, file content; in git-mode review, the full changed files within the `--context-lines` budget). Everything plain Ollama needs must be in the prompt because it cannot read files.
-  - **`--agentic`** (git-mode review): the full-changed-files embed is skipped — the diff is still sent, and the model (claude, or ollama via an agent runner) fetches the rest itself.
-
-**Where the workdir matters.** `_ai_run --workdir DIR` does the `cd` before invoking the provider, so Claude sees the right directory. For plain ollama the cd happens too but is irrelevant (no files are read at runtime). For ollama **with `--agentic`** it matters just as much as for Claude: the agent runner's tools operate relative to that directory.
-
-**Why this split is right.** The provider plugin layer (Layer 2) handles HOW to invoke each tool. The prompt assembly (Layer 4–5) handles WHAT to send. Mixing them would either:
-
-- Force the runner to know about file contents (leaking into Layer 2), or
-- Force the prompt to embed content even for Claude (wasteful and weakens Claude's exploration).
-
-By keeping the split — context assembly in the command handler, invocation in the plugin — both providers get what they need without the layers leaking into each other.
-
-## Sessions: a parallel pipeline
-
-Sessions are a separate concern from one-shot commands. They have their own storage, their own context management, and their own provider boundary.
-
-**Architectural decision: sessions are ollama-only.**
-
-Claude has its own native session story (`claude --resume`, internal storage in `~/.claude/projects/`). The toolkit deliberately does NOT bridge to it. Reasons:
-
-- **Abstraction integrity.** A bridge would surface "what works for ollama doesn't work for claude" inconsistencies. Better to have one clean feature (ollama sessions) and let claude users go to claude CLI for its own session story.
-- **Don't depend on another product's internals.** Claude's storage format is private API. Parsing it would create unmaintainable coupling.
-- **Symmetric with how the toolkit treats other tools.** We don't manage pi's sessions, opencode's memory, or future cline's Kanban. Each tool owns its territory.
-
-When the user passes `--session NAME --provider claude` (or task resolution selects claude), the command errors with a clear redirect to `claude --resume` / `claude -c`.
-
-**Pipeline overview:**
-
-```mermaid
-flowchart TD
-    stdin["user input (stdin)"]
-    repl["_ai_session_chat<br/>REPL outer loop"]
-    maybe["_ai_session_maybe_summarize<br/>side effect: appends {t:summary} row"]
-    build["_ai_session_build_messages<br/>pure: reads file → JSON array"]
-    api["_ai_ollama_chat<br/>streaming /api/chat"]
-    append["append {t:assistant} row"]
-    jsonl[(".ai/sessions/&lt;name&gt;.jsonl<br/>append-only JSONL")]
-
-    stdin --> repl
-    repl --> append_user["append {t:user} row"]
-    append_user --> maybe
-    maybe --> build
-    build --> api
-    api --> append
-    append --> jsonl
-    maybe -.write.-> jsonl
-    append_user -.write.-> jsonl
-    build -.read.-> jsonl
-```
-
-Storage layout, JSONL types, the `covers` field, and the truncation algorithm are documented in detail in [sessions.md](sessions.md). The architectural points here are:
-
-1. **Append-only JSONL** for concurrency tolerance and append atomicity.
-2. **Side-effect separation.** `build_messages` is pure (read → return array). `maybe_summarize` is the side-effect step (write to file). Calling them in order keeps the contract clean.
-3. **Walk-up symmetric with config.** Sessions and config use the same walk-up algorithm. Same boundaries (git root, $HOME, /).
-4. **`covers` field as durable cursor.** A summary block records how many turn messages it covers. The builder skips that many on next call. No external pointer to maintain.
+| Path | What |
+|---|---|
+| `fish/.config/fish/functions/ai.fish`, `_ai_*.fish` | the toolkit (stowed into `~/.config/fish/functions/`) |
+| `fish/.config/fish/completions/ai.fish` | completion |
+| `fish/.config/fish/prompts/meta-*.md`, `lenses/` | prompt templates and lenses |
+| `agents/` | skills and opencode profiles (stow package `agents`) |
+| `tests/ai/run.fish`, `tests/ai/golden/` | golden + smoke harness |
+| `~/.config/ai/config`, `<project>/.ai/config` | config |
+| `~/.config/ai/models.json` | model metadata (label, trial) keyed by digest |
+| `~/.cache/ai-models.json` | installed-model list (from `/api/tags`; works offline) |
+| `~/.cache/ai/model-caps.json` | capabilities per digest (never stale: a digest's content doesn't change) |
+| `~/.pi/agent/models.json`, `~/.config/opencode/config.json` | the runners' own provider config (not ours, not in dotfiles) |
 
 ## Design invariants
 
-These should stay true as the code evolves:
+1. **Two executor kinds, one selection point.** Every model call goes through
+   `_ai_select_executor`. Commands never branch on the provider name to decide what to send.
+2. **Embedding is decided by the mode, never the provider.** The same command produces the same
+   prompt for every executor.
+3. **Providers belong to the runner.** `ai` keeps no provider registry, URLs or keys; an unknown
+   provider is an error naming the runner.
+4. **Fail fast, never parse runner stderr.** Reachability is probed (≤2 s) before a runner run;
+   failures are not classified from runner output.
+5. **No magic numbers outside one named place per executor.** Host in `_ai_ollama_host`, ceiling
+   in `_ai_ollama_max_ctx`, sizing constants in `_ai_ollama_num_ctx`, claude aliases in
+   `_ai_agent_claude_models`.
+6. **No literal model fallback.** Nothing configured is an error with the fix in it.
+7. **The native driver always sends an explicit `think`.** Reasoning never lands in the answer.
+8. **Skills are injected, rules are referenced.** Our runs pass `SKILL.md` explicitly; the
+   skill's rules are symlinks to the same prompt files the single-shot path uses.
+9. **Project config beats global config.** Always.
+10. **Resolve before `cd`.** Provider/model are resolved from the invocation directory.
+11. **Resolvers are pure.** `_ai_config_read`, `_ai_default_*`, `_ai_origin_*` have no side
+    effects.
+12. **Adding a lens or template is one file**; adding a task is one line in `_ai_tasks`; adding a
+    runner is the contract plus one entry in `_ai_agents`.
 
-1. **One-shot stateless paths stay backward-compatible.** Adding sessions did not change `ai chat`, `ai gen commit`, `ai review --last 3`. The new code path is additive.
+## Known limitations
 
-2. **Adding a provider is one file.** No registration in `_ai_providers` or other index. Discovery is via `functions -an`. A new file in `functions/` is sufficient.
-
-3. **Adding a task identifier is one config key per scope.** No code changes needed in resolvers. Only in command handlers if they want to use it.
-
-4. **Adding a prompt template is one file.** No fish code changes; loader pattern handles fallback.
-
-5. **Project config beats global config.** Always. No exceptions. If a user sets something in project, they meant it.
-
-6. **Sessions are ollama-only by design.** This is not a temporary limitation. Bridging claude (parsing its storage, mapping IDs) is rejected as architecturally wrong. See [the sessions boundary](#sessions-a-parallel-pipeline).
-
-7. **No filesystem access from provider plugins.** Plugins know about their tool. Reading files for context delivery is the command handler's responsibility (Layer 4-5). Agent runners are the deliberate exception — reading the repo (read-only) is their whole purpose, and they are only reached via an explicit `--agentic`.
-
-8. **Resolvers are pure.** `_ai_default_provider`, `_ai_default_model`, `_ai_config_read` have no side effects, no caching mutations. Read-only.
-
-9. **Pre-resolve before workdir cd.** Command handlers resolve provider/model from the user's invocation PWD, BEFORE entering any internal `cd`. This ensures project config is taken from where the user invoked, not where the runner walked to.
-
-10. **JSONL append-only.** Once a session row is written, it stays. Operations that "modify" sessions (clear, edit) rewrite the file under the hood, but the runtime expectation is that turns and summaries are append-only.
-
-## Cross-cutting concerns
-
-**Dry-run.** `--dry-run` is implemented at the dispatcher (Layer 3) and forwarded through all command handlers. The dispatcher prints the assembled prompt to stdout, a label to stderr, and returns 0 before invoking the provider. Command handlers detect `--dry-run` to suppress side-effect cues ("Saved to: $file" message when nothing was saved).
-
-**Completions.** `completions/ai.fish` consumes the same discovery mechanisms used at runtime: `_ai_providers` for provider names, `_ai_tasks` for task names, `_ai_session_names` for session names, `_ai_review_lens` (via `_ai_complete_lens`, which handles comma-stacked values) for lenses, and `_ai_complete_models` for models — it reads the installed-models cache (so it works with the server down), falls back to `ollama list` when the cache is cold, and adds the claude aliases for `--verify-model`. So tab-completion is automatically consistent with what the toolkit knows about.
-
-**Stow.** Files in the repo at `fish/.config/fish/functions/`, `prompts/`, `completions/` are symlinked into `~/.config/fish/` by `install.sh` (which wraps `stow`). When new files are added or deleted in the repo, `stow --restow fish` and `find … -type l ! -exec test -e {} \;` should be run to update symlinks and prune broken ones.
-
-**Error surface.** Error messages are user-facing: red `set_color`, prefixed with "Error:", followed by a hint for resolution. Warnings are yellow `set_color`. The pattern is: explain what failed, then say what the user should do.
-
-## Boundaries and what we deliberately don't do
-
-| Concern | Status |
+| Limitation | Notes |
 |---|---|
-| Bridge to claude CLI sessions | Rejected — each tool owns its territory |
-| Direct Anthropic API access | Rejected — API gating, requires separate billing |
-| Manage pi / opencode / claude-code state | Rejected — same boundary principle |
-| Vector search / embeddings for sessions | Not yet — out of scope for current implementation |
-| Cross-provider session migration | Rejected — sessions are scoped to one provider for life |
-| Encryption for sessions storage | Not yet — could be added without changing architecture |
-| Per-project prompt templates | Not yet — straightforward extension of the walk-up pattern |
-| Streaming for `ai gen`/`ai review` | Done — the ollama provider requests `stream:true` and emits chunks via `jq --unbuffered`; file output shows a live line count (`_ai_run_watched`) |
-These are architectural decisions, not bugs. They can be revisited if user pain emerges.
+| Fallback provenance | Recorded on stderr only, not inside the `-o` file |
+| Interactive sessions not probed | `ai code` / `ai chat` start the runner without a reachability check |
+| Interactive tool profiles | opencode's TUI picks agent and model itself; the claude REPL uses its own permission prompts; pi's interactive `read` keeps bash |
+| Runner context window | Runners use the server's `OLLAMA_CONTEXT_LENGTH` for ollama, not a per-request size. Register ollama models in the runner with a matching context window, or big agentic prompts come back empty |
+| claude runner isolation | `claude -p` loads the user's Claude Code memory and the project's `CLAUDE.md`, which can bias a review |
+| Runner model lists are live | `_models` runs the runner's listing on each selection (no cache) |
+| No reasoning sidecar on runner paths | Runners expose no separate thinking channel |
+
+## Testing
+
+`tests/ai/run.fish` runs every prompt-assembly path with `--dry-run` inside a sandbox: a
+temporary `HOME` with a controlled config, this repo's prompts and skills, a fixture pi
+`models.json` (one ollama provider, one cloud provider on a dead port), a dead `OLLAMA_HOST`
+with an installed-model cache, and clones of the repo pinned to fixed commits. Output is
+normalised and compared byte for byte with `tests/ai/golden/<case>.txt`; help screens are smoke
+checks. Nothing calls a model or the network, and the real config is never read. Run it before
+and after any change; `--update` rewrites the goldens (review the diff), `NAME…` runs a subset.

@@ -1,6 +1,10 @@
 # AI toolkit docs
 
-- [Architecture](architecture.md) — design layers, contracts, invariants
-- [Toolkit reference](toolkit.md) — commands, flags, examples
-- [Sessions](sessions.md) — storage layout, context management, lifecycle workflows
-- [How-to / best practices](howto.md) — common scenarios
+- [Architecture](architecture.md) — executors (native ollama driver, runners pi / opencode /
+  claude), runner contract, context policy, config resolution, skills, invariants
+- [Toolkit reference](toolkit.md) — every command and flag, config keys, env vars, files,
+  completion, error messages
+- [How-to / best practices](howto.md) — first run, picking and trying models, review workflows,
+  cloud providers through the runner, off-network fallback, `ai code` / `ai chat`, troubleshooting
+
+Tests: `tests/ai/run.fish` (golden + smoke harness, offline).

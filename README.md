@@ -9,12 +9,13 @@ Development environment configuration for MacBook Pro M4 Max (36GB), optimized f
 | **nvim** | Neovim (LazyVim) with LSP for Scala, Rust, Java, Kotlin |
 | **kitty** | Kitty terminal with Japanesque theme |
 | **fish** | Fish shell with dev aliases and SDKMAN integration |
+| **agents** | `ai` toolkit add-ons for agent CLIs: the `ai-review` / `ai-verify` skills (→ `~/.agents/skills`, `~/.claude/skills`) and opencode runner profiles (→ `~/.config/opencode/agents`) |
 | **leetcode** | Offline LeetCode runner for Scala 3 and Rust |
 
 ## Quick Install
 
 ```bash
-# Clone and apply (needs Homebrew; install.sh runs `brew bundle` from Brewfile, stows nvim/kitty/fish, installs fish plugins)
+# Clone and apply (needs Homebrew; install.sh runs `brew bundle` from Brewfile, stows nvim/kitty/fish/agents, installs fish plugins)
 git clone git@github.com:alnovis/dotfiles-mac.git ~/dotfiles-mac
 cd ~/dotfiles-mac
 ./install.sh
@@ -112,7 +113,7 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 **Environment defaults** (`fish/.config/fish/conf.d/env.fish`):
 - `EDITOR` / `VISUAL` → `nvim`
 - `LANG` → `en_US.UTF-8`
-- `OLLAMA_CONTEXT_LENGTH` → `131072` (default context for the agentic/pi path & `ollama run`; the non-agentic `ai` provider sizes num_ctx per-request and overrides it)
+- `OLLAMA_CONTEXT_LENGTH` → `131072` (the ollama server's default window, used by the runners pi/opencode and `ollama run`; the `ai` native driver sizes `num_ctx` per request instead)
 - `JAVA_HOME` is owned by SDKMAN when installed; `config.fish` only sets a fallback for non-SDKMAN machines
 - Host-specific overrides: create `~/.config/fish/conf.d/env.local.fish` (gitignored), auto-sourced
 
@@ -175,69 +176,61 @@ All functions support `-h/--help`.
 - Pods match by name **substring** across namespaces (`-n` to scope); completion is entirely ours (helpers) or bridged to `kubectl __complete` (`k x`)
 - KUBECONFIG: `$K_KUBECONFIG` override, else `~/work/rf/local-config/k3s/config`
 
-*AI — unified `ai` command with multi-provider support (Ollama, Claude), per-task / per-project config, named sessions, and Tab-completion. Full docs: [docs/fish/ai/](docs/fish/ai/).*
+*AI — one `ai` command over local and cloud models, per-task / per-project config, Tab-completion. Full docs: [docs/fish/ai/](docs/fish/ai/).*
 
-**Core / chat:**
-- `ai [PROMPT]` — one-shot prompt or interactive chat (`ai "question"`, `git diff | ai "review"`)
-  - `-m/--model`, `-t/--think` (ollama), `--provider`, `--dry-run` (print assembled prompt without invoking)
-- `ai chat` — interactive chat (default ollama)
-  - `--session NAME` / `-s NAME` — start/resume persistent session (ollama only, see Sessions below)
-  - `-c` continue last session, `--new` error if exists, `--global` force global scope, `--system "..."`
-- `ai code` — pi with file edits off by default (read + bash stay on, prompted), `-e/--edit` to allow edits (ollama only)
+**How it runs a model** — two kinds of executor, picked per call:
+- **native ollama driver** — single-shot calls to local models; sizes `num_ctx` to each prompt
+- **runners** — agent CLIs behind one contract: **pi** or **opencode** (config key `agent`, default pi) for every non-claude provider, local or cloud; the **claude** CLI for `--provider claude`. Providers and their keys live in the runner's own config (pi `~/.pi/agent/models.json`, opencode `~/.config/opencode/config.json`) — `ai` keeps no registry
+- What goes into the prompt depends on the mode, not the provider: by default everything is embedded (diff + changed files, or file / tree / README); with `--agentic` only the diff or the file, and the executor explores the repo read-only with the `ai-review` / `ai-verify` skill injected
 
-**Review (auto-detected mode from positional):**
-- `ai review` — git mode: branch vs base (auto-detects develop/main/master)
-- `ai review BRANCH` — git mode: vs that branch
-- `ai review --last [N]` / `--commit SHA` / `--file FILE` — git mode: last N commits / specific commit / single file filter
-- `ai review PATH` — target mode: project (dir) or single-file review
-- `ai review FILE --with-project-context` — target mode: file + parent project context
+**Core / chat / code:**
+- `ai [PROMPT]` — one-shot prompt, or `ollama run` with no arguments (`ai "question"`, `git diff | ai "review"`)
+  - `-m/--model`, `-t/--think`, `--no-think`, `--agentic`, `--provider`, `--dry-run` (print the prompt and the executor that would get it)
+- `ai chat [MODEL]` — interactive chat with the chat task's provider; history lives in the runner / claude CLI: `-c` continue the last chat, `-r` pick one; `--provider`, `--dry-run`
+- `ai code` — interactive coding session with the code task's provider (pi/opencode, or claude); no file edits by default, `-e/--edit` allows them; `--provider`, `--model`, `--dry-run`
+
+**Review (mode auto-detected from the positional):**
+- `ai review` — git mode: branch vs base (develop/main/master); `ai review BRANCH` — vs that branch
+- `ai review --last [N]` / `--commit SHA` / `--file FILE` — last N commits / one commit / one file of the diff
+- `ai review PATH` — target mode: a directory or a single file; `--with-project-context` adds the project tree/README to a file review
 - Common: `--provider`, `--model`, `--brief`, `--lang LANG`, `-o/--output FILE`, `--dry-run`
-- `--lens NAME[,NAME…]` — add specialist checklists (security, quality, Rust, SQL/HBase; see `prompts/lenses/`)
-- `--agentic` — let the model explore the repo itself (claude natively; ollama via the agent-runner)
+- `--lens NAME[,NAME…]` — specialist checklists (security, quality, Rust, SQL/HBase; see `prompts/lenses/`)
+- `--agentic` — the executor reads the repo itself (read-only tools + the `ai-review` skill)
 - `--no-think` — fast pass: disable a thinking model's reasoning
-- `--verify` / `--verify-provider P` / `--verify-model M` — adversarial second pass that tries to refute each finding; with `-o` it goes to `<output>.verify.<ext>`
-- `--verify-only FILE` — re-verify an existing review without re-running it
+- `--verify` / `--verify-provider P` / `--verify-model M` — adversarial second pass that tries to refute each finding; with `-o` it goes to `<output>.verify.<ext>`; `--verify-only FILE` re-verifies a saved review
 - Git only: `--lang-all LANG`, `--max-lines N` (diff cap, default 500), `--context-lines N` (budget for embedding whole changed files, default 2000)
 
 **Generation:**
-- `ai gen commit` — commit message from staged/unstaged diff
+- `ai gen commit` — commit message from the staged (else unstaged) diff
 - `ai gen summary [DIR]` — project summary
 - Common: `--provider`, `--model`, `--lang`, `-o/--output FILE`, `--dry-run`
 
-**Sessions** (persistent chat history, ollama only — claude conversations use `claude --resume` natively):
-- Storage: walk-up `.ai/sessions/<name>.jsonl` (project) → `~/.config/ai/sessions/` (global)
-- `ai sessions ls [--archived|--all]` / `show NAME` / `info NAME` — browse + render
-- `ai sessions search QUERY [--name PAT] [--since DATE] [--regex] [--archived|--all]` / `stats [--archived|--all]` — find + aggregate (`--archived`: search only the archive, stats includes it)
-- `ai sessions rm / rename / clear / edit` — modify
-- `ai sessions branch / archive / restore / move --to {project|global}` — lifecycle
-- `ai sessions export / import / pin / unpin` — share + lock the model per session
-- Context management: rolling summary + sliding window (configurable thresholds)
+**Providers:**
+- `ai providers` — every provider and the executor serving it (no network)
+- `ai providers check NAME` — reachable right now? It is the same ≤2 s probe `ai` runs before every cloud call; when that probe fails on a terminal, `ai` offers to run on local ollama instead
 
-**Config (per-task / per-project, with global fallback):**
-- `ai config` — show project + global config side-by-side
-- `ai config status` — resolved provider/model per task with origin (`project / global / env / default`)
-- `ai config provider PROV [--task X] [--project]` — set provider scoped
-- `ai config reset --task {X|all} [--project]` — clear per-task overrides
-- `ai config move --task X --to {project|global}` — relocate per-task keys
-- `ai config tasks` — list known tasks (chat, code, review, commit, summary)
-- Resolver chain: project `.ai/config` → global `~/.config/ai/config` → `AI_DEFAULT_MODEL` env → fallback
+**Config (per-task / per-project, global fallback):**
+- `ai config` / `ai config status` — raw config, and the resolved provider/model per task with origin
+- `ai config provider PROV [--task X] [--project]`, `ai config reset --task {X|all} [--project]`, `ai config move --task X --to {project|global}`, `ai config tasks`
+- Model resolution: task model (project → global) → `AI_DEFAULT_MODEL` (one-off override) → config key `model` (project → global); nothing set is an error, not a silent default
+- Native ollama: `OLLAMA_HOST`; context ceiling `ollama_max_ctx` / `AI_OLLAMA_MAX_CTX` (default 131072)
 
 **Models:**
-- `ai models` / `ai models list [FILTER]` — RAM-filtered list (`--all` for everything)
-- Shows "Active selection" header per task + "Used for" tag per model
-- `ai models install / rm / use MODEL [--task X] [--project]` — manage models, set scoped defaults
-- `ai models update / info / prune / running` — maintenance
+- `ai models [FILTER]` — installed models: one row per model, grouped by label, with size, capabilities, the tasks using it and trial age (no network); `--provider P|all` — a runner provider's models
+- `ai models info NAME[:TAG]` — details; for a model not installed, read from the ollama registry before downloading (size, RAM fit, params, quantization, vision, …)
+- `ai models try NAME:TAG` / `keep` / `drop` — pull a model as a trial, then keep or remove it
+- `ai models search [QUERY]` — open ollama.com search (ollama has no search API)
+- `ai models label NAME LABEL` — group a model (`general` clears); `ai models use [TASK] MODEL [--project]` — default or per-task model
+- `ai models install / rm / update / prune / running` — maintenance
 
-**Prompt templates** (`~/.config/fish/prompts/`, overridable, fall back to inline defaults):
-- `meta-commit.md`, `meta-summary.md` — generation
-- `meta-review.md` (project state), `meta-review-diff.md` (git diff)
-- `meta-verify.md` (verify pass)
-- `meta-session-summary.md` (rolling summary for long sessions)
-- `lenses/<name>.md` (review lenses, see `lenses/README.md`)
+**Prompts and skills:**
+- `~/.config/fish/prompts/`: `meta-commit.md`, `meta-summary.md`, `meta-review.md` (project state), `meta-review-diff.md` (git diff), `meta-verify.md`, `lenses/<name>.md` (see `lenses/README.md`)
+- `agents/.agents/skills/{ai-review,ai-verify}/` — the agentic procedure; `references/` links to the prompts above, so the rules have one source. Also usable by hand in claude / pi: `/ai-review [BASE|PATH] [--lens …]`
 
 **Other:**
 - `ai stop [MODEL]` — stop one or all running models, `--server` to kill Ollama entirely
 - `opencode` — run OpenCode TUI with Ollama auto-start
+- Tests: `tests/ai/run.fish` — golden `--dry-run` prompts + help smoke checks, offline, about a second
 
 *LeetCode:*
 - `lc-run` — run LeetCode solution with `@test` cases (Scala 3, Rust)
@@ -262,27 +255,29 @@ All functions support `-h/--help`.
 **AI Models:**
 
 ```bash
-ai models                                   # browse available models (RAM-filtered)
-ai models install qwen3.5:9b                # install a model
-ai models use qwen3.5:9b                    # set as global default
-ai models use qwen2.5-coder:7b --task commit  # per-task default
-ai config status                            # see resolved provider+model per task
+ai models                                   # installed models
+ai models info qwen3:30b                    # will it fit? (read from the registry, nothing downloaded)
+ai models try qwen3:30b                     # pull as a trial; later: ai models keep / drop qwen3:30b
+ai models use qwen3.5:9b                    # default model (config key `model`)
+ai models use commit qwen2.5-coder:7b       # per-task model
+ai config status                            # resolved provider + model per task
 ```
 
 **AI Tools:**
 
 | Tool | Purpose | Usage |
 |------|---------|-------|
-| `ai` | Multi-provider toolkit (Ollama/Claude) with per-task/per-project config | `ai "question"`, `git diff \| ai "review this"` |
-| `ai review` | Code review — git changes or project state (auto-detected) | `ai review`, `ai review src/Foo.scala`, `ai review --last 3` |
+| `ai` | Local + cloud models through one command, per-task/per-project config | `ai "question"`, `git diff \| ai "review this"` |
+| `ai review` | Code review — git changes or project state (auto-detected) | `ai review`, `ai review src/Foo.scala --lens crypto`, `ai review --last 3 --agentic` |
 | `ai gen` | Content generation (commit, summary) | `ai gen commit`, `ai gen summary -o summary.md` |
-| `ai chat` | Chat — stateless or persistent (`--session NAME`, ollama only) | `ai chat -s debug-foo`, `ai chat -c` |
-| `ai sessions` | Session management (ls/show/search/branch/pin/...) | `ai sessions ls`, `ai sessions search migration` |
+| `ai chat` | Interactive chat; history via the runner / claude CLI | `ai chat`, `ai chat -c`, `ai chat --provider claude` |
+| `ai code` | Interactive coding session (pi/opencode, or claude) | `ai code @src/`, `ai code -e` |
+| `ai providers` | Providers and their executors; reachability | `ai providers`, `ai providers check litellm` |
 | `ai config` | Provider/model config — global + per-project + per-task | `ai config status`, `ai config provider claude --task review` |
-| `ai models` | Model manager (install/use/info, per-task defaults) | `ai models use qwen3.5:9b --task chat` |
-| `ai code` | AI-assisted coding (pi + Ollama) | `ai code @src/` |
-| `pi` | Coding agent (multi-provider, Ollama) | `pi --model ollama/qwen3.5:9b` |
-| `claude` | Cloud AI coding agent (Anthropic) | `claude "analyze project"` |
+| `ai models` | Installed models, registry info, trials, labels | `ai models info qwen3:30b`, `ai models use review qwen3.5:27b` |
+| `pi` | Coding agent, the default runner (local + cloud providers) | `pi --model ollama/qwen3.5:9b` |
+| `opencode` | Coding agent, alternative runner (`agent=opencode`) | `opencode` |
+| `claude` | Claude Code CLI, runner for `--provider claude` | `claude "analyze project"` |
 
 ## macOS Apps
 
@@ -295,7 +290,7 @@ ai config status                            # see resolved provider+model per ta
 
 | Document | Description |
 |----------|-------------|
-| [docs/fish/ai/](docs/fish/ai/) | AI toolkit — architecture, reference, sessions, how-to |
+| [docs/fish/ai/](docs/fish/ai/) | AI toolkit — architecture, reference, how-to |
 | [docs/fish/kube/toolkit.md](docs/fish/kube/toolkit.md) | Kube toolkit — `k` dispatcher, helpers, `k x` raw kubectl |
 | [docs/nvim/keymaps.md](docs/nvim/keymaps.md) | Full Neovim keymaps reference |
 | [docs/leetcode.md](docs/leetcode.md) | LeetCode offline runner guide |

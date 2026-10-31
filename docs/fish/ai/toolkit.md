@@ -1,834 +1,769 @@
 # AI toolkit reference
 
-> See also: [Architecture](architecture.md) · [Sessions](sessions.md) · [How-to](howto.md)
+> See also: [Architecture](architecture.md) · [How-to](howto.md)
 
-Command reference for `ai`. For design decisions and the "why" behind these commands, see [architecture.md](architecture.md). For sessions deep-dive (storage layout, context management algorithms), see [sessions.md](sessions.md).
+Command reference for `ai`. For the design behind these commands (executors, runner contract,
+context policy), see [architecture.md](architecture.md).
 
 ## Contents
 
 - [Quick reference](#quick-reference)
-- [Chat & code](#chat--code)
-- [Review](#review)
-- [Generation](#generation)
-- [Sessions](#sessions)
-- [Configuration](#configuration)
-- [Models](#models)
-- [Common flags](#common-flags)
+- [Top-level `ai`](#top-level-ai)
+- [`ai chat`](#ai-chat)
+- [`ai code`](#ai-code)
+- [`ai review`](#ai-review)
+- [`ai gen`](#ai-gen)
+- [`ai providers`](#ai-providers)
+- [`ai models`](#ai-models)
+- [`ai config`](#ai-config)
+- [`ai stop`](#ai-stop)
+- [Config keys](#config-keys)
+- [Environment variables](#environment-variables)
 - [Prompt templates](#prompt-templates)
 - [Files and paths](#files-and-paths)
-- [Environment variables](#environment-variables)
 - [Tab-completion](#tab-completion)
 - [Troubleshooting](#troubleshooting)
 
 ## Quick reference
 
 ```
-ai [PROMPT]                          one-shot or interactive chat
-ai chat [-s NAME | -c]               chat, optionally with persistent session
-ai code [-e] [@FILES...]             AI-assisted coding via pi
-ai review [PATH | --last N]          code review (auto-detects mode)
+ai [PROMPT]                          one-shot prompt; interactive with no prompt
+ai chat [MODEL] [-c | -r]            interactive chat, history kept by the runner / claude CLI
+ai code [-e] [ARGS...]               interactive coding session (no file edits unless -e)
+ai review [PATH | BASE | --last N]   code review, mode auto-detected
 ai review --verify-only FILE         re-verify a saved review (no review pass)
-ai gen commit                        generate commit message
-ai gen summary [DIR]                 generate project summary
-ai sessions <subcommand>             manage chat sessions
-ai config <subcommand>               view/set provider and model config
-ai models <subcommand>               install / manage Ollama models
-ai stop [MODEL]                      stop running models
+ai gen commit                        commit message from staged (else unstaged) changes
+ai gen summary [DIR]                 project summary
+ai providers [ls | check NAME]       providers, their executors, reachability
+ai models [COMMAND]                  installed models, info, try/keep/drop, use, label, …
+ai config [SUBCOMMAND]               provider config, resolved per-task status
+ai stop [MODEL | --server]           stop running ollama models or the server
 ai --help                            top-level help
 ```
 
-Each command supports `-h`/`--help`.
+Every command takes `-h` / `--help`.
 
-## Chat & code
+**Executors in one line:** `ollama` single-shot → the native ollama driver; `claude` → the claude
+CLI; any other provider, and anything with tools or chat history → the runner named by the config
+key `agent` (`pi` by default, or `opencode`). Details: [architecture.md](architecture.md#executor-selection).
 
-### `ai [PROMPT]`
-
-One-shot prompt to the default provider, or interactive mode if no prompt and no piped stdin.
+## Top-level `ai`
 
 ```
 ai "explain monads"                  one-shot
-git diff | ai "review this"          pipe stdin as context
+git diff | ai "review this"          piped stdin is appended to the prompt
 ai                                   interactive (terminal only)
+ai --provider claude "question"      one-shot on claude
 ```
 
-**Flags:**
+Interactive iff stdin is a terminal, there is no prompt, and no output file. The top-level command
+has no task: provider = `--provider` > config key `provider` > `ollama`; model = `--model` > the
+default model.
+
+| Executor | Interactive | One-shot |
+|---|---|---|
+| ollama | `ollama run --think=false MODEL` (no history) | native driver |
+| claude | claude REPL | `claude -p`, no tools |
+| other | runner TUI, no tools | runner, no tools |
+
+**Flags** (from `ai --help`):
 
 | Flag | Effect |
 |---|---|
-| `-m`, `--model MODEL` | Override resolved model |
-| `-t`, `--think` | Enable thinking mode (ollama models that support it) — see note below |
-| `--no-think` | Fast path: force `think:false` even on a thinking model (one-shot, ollama provider only) |
-| `--agentic` | Let the model explore the current directory with read-only tools — see [Agentic mode](#agentic-mode---agentic). Without `-m` the default model is used, same as the plain provider |
-| `--provider PROV` | Override resolved provider (ollama, claude) |
-| `--dry-run` | Print assembled prompt to stdout, label to stderr, return 0 without invoking |
+| `-m`, `--model MODEL` | Use a specific model |
+| `-t`, `--think` | Native ollama only. Interactive: `ollama run --think=true`. One-shot: a thinking model reasons anyway (kept out of the answer); a non-thinking model prints `ollama: <model> does not support thinking — ignoring --think` |
+| `--provider PROVIDER` | Override provider (ollama, claude, or one the runner knows) |
+| `--dry-run` | Print the assembled prompt (stdout) and the executor label (stderr) without invoking the model |
 
-`--think` matters mostly in the **interactive REPL**: `ai -t` runs `ollama run --think=true`,
-while a plain `ai` runs `--think=false`. In **one-shot** mode it changes little — a
-thinking-capable model reasons by default anyway (its reasoning is kept out of the answer,
-see [Reasoning sidecar](#reasoning-sidecar)), and a non-thinking model just prints
-`ollama: <model> does not support thinking — ignoring --think` to stderr.
-
-### `ai chat`
-
-Interactive chat with the default chat model. Stateless by default — each invocation is a fresh conversation (`ollama run MODEL`).
-
-```
-ai chat                              start REPL with task=chat resolved model
-ai chat qwen2.5-coder:32b            override model (positional)
-```
-
-The positional argument is a **model name**, not a prompt — `ai chat "say hi"` tries to
-run a model called `say hi`. For a one-shot prompt use `ai "say hi"`. `ai chat` has no
-`--dry-run`.
-
-**Flags:**
+The dispatcher also accepts these (not listed in `ai --help`):
 
 | Flag | Effect |
 |---|---|
-| `-s`, `--session NAME` | Start or resume named session (see [Sessions](#sessions)) |
-| `-c`, `--continue` | Resume the last session (read from `.last` pointer) |
-| `--new` | When combined with `--session`, error if session already exists |
-| `--global` | When creating a new session, force global scope |
-| `--system "..."` | System prompt (only applied at session creation) |
-| `--model MODEL` | Override model for this run |
-| `--provider PROV` | Session mode only — must be ollama |
+| `--agentic` | Profile `read`: the executor may read the current directory |
+| `--no-think` | Native ollama: send `think:false` even to a thinking model |
+| `--output FILE` | Write the answer to FILE (native ollama also writes a reasoning sidecar) |
+| `--workdir DIR` | Run in DIR |
+| `--skill NAME` | Inject the installed skill NAME into a runner or claude |
 
-`--session` and `-c` activate the session pipeline. `--provider claude` with a session is blocked with an error suggesting `claude --resume` / `claude -c`. Without `--session`/`-c`, `--provider` is **ignored**: stateless `ai chat` always runs `ollama run` (for an interactive Claude session use `ai --provider claude`).
-
-### `ai code [OPTIONS] [FILES...]`
-
-Run [pi](https://pi.dev/) with Ollama as the backend. By default file edits are
-disabled (`--exclude-tools edit,write`), but `read` and `bash` stay available and pi
-prompts before each bash command in interactive mode. This is not a sandbox -- bash
-can still touch files, and `-p` (non-interactive) removes the prompt, so avoid it on a
-working tree you care about. Use `-e` to allow direct file edits.
+Dry-run headers name the executor:
 
 ```
-ai code @src/main.rs                 analyze (no file edits)
+$ ai --dry-run hello
+--- dry-run: prompt that would be sent to ollama (native) ---
+hello
+
+$ ai --provider claude --dry-run hello
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
+hello
+```
+
+## `ai chat`
+
+```
+Usage: ai chat [MODEL] [--provider P] [-c | -r] [--dry-run]
+```
+
+Interactive chat with the `chat` task's provider and model (`chat_provider` / `chat_model`).
+claude → the claude CLI; **every other provider, ollama included → the runner**, which keeps the
+chat history. For a bare `ollama run` with no history, run `ai` with no arguments (when the
+top-level provider is ollama).
+
+| Flag | Effect |
+|---|---|
+| `MODEL`, `--model M` | Override the model (the positional wins if both are given) |
+| `--provider P` | Override the provider |
+| `-c`, `--continue` | Continue the last chat (the runner's / claude's history) |
+| `-r`, `--resume` | Pick a past chat to resume |
+| `--dry-run` | Show which executor would start, then exit |
+
+The positional is a **model name**, not a prompt; for a one-shot prompt use `ai "…"`. Real
+`--dry-run` output (test sandbox, pi as runner):
+
+```
+$ ai chat --dry-run
+would start: ollama via pi (profile none), interactive, model default-model
+$ ai chat -c --dry-run
+would start: ollama via pi (profile none), interactive, continue last, model default-model
+$ ai chat -r --provider claude --dry-run
+would start: claude (runner claude, profile none), interactive, resume (pick), model (executor default)
+```
+
+With opencode as the runner, `-r` has no effect (its TUI takes only `--continue`) and the model is
+picked in the TUI.
+
+## `ai code`
+
+```
+Usage: ai code [OPTIONS] [ARGS...]
+```
+
+Interactive coding session in the current repository with the `code` task's provider
+(`code_provider` / `code_model`): claude → the claude CLI, any other provider → the runner.
+Default profile `read`: no file edits (pi also keeps bash and prompts for each command). `-e`
+allows edits. Not a sandbox: bash can still touch files.
+
+| Flag | Effect |
+|---|---|
+| `-e`, `--edit` | Allow file edits (profile `edit`) |
+| `--provider P` | Override the provider |
+| `--model M` | Override the model |
+| `--dry-run` | Show which executor would start, then exit |
+| any other argument | Passed to the executor untouched (e.g. pi's `@files`); the claude runner ignores them |
+
+```
+ai code @src/main.rs                 analyze, no file edits
 ai code -e @src/main.rs              edit mode
-ai code --model ollama/qwen2.5-coder:32b @src/
+ai code --provider claude            coding session in the claude CLI
 ```
 
-Use pi's `@`-syntax to add files or directories to context.
+Real `--dry-run` output (test sandbox):
 
-**Flags:**
+```
+$ ai code --dry-run @src
+would start: ollama via pi (profile read), interactive, model default-model
+  passing: @src
+$ ai code -e --dry-run
+would start: ollama via pi (profile edit), interactive, model default-model
+$ ai code --provider testcloud --dry-run
+would start: testcloud via pi (profile read), interactive, model cloud-model
+```
+
+With an ollama provider the model must be one the runner knows how to serve well: register it in
+pi's `models.json` with a context window matching the server's (see [howto](howto.md#agentic-runs-on-ollama-come-back-empty)).
+
+## `ai review`
+
+```
+Usage: ai review [OPTIONS] [TARGET|BASE] ["custom prompt"]
+```
+
+One command, two modes, picked from the first positional:
+
+- **Target mode** — the positional exists on disk (file or directory): review its current state.
+- **Git mode** — no path, or a git ref: review committed changes. The index and working tree are
+  never read; for uncommitted work use `git diff --staged | ai "review this"`.
+
+```
+ai review                            git: branch vs auto-detected base
+ai review main                       git: vs main
+ai review --last 3                   git: last 3 commits
+ai review src/Foo.scala              target: one file
+ai review .                          target: current project
+```
+
+### Common options
 
 | Flag | Effect |
 |---|---|
-| `-e`, `--edit` | Allow file edits (default: edits off via `--exclude-tools edit,write`; bash still available) |
-| `--model MODEL` | Pass through to pi (format: `ollama/MODEL`) |
-| Any other pi flag | Passed through |
-
-`ai code` is ollama-only — points pi at the resolved code model via `--model ollama/MODEL`. For Claude-assisted coding, use `claude` directly.
-
-### `ai stop`
-
-Stop running Ollama models or the server.
-
-```
-ai stop                              stop all running models
-ai stop qwen2.5-coder:32b            stop one model
-ai stop --server                     kill the Ollama server entirely
-```
-
-## Review
-
-`ai review` is a single command with two modes auto-detected from the positional argument:
-
-- **Git mode** — review committed changes (diff vs base, last N commits, specific commit, file filter). The index and working tree are never read — for staged changes use `git diff --staged | ai "review this"`
-- **Target mode** — review project or single-file state (filesystem)
-
-### Mode detection
-
-A positional argument is treated as a **target** if it exists on disk (file or directory), otherwise as a **git ref** (branch name).
-
-```
-ai review                            git mode: branch vs base
-ai review main                       git mode: vs main branch
-ai review src/Foo.scala              target mode: file (exists on disk)
-ai review src/                       target mode: directory
-ai review .                          target mode: current dir
-```
+| `--provider P` | Override provider (ollama, claude, or one the runner knows) |
+| `--model MODEL` | Override model |
+| `--lang LANG` | Response language (default `en`). Long form only: `-l` is not accepted |
+| `-o`, `--output FILE` | Save output to file (shows a live progress line instead of streaming) |
+| `--brief` | Short 3–5 bullet summary; `--lens` and `--verify` are ignored with a note |
+| `--lens NAME[,NAME...]` | Add specialist checklist(s) — see [Lenses](#lenses---lens) |
+| `--agentic` | Embed only the diff / target file and let the model explore the repo read-only (claude via its CLI, other providers via the runner). Default: everything embedded, no tools |
+| `--no-think` | Fast pass: disable a thinking model's reasoning (native ollama) |
+| `--context-lines N` | Budget for embedding full changed files (git mode, default 2000). `0` = diff-only |
+| `--dry-run` | Print the assembled prompt without invoking the model |
+| `-h`, `--help` | Show help |
 
 ### Git mode
 
 | Flag | Effect |
 |---|---|
-| `--last [N]` | Review last N commits on current branch (default 1) |
-| `--commit SHA` | Review one specific commit |
-| `--file FILE` | Filter diff to a single file |
-| `--max-lines N` | Cap the diff at N lines (default 500) |
-| `--context-lines N` | Budget for embedding the **full content** of changed files (default 2000; `0` = diff-only) |
-| `--lang-all LANG` | Force language for response AND thinking (slower) |
-| (any other) | See [Common flags](#common-flags) and [Review flags for both modes](#review-flags-for-both-modes) |
+| `--last [N]` | Review the last N commits (default 1). `--last 3` and `--last=3` both work |
+| `--commit SHA` | Review one commit |
+| `--file FILE` | Filter the diff to one file |
+| `--max-lines N` | Cap the diff at N lines (default 500; larger diffs are truncated with a warning) |
+| `--lang-all LANG` | Full response and thinking in LANG (slower) |
 
-Examples:
-
-```
-ai review                            current branch vs auto-detected base
-ai review develop                    vs develop branch
-ai review --last 3                   diff of last 3 commits
-ai review --commit abc1234           one commit
-ai review --file src/Foo.scala       diff filtered to one file
-ai review --brief --lang ru          short review in Russian
-```
-
-The base branch auto-detection order: `develop` → `main` → `master`.
-
-Diff size cap: 500 lines by default — larger diffs are truncated with a warning. Use `--file` to scope down, or `--max-lines N` to raise the cap for a large commit (e.g. `--max-lines 4000`).
-
-A diffstat of the range under review is always printed to stderr before the run.
-
-**Full changed files (`--context-lines`).** Besides the diff, git mode embeds the whole
-content of every changed file (as of the reviewed tip; deleted and binary files are
-skipped) so a single-shot model sees the full class / `pom.xml` / `Cargo.toml`, not just
-hunks. The total line count of those files is checked against a budget (default 2000,
-printed as `Context window: N lines across M files (budget B)`):
-
-- within budget → embedded;
-- over budget, interactive terminal → you are asked `[1] diff-only (default)  [2] embed all`;
-- over budget, non-interactive → diff-only, with a note suggesting `--context-lines N`.
-
-`--context-lines 0` forces diff-only (smaller prompt — the fix suggested when the model
-returns nothing). Embedding is skipped entirely with `--brief` and `--agentic`.
+- Base auto-detection: `develop` → `main` → `master`; the merge base is taken against
+  `origin/<base>` when it exists, else the local branch. On the base branch itself:
+  `Already on <base> — use --last or --commit to review`.
+- A diffstat of the range is always printed to stderr first.
+- **Full changed files.** Besides the diff, the complete content of every changed file (as of the
+  reviewed tip; deleted and binary files skipped) is embedded when the total fits the
+  `--context-lines` budget, reported as `Context window: N lines across M files (budget B)`. Over
+  budget: on a terminal you are asked `[1] diff-only (default) [2] embed all`; otherwise diff-only
+  with a note. Skipped with `--brief` and `--agentic`.
 
 ### Target mode
 
 | Flag | Effect |
 |---|---|
-| `--with-project-context` | For file targets, also include parent project context |
-| (any other) | See [Common flags](#common-flags) |
+| `--with-project-context` | For a file target, also embed the parent directory's tree and README, and relax the "review only this file" note |
 
-Examples:
+What is embedded, for every executor alike:
 
-```
-ai review .                          review current project
-ai review ~/work/myproject           review specific project
-ai review src/Foo.scala              review one file
-ai review src/Foo.scala --with-project-context    file + parent tree+README
-ai review . "focus on security"      custom prompt suffix
-ai review . --provider claude -o review.md
-```
+| Target | Default | `--agentic` |
+|---|---|---|
+| file | scope note + file content (+ tree + README with `--with-project-context`) | scope note + file content |
+| directory | `tree -L 4` (build/VCS dirs excluded) + README (first 100 lines) | the directory path only |
 
-For Claude, target mode `cd`s into the directory so Claude can read files. For Ollama, target context (tree output, README excerpt, file contents) is embedded into the prompt.
+The working directory is the file's parent, or the directory itself.
 
 ### Mode-incompatible flags
 
-The dispatcher validates flag combinations before delegating:
+- `--last`, `--commit`, `--file`, `--max-lines`, `--context-lines` with a path target →
+  `Error: --<flag> is git-mode only and cannot combine with a path target`.
+- `--with-project-context` without a path → `Error: --with-project-context is target-mode only (needs a file path)`.
+- `--verify-only FILE` short-circuits both modes.
 
-- `--last`, `--commit`, `--file`, `--max-lines`, `--context-lines` require git mode → error if combined with a PATH target.
-- `--with-project-context` requires target mode → error if used without a PATH.
+### Lenses (`--lens`)
 
-`--verify-only FILE` short-circuits both modes (no review pass at all) — see
-[Verify an existing review](#verify-an-existing-review---verify-only).
+A lens injects a specialist checklist after the base review prompt. It says *where to look*; the
+finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
+(`--lens crypto,logic-bug`) and work in both modes. 15 ship today:
 
-### Review flags for both modes
+| Group | Lens | Hunts for |
+|---|---|---|
+| Security (adapted from Visa's VVAH) | `crypto` | JWT alg confusion, nonce/IV reuse, non-constant-time compares, weak randomness, TLS verification off, hardcoded keys |
+| | `access-control` | IDOR/BOLA, missing authorization checks, privilege escalation, mass assignment, tenant leakage |
+| | `logic-bug` | TOCTOU, concurrency on half-initialized state, overflow/narrowing, state-machine confusion |
+| | `deserialization` | Untrusted-input deserialization leading to RCE (JVM: `ObjectInputStream`, Jackson default typing, SnakeYAML, …) |
+| Quality | `documentation` | Docs, comments and examples that drift from the code |
+| | `reactive` | Blocking a non-blocking pipeline, lost signals, unbounded buffers (Reactor, reactive Kafka) |
+| | `resource-leak` | Handles not released on every path, especially the error path |
+| | `error-handling` | Swallowed or mislabeled failures, panics on recoverable input |
+| | `k8s-manifest` | Probes, limits, image tags, secrets in k8s / jkube YAML |
+| Rust | `rust-unsafe` | UB and broken safety invariants behind `unsafe`, unsound safe APIs |
+| | `rust-async` | Lock across `.await`, blocking the executor, dropped tasks |
+| | `rust-ownership` | `Rc` cycles, runtime borrow panics, Drop order, needless allocations |
+| Data / query | `sql-postgres` | Unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics |
+| | `sql-clickhouse` | `ORDER BY`/partition design, mutations, `FINAL` dedup, memory-blowing joins |
+| | `hbase` | Row-key hotspotting, unbounded scans, column-family / version growth |
+
+Each lens ends with a **HARD GATE** — the evidence a finding must carry, and when to drop it.
+Lens files live in `~/.config/fish/prompts/lenses/<name>.md`; a new file there is selectable at
+once (in `--lens`, its completion, validation, and the `ai-review` skill). An unknown name is an
+error listing the available ones. Attribution: `prompts/lenses/README.md`.
+
+### Verify (`--verify`)
+
+A second pass that tries to **refute** each first-pass finding and gives one verdict per finding.
+Nothing is hidden: every finding is kept and tagged.
 
 | Flag | Effect |
 |---|---|
-| `--lens NAME[,NAME…]` | Add specialist checklist(s) — see [Review lenses](#review-lenses---lens) |
-| `--agentic` | Let the model explore the repo with tools — see [Agentic mode](#agentic-mode---agentic) |
-| `--no-think` | Fast pass: `think:false` on a thinking model — see [Reasoning sidecar](#reasoning-sidecar) |
-| `--verify`, `--no-verify`, `--verify-provider P`, `--verify-model M`, `--verify-output FILE` | Second-opinion pass — see [Verify](#second-opinion-verify---verify) |
-| `--verify-only FILE` | Verify a saved review, no review pass |
-| `--brief` | Short 3–5 bullet summary instead of the full review (both modes; same context is embedded, `--lens` and `--verify` are ignored with a note) |
-| `--lang LANG` | Response language (long form only — `-l` is not accepted by `ai review`) |
-
-### Review lenses (`--lens`)
-
-A lens injects a specialist hunting checklist into the review, on top of the base
-prompt. It tells the model *where to look* for one class of defect; the
-finding gate and severity rules in `meta-review*.md` still apply — a lens is not a
-mandate to find something. Lenses work in both git and target mode.
-
-```
-ai review . --lens access-control          add the authorization checklist
-ai review --lens crypto,logic-bug          stack two lenses on the diff
-ai review src/Auth.scala --lens access-control,deserialization
-ai review --lens rust-async,error-handling review a tokio change
-ai review db/ --lens sql-postgres          review migrations / queries
-```
-
-Available lenses (comma-separated, stackable) — 15 ship today, in four groups:
-
-**Security** (adapted from Visa's VVAH):
-
-| Lens | Hunts for | Best fit |
-|---|---|---|
-| `crypto` | JWT alg-confusion, nonce/IV reuse, non-constant-time compares, non-CSPRNG randomness, unenforced TLS verification, hardcoded keys | Anything touching tokens, signing, encryption, TLS |
-| `access-control` | IDOR/BOLA, missing `@PreAuthorize`/route guards, privilege escalation, mass assignment, multi-tenant leakage, unscoped bulk ops | APIs, request handlers, anything with authenticated identity + per-object access |
-| `logic-bug` | TOCTOU, concurrency on half-initialized state, integer overflow/narrowing, state-machine confusion, tenant-blind cache keys, sentinel-return misuse | Ordering/concurrency-sensitive code, no single grep signature |
-| `deserialization` | `ObjectInputStream`, Jackson default-typing, XStream/`XMLDecoder`, SnakeYAML, Kryo/Hessian, allow-list bypass | JVM services (Scala/Java/Kotlin) that read untrusted serialized input |
-
-**Quality** (original to this repo):
-
-| Lens | Hunts for | Best fit |
-|---|---|---|
-| `documentation` | Docs, comments, examples that drift from what the code does; missing docs on public surfaces | Doc/README changes, public API changes |
-| `reactive` | Blocking a non-blocking pipeline, lost/swallowed signals, unbounded buffers, publishers never subscribed | Reactor / WebFlux / reactive Kafka |
-| `resource-leak` | Handles not released on every path, especially the error path | JVM code with streams/connections/clients, Reactor lifecycles |
-| `error-handling` | Swallowed or mislabeled failures, unchecked `null`/`None`, panics on recoverable input, masked root causes | Scala / Java / Kotlin / Rust |
-| `k8s-manifest` | Probes, limits, image tags, secrets — defects that pass `kubectl apply` but bite in prod | k8s / jkube YAML |
-
-**Rust** (original to this repo):
-
-| Lens | Hunts for | Best fit |
-|---|---|---|
-| `rust-unsafe` | UB / broken safety invariants behind `unsafe`, unsound safe APIs | Crates with `unsafe` blocks or FFI |
-| `rust-async` | Lock held across `.await`, blocking the executor, dropped tasks, work lost on cancellation | tokio / async code |
-| `rust-ownership` | `Rc` cycles, runtime borrow panics, Drop-order side effects, needless allocations on hot paths | Any Rust code |
-
-**Data / query** (original to this repo — one engine each):
-
-| Lens | Hunts for | Best fit |
-|---|---|---|
-| `sql-postgres` | Unbounded scans, missing indexes, locking/deadlocks, unsafe migrations, NULL semantics | Postgres queries (inline JDBC/jOOQ/Slick/Doobie) and `.sql` migrations |
-| `sql-clickhouse` | `ORDER BY`/partition design, heavy mutations, dedup (`FINAL`) semantics, memory-blowing JOIN/GROUP BY | ClickHouse queries and DDL |
-| `hbase` | Row-key hotspotting, unbounded scans, column-family / version growth | HBase Java client / Phoenix |
-
-Each lens carries a **HARD GATE** — e.g. `access-control` requires citing the entry
-point + where ownership is checked; `logic-bug` requires citing the trust boundary
-crossed. This keeps a lens from turning the reviewer into a false-positive machine.
-
-Lens files live at `~/.config/fish/prompts/lenses/<name>.md` and are overridable;
-drop a new `<name>.md` there and it becomes selectable immediately (in `--lens`, its
-completion, and validation). Only the four **security** checklists are adapted from
-Visa's VVAH (Apache-2.0); the quality, Rust, and data/query lenses are original — see
-`lenses/README.md` for attribution. An unknown lens name is an error listing the
-available ones. `--lens` is ignored (with a note) in `--brief` mode.
-
-### Second-opinion verify (`--verify`)
-
-A two-pass review: after the first-pass findings, a second pass adversarially tries
-to **refute** each one ("assume it is WRONG until confirmed"), then annotates the
-output. Nothing is hidden — every finding is kept and tagged, so you decide.
-
-```
-ai review --verify                       review, then verify with the same provider
-ai review . --lens access-control --verify   lens + verify together
-ai review --provider ollama --verify --verify-provider claude   generate locally, verify with claude
-```
-
-| Flag | Effect |
-|---|---|
-| `--verify` | Run the verify pass after the review |
-| `--no-verify` | Disable verify (overrides a `review_verify` config default) |
+| `--verify` | Run a verify pass after the review |
+| `--no-verify` | Disable verify (overrides the `review_verify` config default) |
 | `--verify-provider P` | Provider for the verify pass (default: `verify_provider` config, else the review provider) |
-| `--verify-model M` | Model for the verify pass (default: per-task `verify` config) |
-| `--verify-output FILE` | Where the verify pass is written when `-o` is given (default: `<output>.verify.<ext>`) |
+| `--verify-model M` | Model for the verify pass (default: `verify_model` config, else the default model on ollama) |
+| `--verify-output FILE` | Where the verify pass is written (default: `<output>.verify.<ext>`) |
 
-Output depends on where the review goes:
+- **Terminal (no `-o`)** — the review, then a `## Verification` section.
+- **File (`-o review.md`)** — the raw review lands in `review.md` as soon as pass 1 ends (so it
+  survives an interrupted verify); verdicts go to `review.verify.md` (`report` → `report.verify`).
+  Without `-o`, `--verify-output` has no effect.
 
-- **Terminal (no `-o`)** — the first-pass review verbatim, then a `## Verification`
-  section with the verdicts.
-- **File (`-o review.md`)** — the raw review is written to `review.md` the moment the
-  first pass finishes (so it survives an interrupted verify), and the verify pass goes
-  to a **separate** file, `review.verify.md` (`<base>.verify.<ext>`; `report` →
-  `report.verify`). `--verify-output FILE` overrides that path. Both paths are printed
-  at the end. Without `-o`, `--verify-output` has no effect.
-
-The verify pass emits one keyed verdict per finding — exactly one of the three verdicts,
-with the reasoning on a separate `why:` line — and a final tally:
+The verifier sees the findings plus the code the review saw: the diff in git mode, the file for a
+file target, nothing for a directory target. With `--agentic` it also reads the repo itself,
+with the `ai-verify` skill injected. Output shape (one verdict per finding, then a tally):
 
 ```
-- <finding title / file:line> — [CONFIRMED N/10]  ·  [REFUTED N/10]  ·  [UNCERTAIN]
-  why: <one or two sentences citing what was found in the code>
+- <finding title / file:line> — [REFUTED 9/10]
+  why: <what was found in the code>
 Verify: X confirmed, Y refuted, Z uncertain
 ```
 
-(The `·`-separated line shows the three options; real output carries only one, e.g.
-`[REFUTED 9/10]`.)
-
-Verify runs through the same dispatcher (`_ai_run`) as the review, and passes
-`--agentic` and `--no-think` through to the verifier. Tool grounding is a property of
-the provider (or of the agent runner `--agentic` selects), not of the verify step — see
-[Verify and local models](#verify-and-local-models) below. Defaults: opt-in (off unless
-`--verify` or a `review_verify` config default), and the `verify` task is configurable
-like any other via `ai config` / `ai models use verify MODEL`. `--verify` is skipped
-(with a note) in `--brief` mode.
-
-#### Verify and local models
-
-The verify providers behave differently because tool grounding lives in the provider
-(or the agent runner), not the verify step:
-
-- **claude** — `claude -p` is agentic: the verify pass reads the actual repo
-  (Read/Grep) and walks the call chain to confirm or refute. This is the strong
-  path, and it comes for free — no special-casing.
-- **ollama, plain** — the provider has no tools, so the verifier reasons from the
-  **embedded code** (the diff or single file the first pass saw). It cannot explore
-  beyond that.
-- **ollama + `--agentic`** — the verifier runs through the agent runner (default: the
-  built-in ollama tool loop) and can open files, grep, and list directories in the repo
-  itself. See [Agentic mode](#agentic-mode---agentic).
-
-Local models are still unreliable *verifiers* — a small model will confidently claim it
-"checked the callers" without doing so, and can refute a real bug as a false positive.
-So:
-
-- Best pattern: **generate locally, verify with claude** — cheap local first pass,
-  rigorous cloud refutation on a focused set of findings
-  (`--provider ollama --verify --verify-provider claude`).
-- Weak direction: **claude review → local verify** — a local model refutes cloud
-  findings unreliably; the command prints a note suggesting `--verify-provider claude`.
+`--verify` is opt-in (or `review_verify=1`), skipped with a note under `--brief`. The `verify`
+task is configured like any other (`ai config provider claude --task verify`,
+`ai models use verify MODEL`).
 
 ### Verify an existing review (`--verify-only`)
 
-`--verify-only FILE` runs **only** the verify pass over a review you already saved —
-no review pass, so a costly claude review can be verified (or re-verified with another
-model) without paying to regenerate it. Git/target mode detection is skipped; the
-verifier's workdir is the current directory, so run it from the repo when the verifier
-is claude or `--agentic` (they read the code from there).
-
-```
-ai review --verify-only review.md --provider claude          verify with claude (reads the repo)
-ai review --verify-only review.md --verify-model north-mini-code-1.0
-ai review --verify-only review.md --file /tmp/change.diff    local verifier + embedded code
-ai review --verify-only review.md -o second-opinion.md
-```
+Runs **only** the verify pass over a saved review: a costly review can be verified, or
+re-verified with another model, without regenerating it. The working directory is the current
+one, so run it from the repo when the verifier uses `--agentic`.
 
 | Flag | Effect |
 |---|---|
-| `--verify-provider P` / `--provider P` | Verifier provider (`--verify-provider` wins; then `verify_provider` config; then the review task's provider) |
-| `--verify-model M` / `--model M` | Verifier model (`--verify-model` wins; then per-task `verify` config) |
-| `--file FILE` | Code / diff to embed for the verifier (otherwise a local verifier reasons from the findings text alone — a note says so) |
-| `--verify-output FILE`, `-o FILE` | Output path (`-o` is an alias here; `--verify-output` wins). Default: `<review>.verify.<ext>` next to the review |
+| `--verify-only FILE` | The saved review to verify |
+| `--verify-provider P` / `--provider P` | Verifier provider (`--verify-provider` wins; then `verify_provider`; then the review task's provider) |
+| `--verify-model M` / `--model M` | Verifier model (`--verify-model` wins; then `verify_model`) |
+| `--file FILE` | Code or diff to embed for the verifier. Without it (and without `--agentic`) a note says the verifier reasons from the findings text alone |
+| `--verify-output FILE`, `-o FILE` | Output path (`--verify-output` wins). Default: `<review>.verify.<ext>` |
 | `--agentic`, `--no-think`, `--lang`, `--dry-run` | As for a normal review |
 
 ### Agentic mode (`--agentic`)
 
-`--agentic` lets the model **explore the repo with tools** instead of relying only on
-what is embedded in the prompt. In git mode it also skips embedding the full changed
-files (`--context-lines`) — the diff is still sent, the model fetches the rest itself.
+`--agentic` switches the profile to `read`: the executor explores the repo read-only, and only the
+minimum is embedded (diff only in git mode; the file alone for a file target; nothing for a
+directory). The `ai-review` skill (verify: `ai-verify`) is injected.
 
-How it is routed (`_ai_run`):
-
-- **claude** — `claude -p` is always tool-grounded, so nothing changes at the provider;
-  the flag only skips the changed-file embedding upstream.
-- **ollama** — the call goes to an **agent runner** (`_ai_agent_<name>`) instead of the
-  plain provider, run inside the repo (the review's workdir), read-only and ephemeral.
-
-The runner is chosen by the `agent` config key (`agent=ollama` by default — set by hand
-in `~/.config/ai/config` or a project `.ai/config`; there is no CLI setter):
-
-| `agent` | Runner | Notes |
-|---|---|---|
-| `ollama` (default) | `_ai_agent_ollama` — built-in `/api/chat` tool loop | Read-only tools `read_file`, `grep`, `find_files`, `list_dir`; `num_ctx` sized per turn to the growing history (capped by the model's native context and `AI_OLLAMA_MAX_CTX`); thinking off; up to 24 turns; live `turn / ctx / elapsed` progress on stderr |
-| `pi` | `_ai_agent_pi` — `pi -p` | Read-only allowlist `read,grep,find,ls`, `--no-session`; context governed by `OLLAMA_CONTEXT_LENGTH` on the server and pi's own model config |
+| Review provider | Runs on |
+|---|---|
+| `claude` | claude CLI with `Read`, `Grep`, `Glob` |
+| `ollama` | the runner (`agent`, default pi) with provider `ollama` — **not** the native driver |
+| other | the runner |
 
 ```
-ai review --agentic                                local model explores the repo for the branch diff
-ai review --agentic --verify -o review.md          agentic review + agentic local verify
-ai review . --agentic --provider claude            same as without --agentic for claude (always tool-grounded)
+$ ai review --last 1 --agentic --dry-run          # test sandbox
+...
+--- dry-run: prompt that would be sent to ollama via pi (profile read), skill ai-review ---
 ```
 
-The agentic path produces no reasoning sidecar (the runner streams its own live
-trace instead), and `--no-think` is moot there (the built-in runner already runs with
-thinking off).
+On a runner the context window for ollama is the server's `OLLAMA_CONTEXT_LENGTH`, not a
+per-request size; there is no reasoning sidecar, and with `-o` the runner's own output is shown
+instead of a line counter.
 
-### Reasoning sidecar
+### Reasoning sidecar and `--no-think`
 
-When a review is written to a file (`-o report.md`) and the model is a **thinking**
-model (ollama capability `thinking` — e.g. `laguna-xs-2.1`), its reasoning is saved
-next to the report as `report.thinking.md` (the verify pass likewise yields
-`report.verify.thinking.md`). The report itself stays clean — only the final review,
-never the chain-of-thought.
+On the native ollama driver a thinking-capable model reasons by default, but its reasoning goes to
+ollama's separate `thinking` channel and never into the answer. When the output goes to a file it
+is saved next to it:
 
-This exists because thinking models otherwise **leak their reasoning into the report**:
-omitting the `think` field lets the model dump its chain-of-thought straight into the
-answer (prose glued onto the front of the real review). The toolkit now always sends an
-explicit `think` boolean — `true` for thinking-capable models (they reason for depth,
-but the reasoning is routed to ollama's separate `thinking` channel), `false` for the
-rest. The sidecar simply captures that separated channel instead of discarding it.
+| Output | Sidecar |
+|---|---|
+| `-o review.md` | `review.thinking.md` |
+| verify pass `review.verify.md` | `review.verify.thinking.md` |
+| `ai gen commit -o msg.txt` | `msg.thinking.txt` |
 
-- The sidecar appears only for thinking models writing to a file. Non-thinking models
-  and terminal-streamed reviews produce no sidecar (nothing is created empty).
-- The same applies to any ollama call written with `-o`, e.g. `ai gen commit -o msg.txt`
-  → `msg.thinking.txt`, `ai gen summary -o draft.md` → `draft.thinking.md`.
-- A `↳ reasoning -> <path>` line is printed when one is written.
-- It is not produced on the `--agentic` path (the agent runner streams its own live
-  turn/tool trace instead).
+A `↳ reasoning -> <path>` line is printed when one is written; an empty one is removed. No sidecar
+for non-thinking models, terminal output, or runner/claude paths.
 
-#### Fast pass: `--no-think`
-
-Reasoning is the bulk of a thinking model's wall-clock time. `--no-think` sends
-`think:false` even to a thinking-capable model — a faster, shallower pass (and no
-sidecar, since nothing is reasoned). It is threaded through every review path: the
-review pass, the verify pass (`--verify`), and `--verify-only`; it also works on a plain
-one-shot (`ai --no-think "…"`). It only affects the ollama provider — claude ignores it,
-and the agentic runner already runs with thinking off.
-
-```
-ai review --no-think                     quick local review with a thinking model
-ai review --no-think --verify -o r.md    both passes without reasoning
-```
+`--no-think` sends `think:false` even to a thinking model: faster, shallower, no sidecar. It is
+passed to the review pass, the verify pass and `--verify-only`. It only affects the native
+driver.
 
 ### Deprecated: `ai gen review`
 
-Replaced by `ai review PATH`. The old name shows a yellow deprecation notice and exits non-zero.
+Replaced by `ai review PATH`; the old name prints a notice and exits 1.
 
-## Generation
-
-### `ai gen commit`
-
-Generate a commit message from staged changes (falls back to unstaged if nothing staged).
+## `ai gen`
 
 ```
-ai gen commit                              from staged diff
-ai gen commit --provider claude            via Claude
-ai gen commit --lang ru                    Russian
-ai gen commit -o /tmp/msg.txt              save to file
-ai gen commit --dry-run                    print prompt without invoking
+Usage: ai gen COMMAND [OPTIONS]
 ```
 
-Template: [`meta-commit.md`](#prompt-templates).
-
-### `ai gen summary [DIR]`
-
-Generate a concise project summary.
-
-```
-ai gen summary                             current dir
-ai gen summary ~/work/proj                 specific dir
-ai gen summary -o README-draft.md          save to file
-ai gen summary --lang ru --provider claude
-```
-
-Template: [`meta-summary.md`](#prompt-templates).
-
-### Common to all `ai gen` subcommands
+| Command | Does | Template |
+|---|---|---|
+| `ai gen commit` | Commit message from staged changes, else unstaged (`No changes to commit` if neither) | `meta-commit.md` |
+| `ai gen summary [DIR]` | Project summary of DIR (default `.`), with its tree and README embedded | `meta-summary.md` |
 
 | Flag | Effect |
 |---|---|
-| `--provider PROV` | Override provider |
+| `--provider PROVIDER` | Override provider (ollama, claude, or one the runner knows) |
 | `--model MODEL` | Override model |
 | `-l`, `--lang LANG` | Response language (default `en`) |
 | `-o`, `--output FILE` | Save output to file |
-| `--dry-run` | Print prompt without invoking the model |
+| `--dry-run` | Print the assembled prompt without invoking the model |
 | `-h`, `--help` | Show help |
 
-## Sessions
-
-Sessions provide persistent chat history. **Ollama only** — for Claude conversations, use `claude --resume` / `claude -c` directly. See [architecture.md](architecture.md#sessions-a-parallel-pipeline) for why.
-
-Quick start:
-
 ```
-ai chat --session debug-foo          start (or resume) a named session
-ai chat -c                           continue the most recent session
-ai sessions ls                       list all sessions
+ai gen commit                        generate a commit message
+ai gen commit --provider claude      on claude
+ai gen commit | git commit -F -      straight into git
+ai gen summary ~/work/project -o summary.md
 ```
 
-Full deep-dive (storage format, context window management, advanced workflows): [sessions.md](sessions.md).
+Both are single-shot (profile `none`) and use the `commit` / `summary` task's provider and model.
 
-### Subcommands
-
-**Read / browse:**
-
-| Command | Description |
-|---|---|
-| `ai sessions` / `ai sessions ls [--archived] [--all]` | List sessions (project + global) |
-| `ai sessions show NAME` | Render session as markdown |
-| `ai sessions info NAME` | Meta + token statistics |
-| `ai sessions search QUERY [--name PAT] [--since DATE] [--regex] [--archived\|--all]` | Search across messages (`--archived` = archived only, `--all` = both) |
-| `ai sessions stats [--all\|--archived]` | Aggregated counts + tokens (either flag includes archived) |
-| `ai sessions export NAME [-f md\|json\|jsonl] [PATH]` | Export to file |
-
-**Modify:**
-
-| Command | Description |
-|---|---|
-| `ai sessions rm NAME [-f]` | Delete session |
-| `ai sessions rename OLD NEW` | Rename |
-| `ai sessions clear NAME [-f]` | Wipe messages, keep meta |
-| `ai sessions edit NAME` | Open in `$EDITOR` |
-
-**Lifecycle:**
-
-| Command | Description |
-|---|---|
-| `ai sessions branch SRC [NEW]` | Fork a session (NEW auto-named `SRC-branch-N` if omitted) |
-| `ai sessions archive NAME` | Move to `archived/` subdir |
-| `ai sessions restore NAME` | Un-archive |
-| `ai sessions move NAME --to {project\|global}` | Relocate between scopes |
-| `ai sessions import PATH [--name NEW] [--global]` | Import a session file |
-
-**Pinning:**
-
-| Command | Description |
-|---|---|
-| `ai sessions pin NAME --model M` | Lock the model for this session (`--model` required) |
-| `ai sessions unpin NAME` | Remove pin |
-
-A pinned session uses the pinned model regardless of task-level config or `AI_DEFAULT_MODEL`. Sessions are ollama-only, so only the model is pinned: `--provider ollama` is accepted (and recorded), any other `--provider` is an error. Override for one REPL run with an explicit `ai chat -s NAME --model M`.
-
-## Configuration
-
-`ai config` manages provider and model defaults at three layers: global, project, and per-task. See [architecture.md](architecture.md#configuration) for the resolver chain.
-
-### View
+## `ai providers`
 
 ```
-ai config                            show project + global sections side-by-side
-ai config status                     resolved per-task with origin annotations
-ai config provider                   show resolved global provider
-ai config provider --task review     show resolved provider for one task
-ai config tasks                      list known task identifiers
+Usage: ai providers [ls]       List providers (no network)
+       ai providers check NAME Is it reachable right now?
 ```
 
-`ai config status` output includes per-task resolved values with origin tags. Provider origins: `project`, `global` (a per-task key), `project+top` / `global+top` (inherited from the top-level `provider=` key of that layer), `default`. Model origins: `project`, `global`, `env` (`AI_DEFAULT_MODEL`), `default` (hardcoded `qwen3.5:9b`), or `—` (non-ollama provider with no model set → the provider's own default). Use it to answer "why is `ai review` using claude?"
+A read-only view. ollama is served by the native driver, claude by the claude CLI, every other
+provider by the runner, which also owns its configuration: add or change providers in pi
+(`~/.pi/agent/models.json`) or opencode (`~/.config/opencode/config.json`).
 
-A per-task `<task>_model` is used **only while the task's configured provider is the one
-in use** — a model name is provider-specific, so `--provider` overriding to a different
-provider drops it. The flip side: after `ai config provider claude --task review`, an
-existing `review_model` (say an ollama tag) is now handed to claude. Set a matching
-model (`ai models use review sonnet`) or clear the old one first
-(`ai config reset --task review`, which removes both `review_provider` and `review_model`).
-
-### Set
+`ai providers` (alias `ls`, `list`) — real output from the test sandbox (installed-model cache
+with 3 tags, pi config with an `ollama` and a `testcloud` provider):
 
 ```
-ai config provider claude                              global
-ai config provider claude --task review                global, per-task
-ai config provider claude --task review --project      project, per-task
-ai config provider ollama --task commit,summary        comma-list applies to multiple tasks
+PROVIDER     EXECUTOR                   MODELS
+ollama       native (127.0.0.1:9)       3 installed (single-shot)
+claude       claude CLI                 sonnet, opus, haiku
+ollama       via pi                     2 (--agentic, ai code)
+testcloud    via pi                     1
+
+ Reachable now? ai providers check NAME · runner: config key agent (pi)
 ```
 
-| Flag | Effect |
-|---|---|
-| `--task X` | Apply to a task (or comma-list, or `all`) |
-| `--project` | Write to project config instead of global |
+`ollama` appears twice on purpose: the native driver (installed tags, single-shot) and the
+runner's ollama provider (models registered in the runner, used for `--agentic`, `ai code`,
+`ai chat`).
 
-### Reset
+`ai providers check NAME` runs the same probe as before a run:
 
-```
-ai config reset --task review                          clear global per-task review keys
-ai config reset --task review --project                clear project per-task review keys
-ai config reset --task all                             clear all global per-task keys
-ai config reset --task all --project                   clear all project per-task keys
-```
-
-### Move
-
-Move per-task keys between project and global layers:
-
-```
-ai config move --task review --to project              global → project
-ai config move --task review --to global               project → global
-ai config move --task all --to project                 every per-task key, global → project
-```
-
-Behavior: read keys from the **opposite** layer, write to `--to`, remove from source. If both layers had the key (conflict), the source value wins.
-
-### Keys without a CLI setter
-
-A few keys are read from the same files (project walk-up, then global) but have no
-`ai config` subcommand — add the line by hand:
-
-| Key | Values | Effect |
+| NAME | Check | Example |
 |---|---|---|
-| `review_verify` | `1` / `true` / `yes` / `on` | Run the verify pass by default on `ai review` (opt out with `--no-verify`) |
-| `agent` | `ollama` (default) \| `pi` | Agent runner behind `--agentic` for ollama — see [Agentic mode](#agentic-mode---agentic) |
-| `sessions_recent_turns`, `sessions_token_threshold`, `sessions_summary_model` | see [sessions.md](sessions.md#config-knobs) | Session context management |
+| `ollama` | `OLLAMA_HOST` answers | `ollama: reachable (http://localhost:11434)` |
+| `claude` | CLI installed | `claude: CLI installed — its connectivity is the CLI's own` |
+| runner provider | the runner's `_probe` | `testcloud: not reachable (via pi) — off-network?` |
+| unknown | — | `nosuch: unknown to runner pi (and not ollama / claude)` |
 
-`verify_provider` / `verify_model` are ordinary per-task keys (`--task verify`).
+A provider with no URL in the runner's config (a built-in one) prints `… — can't tell` and exits
+0. Unreachable or unknown exits 1.
 
-## Models
+## `ai models`
 
-`ai models` manages Ollama models — install, set defaults, browse the catalog.
+```
+Usage: ai models [COMMAND] [ARGS]
+```
+
+Manages ollama models. Without a command: the installed models, no network.
+
+| Command | Does | Network |
+|---|---|---|
+| (none), `list [FILTER]` | Installed models: one row per model (tags sharing a digest merged), grouped by label, with size, capabilities, the tasks using it, trial age | no |
+| `FILTER` | Any other word filters the installed list by name | no |
+| `--provider P` | Models the runner has for provider P; `claude` → its aliases; `all` → every provider | runner-dependent |
+| `info NAME[:TAG]` (alias `show`) | Installed → local details. Not installed → the ollama registry manifest: download size and RAM fit, family, params, quantization, vision, min ollama version | only when not installed |
+| `try NAME:TAG [-y]` | Show registry info, confirm, pull, mark as a trial | yes |
+| `keep NAME` | End a trial, keep the model | no |
+| `drop NAME [-y]` | Remove a model (all its tags) and its metadata; warns if a task or the default still uses it | no |
+| `search [QUERY]` | Open `https://ollama.com/search?q=QUERY` in the browser (ollama has no search API) | — |
+| `label NAME LABEL` | Group a model under LABEL (`general` clears it) | no |
+| `use [TASK] MODEL` | Set the default model, or a task's model | no |
+| `install MODEL` (alias `pull`) | Pull a model (no trial mark) | yes |
+| `rm MODEL` (alias `remove`) | Remove one tag (confirms) | no |
+| `update` | Re-pull every installed tag | yes |
+| `prune` (alias `cleanup`) | Find partial downloads and orphaned blobs in `~/.ollama/models`, confirm, delete | no |
+| `running` (alias `ps`) | Show loaded models (`ollama ps`) | no |
+
+A name without a tag means `:latest` everywhere (`_ai_model_norm`).
 
 ### List
 
+Excerpt of a real `ai models`:
+
 ```
-ai models                            equivalent to `ai models list`
-ai models list                       filtered by RAM (hide oversized models by default)
-ai models list --all                 show everything
-ai models list coder                 filter by substring in name
+   Model                                              Size  Capabilities          Used for
+ Coding:
+   devstral-small-2:24b                            14.1 GB  tools,vision          code
+   laguna-xs-2.1:latest, :q4_K_M                   18.9 GB  tools,thinking
+   qwen2.5-coder:7b                                 4.4 GB  tools                 commit
+ General:
+   gemma4:e4b                                       8.9 GB  tools,thinking,vision
+   qwen3.5:9b                                       7.1 GB  tools,thinking,vision
+   …
+
+ 15 models (16 tags), 184.7 GB on disk
+ Details: ai models info NAME · try one: ai models try NAME:TAG · find: ai models search QUERY
+ Per-task models: ai config status
 ```
 
-The list output has two extras for the per-task system:
+- The list comes from the server (`/api/tags`) and is cached; with the server unreachable it
+  shows the cache under `[ollama not reachable — showing the cached list]`.
+- **Capabilities** (`tools`, `thinking`, `vision`) come from `/api/show`, cached per digest.
+- **Used for** shows `default` and every task whose provider is ollama and that sets an explicit
+  `<task>_model`. Full per-task resolution: `ai config status`.
+- Labelled groups come first (alphabetical), unlabelled models last under **General**. A trial
+  shows as `trial, 3d` (`5h`, `40m`; older than a week: the start date).
 
-- **Active selection** block: shows what `ai chat`, `ai code`, etc. would resolve to right now.
-- **Used for** column: tags models that are explicitly bound to a task (e.g. `commit`, `default`).
+### Info
 
-Models are **grouped by label**: each label gets its own group (alphabetical), and
-unlabeled models fall into **General**, printed last.
+Real output, installed and not installed:
+
+```
+$ ai models info qwen3.5:9b
+Model: qwen3.5:9b
+  Family:          qwen3_5
+  Parameters:      9.7B
+  Quantization:    nvfp4
+  Format:          safetensors
+  Context:         262144
+  Size:            7.1 GB
+  Capabilities:    completion, vision, tools, thinking
+
+$ ai models info gemma4:e2b
+Model: gemma4:e2b (not installed — from the ollama registry)
+  Download:        4.3 GB · RAM 36 GB → fits
+  Family:          gemma4
+  Parameters:      4.6B
+  Quantization:    Q4_K_M
+  Vision:          yes
+  Tools/thinking:  decided by ollama after install (parser gemma4)
+  Draft model:     yes (speculative decoding)
+  Needs ollama:    0.30.9 (you have 0.40.11)
+
+  Try it: ai models try gemma4:e2b
+```
+
+RAM fit: `fits` up to 70 % of RAM, `tight — little room for context` above that, `won't fit`
+above 100 %. Tools/thinking are known remotely only for models with an old-style template;
+parser-based models decide after install. A model the registry doesn't have is an error pointing
+at `https://ollama.com/library`.
+
+### Trials
+
+`try` pulls a model and records the trial date; `keep` clears the mark; `drop` removes every tag
+of the model and its metadata. `try` and `drop` take `-y` / `--yes` to skip the confirmation.
+`drop` warns first if the model is still configured (`Still configured for: default, review —
+those will fail until changed`).
 
 ### Labels
 
-```
-ai models label --seed                         auto-label from names (coder/devstral → coding, vl/vision → vision)
-ai models label ornith:9b coding               set one model's label
-ai models unlabel ornith:9b                    back to General
-ai models labels                               show the model → label map
-```
-
-Labels are lowercased; one label per model; `label MODEL general` just clears it.
-`--seed` never overwrites a label you set. A bare name and its `:latest` form match the
-same label. Stored in `~/.config/ai/model-labels` as `MODEL=label` lines.
-
-### Install / use / remove
+A label says what you keep a model for (e.g. `coding`); capabilities can't tell that. Labels are
+lowercased, one per model, stored per digest in `~/.config/ai/models.json`, so every tag of a
+model shares one label.
 
 ```
-ai models install qwen3.5:9b                          pull from ollama.com
-ai models rm codellama:13b                            remove
-ai models use qwen3.5:9b                              set as global default (sets AI_DEFAULT_MODEL)
-ai models use code qwen2.5-coder:32b                  per-task default (TASK MODEL, positional)
-ai models use review,verify north-mini-code-1.0       several tasks at once
-ai models use all qwen3.5:27b                         every task
-ai models use qwen2.5-coder:7b --task commit --project   flag form, project-scoped
+ai models label qwen3:30b coding     group it under Coding
+ai models label qwen3:30b general    clear the label
 ```
 
-`ai models use` takes either form:
+### Use
+
+```
+Usage: ai models use [TASK] MODEL [--project]
+       ai models use MODEL --task TASK[,TASK...] [--project]
+```
 
 | Form | Meaning |
 |---|---|
-| `use MODEL` | Global default (`AI_DEFAULT_MODEL`) — MODEL must be installed |
-| `use TASK MODEL` | One task, or a `comma,list`, or `all` |
-| `use MODEL --task TASK` | Same as `use TASK MODEL` (flag form, kept) |
-| `… --project` | Write the per-task value to the project `.ai/config` (requires a TASK) |
+| `use MODEL` | Set the default model (config key `model`); must be installed |
+| `use TASK MODEL` | Set one task's model (`<task>_model`) |
+| `use TASK1,TASK2 MODEL` | Several tasks at once |
+| `use all MODEL` | Every task |
+| `use MODEL --task TASK` | Same as `use TASK MODEL` |
+| `… --project` | Write to the project `.ai/config` instead of the global config |
 
-TASK is one of: `chat, code, review, verify, commit, summary, all`. A lone task name with no model errors instead of being misread as a model; an unknown task errors instead of being silently ignored. Per-task values are trusted as-is (you may set a claude-side model name when the task uses claude); the global default is validated against installed models. See `ai models use --help`.
+Tasks: `chat, code, review, verify, commit, summary, all`. A lone task name errors (the model was
+forgotten); an unknown task errors. Per-task values are trusted as-is, so a task on claude or a
+runner provider can take that provider's model id (`ai models use review sonnet`). If
+`AI_DEFAULT_MODEL` is set and differs, `use MODEL` warns that it overrides the new value.
 
-### Maintenance
+## `ai config`
 
 ```
-ai models update                     re-pull all installed models to latest tag
-ai models info qwen2.5-coder:32b     params, quantization, context window
-ai models prune                      clean up partial downloads and orphaned blobs
-ai models running                    show currently loaded models (`ollama ps`)
+Usage: ai config [SUBCOMMAND] [VALUE] [--task TASK] [--project]
 ```
 
-## Common flags
+| Subcommand | Does |
+|---|---|
+| (none) | Show both project and global config files |
+| `provider [PROV]` | Show or set the provider (validated against ollama, claude and the runner's providers) |
+| `status` | Resolved provider/model per task, with the origin of each value |
+| `reset --task X` | Clear `<task>_provider` and `<task>_model` for X (or `all`) |
+| `move --task X --to LAYER` | Move per-task keys between `project` and `global` (source value wins) |
+| `tasks` | List known tasks |
 
-These appear on multiple commands:
+| Flag | Effect |
+|---|---|
+| `--task TASK` | Apply to a task (comma-list or `all`) |
+| `--project` | Write/clear in the project `.ai/config` (default: global `~/.config/ai/config`) |
+| `--to {project\|global}` | Target layer for `move` |
 
-| Flag | Where | Effect |
+```
+ai config provider claude                          global
+ai config provider claude --task review            global, one task
+ai config provider claude --task review --project  project, one task
+ai config reset --task all --project               clear every per-task key in the project
+ai config move --task review --to global           project → global
+```
+
+`ai config status` — real output from the test sandbox (global config `provider=ollama`,
+`model=config-model`, `review_model=review-model`, `commit_model=commit-model`, and
+`AI_DEFAULT_MODEL=default-model` in the environment):
+
+```
+Sources:
+  project = (none — no .ai/config in walked-up tree)
+  global  = ~/.config/ai/config
+  env     = AI_DEFAULT_MODEL=default-model
+
+Resolved per task:
+  default:  ollama / default-model                   (provider: global+top | model: env)
+  chat:     ollama / default-model                   (provider: global+top | model: env)
+  code:     ollama / default-model                   (provider: global+top | model: env)
+  review:   ollama / review-model                    (provider: global+top | model: global)
+  verify:   ollama / default-model                   (provider: global+top | model: env)
+  commit:   ollama / commit-model                    (provider: global+top | model: global)
+  summary:  ollama / default-model                   (provider: global+top | model: env)
+```
+
+Provider origins: `project` / `global` (a per-task key), `project+top` / `global+top` (that
+layer's top-level `provider`), `default` (ollama). Model origins: `project`, `global`, `env`, or
+`—` with `(not set)` (claude then uses its CLI default, a runner provider its first model, and
+ollama errors).
+
+A `<task>_model` applies only while the task's configured provider is the one in use. After
+`ai config provider claude --task review`, an old ollama `review_model` is handed to claude, so
+set a matching model (`ai models use review sonnet`) or `ai config reset --task review` first.
+
+## `ai stop`
+
+```
+Usage: ai stop [OPTIONS] [MODEL]
+```
+
+| Form | Does |
+|---|---|
+| `ai stop` | Stop all running models |
+| `ai stop MODEL` | Stop one model |
+| `ai stop --server` | Kill the ollama server |
+
+Local server only (`pgrep ollama`); prints `Ollama is not running` when there is nothing to stop.
+
+## Config keys
+
+Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (project wins).
+
+| Key | Set with | Effect |
 |---|---|---|
-| `--provider PROV` | All generation/review/chat | Override resolved provider |
-| `--model MODEL` | All generation/review/chat | Override resolved model |
-| `--lang LANG` | gen, review | Response language code (`en`, `ru`, `de`, etc.). `-l` works for `ai gen` only — `ai review` takes the long form |
-| `-o`, `--output FILE` | gen, review | Save output to file |
-| `--dry-run` | top-level `ai`, gen, review | Print assembled prompt without invoking (not available on `ai chat`) |
-| `--no-think` | top-level `ai`, review | Force `think:false` on a thinking model (fast pass) |
-| `--agentic` | top-level `ai`, review | Explore the repo with tools (agent runner for ollama) |
-| `--task X` | config, models use | Scope to one or more tasks |
-| `--project` | config, models use | Operate on project layer |
-| `--to project\|global` | config move, sessions move | Target layer / scope |
-| `-h`, `--help` | All | Show help |
+| `provider` | `ai config provider P` | Default provider for every task and top-level `ai` |
+| `<task>_provider` | `ai config provider P --task T` | Provider for one task |
+| `<task>_model` | `ai models use T MODEL` | Model for one task, used only while the provider in use is the task's provider |
+| `model` | `ai models use MODEL` | Default ollama model. No fallback if unset |
+| `agent` | by hand | Runner for non-claude providers: `pi` (default) or `opencode` |
+| `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
+| `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |
 
-`--lang` writes "respond in $lang" preamble into the prompt. `--lang-all` (review only) extends this to "thinking should also be in $lang" for thinking models — slower and rarely needed.
-
-## Prompt templates
-
-Located in `~/.config/fish/prompts/`. Each is symlinked from the dotfiles repo via `stow` and is user-editable. Commands load them at runtime; deleting a template falls back to a minimal inline default.
-
-| File | Used by |
-|---|---|
-| `meta-commit.md` | `ai gen commit` |
-| `meta-summary.md` | `ai gen summary` |
-| `meta-review.md` | `ai review PATH` (target mode) |
-| `meta-review-diff.md` | `ai review` (git mode) |
-| `meta-verify.md` | Verify pass (`ai review --verify`, `--verify-only`) |
-| `meta-session-summary.md` | Rolling summary in long sessions |
-| `lenses/<name>.md` | `ai review --lens NAME` (one checklist per file; `lenses/README.md` is not a lens) |
-
-Iterate freely — changes take effect on the next invocation. No fish reload needed (templates are read fresh each time).
-
-## Files and paths
-
-| Path | What |
-|---|---|
-| `~/.config/ai/config` | Global config (`provider`, `<task>_provider`, `<task>_model`, sessions params) |
-| `<project>/.ai/config` | Per-project config (walk-up from PWD; see [architecture.md](architecture.md#configuration)) |
-| `~/.config/ai/sessions/<name>.jsonl` | Global session storage |
-| `<project>/.ai/sessions/<name>.jsonl` | Project session storage |
-| `~/.config/ai/sessions/.last` | Pointer to most recent global session |
-| `<project>/.ai/sessions/.last` | Pointer to most recent project session |
-| `<report>.thinking.<ext>` | Reasoning sidecar next to a report written with `-o` (thinking models only) |
-| `<report>.verify.<ext>` | Verify-pass output next to a review written with `--verify -o` (or by `--verify-only`) |
-| `<report>.verify.thinking.<ext>` | Reasoning sidecar of the verify pass |
-| `~/.config/ai/model-labels` | `MODEL=label` map used to group `ai models list` (`ai models label`) |
-| `~/.config/fish/prompts/meta-*.md` | Prompt templates (symlinked from dotfiles) |
-| `~/.config/fish/prompts/lenses/*.md` | Review lenses (symlinked from dotfiles) |
-| `~/.cache/ai-models.json` | Local installed-models cache |
-| `~/.cache/ai-registry.json` | Ollama catalog cache |
-| `~/.cache/ai-context-windows.json` | Per-model context-window cache (sessions) |
+Tasks: `chat`, `code`, `review`, `verify`, `commit`, `summary`. `verify_provider` / `verify_model`
+are ordinary per-task keys.
 
 ## Environment variables
 
 | Variable | Read by | Effect |
 |---|---|---|
-| `AI_DEFAULT_MODEL` | resolver chain | Legacy global model default (universal var, settable via `ai models use MODEL`) |
-| `AI_OLLAMA_MAX_CTX` | ollama provider, built-in agent runner | RAM-safe ceiling for the per-request `num_ctx` (default 131072). The provider sizes `num_ctx` to the prompt (+8k output reserve) and **fails loudly** if that exceeds the ceiling instead of truncating; the agent runner clamps to `min(model native max, this)`. Raise only if you have the RAM |
-| `OLLAMA_HOST` | ollama provider, built-in agent runner | Server address (`host:port` or URL; default `http://localhost:11434`). Sessions and model-info helpers hard-code `localhost:11434` |
-| `OLLAMA_CONTEXT_LENGTH` | Ollama server itself | Default context (`env.fish`, 131072). Governs the **pi** agent runner and `ollama run` (`ai`, `ai chat` REPLs); the ollama provider and the built-in agent runner set `num_ctx` per request and ignore it. Raise for bigger pi runs (KV-cache RAM cost); models cap at their native max |
-| `EDITOR` / `VISUAL` | `ai sessions edit` | Editor for raw JSONL editing |
-| `ANTHROPIC_API_KEY` | Not used by this toolkit | Claude CLI manages its own auth via web login |
+| `OLLAMA_HOST` | every ollama call (`_ai_ollama_host`) | Server address, `host:port` or URL; default `http://localhost:11434`. A non-local host is checked, never started |
+| `AI_DEFAULT_MODEL` | model resolver | One-off override of config key `model`; shown as `env` in `ai config status` |
+| `AI_OLLAMA_MAX_CTX` | native driver | One-off override of `ollama_max_ctx` |
+| `AI_NONINTERACTIVE` | fallback prompt | Set → never ask on the terminal; an unreachable provider fails with a rerun hint |
+| `OLLAMA_CONTEXT_LENGTH` | the ollama server | The server's default window (`conf.d/env.fish`, 131072). Governs runners and `ollama run`; the native driver sends its own `num_ctx` |
+
+## Prompt templates
+
+In `~/.config/fish/prompts/` (stowed from the repo), read fresh on every run. A missing file falls
+back to a short inline prompt.
+
+| File | Used by |
+|---|---|
+| `meta-commit.md` | `ai gen commit` |
+| `meta-summary.md` | `ai gen summary` |
+| `meta-review.md` | `ai review PATH` (target mode); `ai-review` skill |
+| `meta-review-diff.md` | `ai review` (git mode); `ai-review` skill |
+| `meta-verify.md` | verify pass, `--verify-only`; `ai-verify` skill |
+| `lenses/<name>.md` | `ai review --lens NAME` (`lenses/README.md` is not a lens) |
+
+## Files and paths
+
+| Path | What |
+|---|---|
+| `~/.config/ai/config` | Global config |
+| `<project>/.ai/config` | Project config (walk-up from `$PWD`, stops at the git root, `$HOME` or `/`) |
+| `~/.config/ai/models.json` | Model metadata keyed by digest: `name`, `label`, `trial` |
+| `~/.cache/ai-models.json` | Installed tags (from `/api/tags`), used offline by `ai models` and completion |
+| `~/.cache/ai/model-caps.json` | Capabilities per digest |
+| `~/.agents/skills/{ai-review,ai-verify}/` | Installed skills (pi, opencode; our runs read `SKILL.md` from here) |
+| `~/.claude/skills/{ai-review,ai-verify}` | The same skills for claude |
+| `~/.config/opencode/agents/ai-{none,read,edit}.md` | opencode profiles for the runner |
+| `~/.pi/agent/models.json` | pi's providers and models (pi's file, not in dotfiles) |
+| `~/.config/opencode/config.json` | opencode's providers (opencode's file, not in dotfiles) |
+| `<report>.verify.<ext>` | Verify output next to a review written with `--verify -o` or by `--verify-only` |
+| `<report>.thinking.<ext>` | Reasoning sidecar (native ollama, thinking models) |
 
 ## Tab-completion
 
-`completions/ai.fish` provides context-sensitive completions:
+`completions/ai.fish` completes:
 
-- Top-level subcommands
-- Subcommands of `gen`, `models`, `config`, `sessions`
-- Flag names per subcommand
-- Provider names (from `_ai_providers` — auto-discovers all installed providers)
-- Task names (`chat`, `code`, `review`, `verify`, `commit`, `summary`)
-- Lens names for `ai review --lens` via `_ai_complete_lens` (names from `_ai_review_lens`, which auto-discovers `prompts/lenses/*.md`). Stacks: after `--lens crypto,` it offers `crypto,<next>` and skips lenses already chosen
-- Session names for `ai sessions show/info/rm/...` and `ai chat -s ...`
-- Model names via `_ai_complete_models` for `--model`, `--verify-model`, `ai chat MODEL`, `ai models use/rm/info/label/unlabel`, `ai sessions pin --model`. Reads the installed-models cache, so it works with the Ollama server **down** (falls back to `ollama list` only if the cache is cold); `--verify-model` additionally offers the Claude aliases `sonnet`, `opus`, `haiku`
-- Scope values (`project`, `global`) for `ai config move`, `ai sessions move`
+- subcommands of `ai`, `gen`, `config`, `models`, `providers`;
+- flags per subcommand;
+- provider names from `_ai_providers` (ollama, claude, and the runner's providers) for every
+  `--provider`, `--verify-provider`, `ai config provider`, `ai providers check`, and
+  `ai models --provider` (plus `all`);
+- model names via `_ai_complete_models`, following `--provider` on the same line (for
+  `--verify-model`: `--verify-provider` first): ollama or none → the installed-model cache (works
+  with the server down); claude → `sonnet`, `opus`, `haiku`; any other provider → the runner's
+  models for it. `--verify-model` with no provider also offers the claude aliases;
+- task names (and `all`) for `--task` and the first argument of `ai models use`;
+- lens names for `--lens`, comma-stacked (`--lens crypto,<Tab>` offers the rest);
+- running models for `ai stop`.
 
-All completions are recomputed at tab time — no static lists to update.
+Known gap: top-level `ai --provider X -m <Tab>` completes nothing (fish takes `X` for a
+subcommand). fish caches completions per session: after editing, `exec fish`.
 
 ## Troubleshooting
 
-**`Error: claude is not installed`**
+**`ollama: no model configured — set one with: ai models use MODEL`**
+No default model and no task model. `ai models use MODEL` (must be installed), or
+`ai models use TASK MODEL`.
 
-`claude` CLI not on `$PATH`. Install via web login flow at claude.ai/code or set up Anthropic API access (note: API access has been gated; toolkit doesn't bridge to API directly — see [architecture.md](architecture.md#boundaries-and-what-we-deliberately-dont-do)).
+**`Provider X: unknown to runner pi — configure it in pi, or pick another provider (ai providers)`**
+The runner's config has no provider X. Add it to `~/.pi/agent/models.json` (or opencode's config
+with `agent=opencode`); `ai models --provider all` lists what the runner knows.
 
-**`Error: --session requires NAME (or use -c to continue last)`**
+**`X unreachable (via pi) — off-network? Rerun with --provider ollama`**
+The probe failed and there was no terminal to ask on (or `AI_NONINTERACTIVE` is set, or no
+default ollama model exists). Rerun with `--provider ollama`, or check with
+`ai providers check X`.
 
-`ai chat --session` without a name only works as `-c` (continue last). To start fresh, pass an explicit name: `ai chat -s my-session`.
+**`Unknown runner 'X' in config key agent (valid: pi, opencode)`**
+Fix the `agent=` line in the config.
 
-**`Error: sessions are supported for ollama provider only`**
+**`Error: pi is not installed — brew install pi-coding-agent`** / **`Error: opencode is not installed — brew install opencode`** / **`Error: claude is not installed`**
+The executor's CLI is missing from `$PATH`.
 
-You triggered the session pipeline with a claude-resolved task. Either use ollama for this session, or use `claude --resume` / `claude -c` for Claude conversations.
+**`Note: skill ai-review is not installed (stow agents) — running without it`**
+The `agents` stow package isn't installed: `./install.sh` (or `mkdir -p ~/.agents/skills ~/.claude/skills ~/.config/opencode/agents && stow agents`).
 
-**`Error: --last is git-mode only and cannot combine with a path target`**
+**`ollama: prompt ~N tokens needs ~M context, over the 131072 ceiling…`**
+The native driver refuses to truncate. Shrink the prompt (`--context-lines 0`, `--file`, a
+smaller range), use `--agentic`, or raise `ollama_max_ctx` / `AI_OLLAMA_MAX_CTX` if you have the
+RAM.
 
-`ai review --last 3 some/path` is invalid. `--last` is git-mode-only. Choose one or the other.
+**`Error: ollama at HOST is not reachable`** / **`Error: Ollama failed to start`**
+A remote `OLLAMA_HOST` is down (it is never started for you), or a local `ollama serve` didn't come
+up within 10 s.
 
-**`Ollama is not running`** from `ai stop`
+**`No output written — FILE is empty…`**
+The model returned nothing: an interrupted stream or a prompt too big for the window. Retry with
+`--context-lines 0`; on a runner, check the context window (next item).
 
-Only `ai stop` prints this (it checks `pgrep ollama` and has nothing to stop). Every
-command that needs the server goes through `_ai_ensure_running`, which **auto-starts**
-`ollama serve` in the background (`Starting Ollama...` on stderr) and waits up to 10s;
-if that fails you get `Error: Ollama failed to start`. If Ollama runs under a different
-process name (rare), the `pgrep` check misses it — start it manually with `ollama serve &`.
+**An agentic run on ollama comes back empty**
+Runners use the server's `OLLAMA_CONTEXT_LENGTH`; a prompt plus file reads that overflow it get
+truncated. Register the model in the runner with a matching context window — see
+[howto](howto.md#agentic-runs-on-ollama-come-back-empty).
 
-**`ollama: prompt ~N tokens needs ~M context, over the 131072 ceiling`**
-
-The ollama provider refuses to truncate a too-large single-shot prompt (the model would
-return nothing). Shrink it — `ai review --context-lines 0` (diff-only), `--file`, a
-smaller range — or raise `AI_OLLAMA_MAX_CTX` if you have the RAM. `--agentic` is another
-way out: the model fetches context on demand instead of receiving it all up front.
-
-**`[ctx_truncated kept=N total=M budget=X]` appears in a session**
-
-Sliding window kicked in — older turns were dropped. If you want to preserve them: raise `sessions_recent_turns` or `sessions_token_threshold` in config, or use `ai sessions branch` to fork before the truncation happens. The rolling summary will catch facts from dropped turns into a `summary` block — see [sessions.md](sessions.md#context-management).
-
-**Tab completion not picking up a new provider**
-
-Provider plugins are autoloaded on first call. After adding `_ai_provider_<name>.fish`, run any `ai` command once (e.g. `ai config provider`) to trigger autoload, then completion will see it. If using stow, also run `stow --restow fish` to symlink the new file.
-
-**`broken symlinks in ~/.config/fish/functions/`**
-
-After deleting files from the repo (e.g. an old `_ai_*` function), the stow symlinks become broken. Clean up with:
+**Broken symlinks in `~/.config/fish/functions/`**
+After functions are deleted from the repo:
 
 ```
 find ~/.config/fish/functions/ -maxdepth 1 -type l ! -exec test -e {} \; -print -delete
+stow --restow fish
 ```
-
-This is also automatic if you re-run `stow --restow fish` after the deletion.

@@ -40,10 +40,10 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
 
     set -l rc
     if contains -- --agentic $run_args
-        # Agentic: the agent-runner streams its OWN live turn/tool/ctx progress to
-        # stderr — show it (do NOT redirect the runner's stderr) and don't draw a
-        # second line here. Its final answer (stdout) is redirected to the file.
-        test $tty -eq 1; and printf '  %s | agentic — exploring the repo with tools (dynamic context; Ctrl-C stops it)\n' $label >&2
+        # Agentic: the runner (pi / opencode / claude) may print its own progress on
+        # stderr — leave it visible (do NOT redirect it) and don't draw a second line
+        # here. Its final answer (stdout) is redirected to the file.
+        test $tty -eq 1; and printf '  %s | agentic — exploring the repo with tools (Ctrl-C stops it)\n' $label >&2
         _ai_run $run_args <$pfile >$outfile
         set rc $status
     else
