@@ -200,9 +200,10 @@ function q --description "Quick alias manager: lightweight named commands"
             end
 
             set -l cmd (tail -n +2 $quick_dir/$name | string collect)
-            # Pass extra args to the command
+            # Pass extra args to the command. Escape them: eval re-parses its input, so
+            # raw args like "SELECT f(x) > 1" would run as fish syntax (subst, redirect).
             if test (count $argv) -gt 1
-                eval $cmd $argv[2..]
+                eval $cmd (string escape -- $argv[2..])
             else
                 eval $cmd
             end
