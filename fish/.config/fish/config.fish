@@ -27,7 +27,7 @@ if status is-interactive
     alias v="nvim"
     alias vi="nvim"
     alias vim="nvim"
-    alias idea="open -a 'IntelliJ IDEA CE'"
+    alias idea="open -a 'IntelliJ IDEA'"
     alias rr="open -a RustRover"
 
     # Docker (OrbStack)

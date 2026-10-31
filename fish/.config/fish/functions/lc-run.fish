@@ -1,10 +1,9 @@
 function lc-run --description "Run LeetCode solution with test cases"
     if contains -- --help $argv; or contains -- -h $argv
-        echo "Usage: lc-run [FILE]"
+        echo "Usage: lc-run FILE"
         echo ""
         echo "Run LeetCode solution with @test cases."
         echo "Detects language by extension (.scala / .rs)."
-        echo "If no file given, uses the last argument or prompts."
         echo ""
         echo "Test format (in comments):"
         echo "  Scala: // @test methodName(args) = expected"
