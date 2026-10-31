@@ -14,6 +14,9 @@ Before flagging a Critical or Important issue, gate it — drop it if any check 
 - CITED — point at a real file:line in the diff you actually see. No location = no proof = do not report it.
 - INTRODUCED — the diff actually causes it; don't flag pre-existing issues in unchanged context lines as if this change created them.
 - NOT-ALREADY-HANDLED — check for an existing guard, validation, or handler in the surrounding context first. If it's covered, drop it.
+- ABSENCE CLAIMS — "no auth", "no validation", "no timeout": name where you looked for the control. Absence asserted against code you were not shown is not a finding.
+
+Once a finding passes the gate, look for its siblings: a change that makes a mistake once tends to make it in every hunk that does the same thing. Check the rest of the diff for the same pattern and report one finding per confirmed site, each with its own file:line — not one finding listing five paths. Then ask what else is wrong at the site you already read: two defect classes on one line are two findings.
 
 Rate the impact, not the category. "Missing null check" is not a severity; "null deref on every request to the changed handler" is. Place a finding in a tier by blast radius and how many conditions must line up — not by the name of the bug class:
 - Downgrade triggers: test/debug-only code drops a tier; needs a second unlikely condition to bite drops a tier; torn between two tiers, pick the lower.

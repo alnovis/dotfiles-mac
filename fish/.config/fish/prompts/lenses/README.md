@@ -39,7 +39,10 @@ files: a one-line framing, a `HARD GATE:` paragraph, then a
 
 The **security** lenses (`crypto`, `access-control`, `logic-bug`,
 `deserialization`) are adapted from Visa's Vulnerability Agentic Harness (VVAH),
-specifically its `SPECIALIST_HINTS` lenses in `vvaharness/lang/hints.py`.
+specifically its detection skills `vvaharness/skills/<name>/SKILL.md` (before
+v1.5.0 they were the `SPECIALIST_HINTS` in `vvaharness/lang/hints.py`). The
+sibling sweep and the absence rule in `meta-review*.md` and the `ai-review`
+skill are adapted from its `sibling-instances` and `code-exploration` skills.
 
 - Source: https://github.com/visa/visa-vulnerability-agentic-harness
 - License: Apache License 2.0, © 2026 Visa, Inc.

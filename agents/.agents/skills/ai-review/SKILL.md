@@ -30,13 +30,23 @@ no package installs. Reading files and running read-only git commands is fine.
    file: say so and list the available lenses (the `.md` files in `references/lenses/`, except
    README.md). No lens named: apply none.
 4. Ground the review in the code. For each changed file read the whole file, not only the hunks.
-   For each changed function find its callers (grep) and its tests. Before reporting a suspected
-   issue, look for a guard, validation or handler that already covers it.
-5. Write the review in the format the rules define. Every finding cites a `file:line` you read
+   For each changed function find its callers (grep) and its tests. For a directory target, list
+   its files first and say which ones you read. Before reporting a suspected issue, look for a
+   guard, validation or handler that already covers it. To claim a control is missing (no auth,
+   no escaping, no timeout), name the files you opened looking for it.
+5. Sweep for siblings of every confirmed finding. The same defect usually repeats wherever the
+   same thing is done. Grep the repository for the pattern you just confirmed, in two or three
+   phrasings (`md5(` and `MessageDigest.getInstance("MD5")`; `"SELECT " +` and `s"SELECT`).
+   Open each hit and judge it on its own evidence: a hit in a test fixture, behind another guard,
+   or on a fixed literal may be fine. Report one finding per confirmed site, each with its own
+   `file:line`. In the finding, state the sweep: what you grepped, how many hits, how many
+   confirmed. Never sweep for a class you have not confirmed. Before leaving a site you have
+   read, also ask what other class of defect it holds; each class is a separate finding.
+6. Write the review in the format the rules define. Every finding cites a `file:line` you read
    in this run.
 
 ## Limits
 
 - At most 30 tool calls.
 - Start from the change: read the changed files, their callers and tests, and the references.
-  Do not scan the whole repository.
+  Do not scan the whole repository; the targeted greps of step 5 are the exception.
