@@ -59,7 +59,7 @@ For an existing session name, `_ai_session_file NAME`:
 3. Stop at any directory containing `.git/` (git root is the project boundary).
 4. If not found in walk-up: try `~/.config/ai/sessions/NAME.jsonl`.
 
-This is symmetric with [config walk-up](architecture.md#layer-3-configuration). Sessions and config use the same boundary rules.
+This is symmetric with [config walk-up](architecture.md#configuration). Sessions and config use the same boundary rules.
 
 ### Write target for new sessions
 
@@ -69,9 +69,9 @@ This is symmetric with [config walk-up](architecture.md#layer-3-configuration). 
 2. If `SCOPE = global`: `~/.config/ai/sessions/NAME.jsonl`.
 3. Otherwise:
    - If in a git repo: `<git-root>/.ai/sessions/NAME.jsonl`.
-   - Else: `<cwd>/.ai/sessions/NAME.jsonl`.
+   - Else: `~/.config/ai/sessions/NAME.jsonl` (global).
 
-This means new sessions go to the project layer by default when you're in a repo, and `--global` is the opt-out for shell-wide sessions.
+This means new sessions go to the project layer by default when you're in a repo, and `--global` is the opt-out for shell-wide sessions. Outside a git repo there is no project to attach to, so a new session is global automatically — no stray `.ai/` directory is created in an arbitrary working directory.
 
 ### `.last` pointer
 
@@ -119,7 +119,7 @@ After pinning:
 {"t":"config","pinned":true,"provider":"ollama","model":"qwen2.5-coder:32b","ts":"2026-06-15T19:50:00Z"}
 ```
 
-The latest `config` record wins. To revert, append `{"t":"config","pinned":false,...}`.
+The latest `config` record wins — both the REPL and `ai sessions ls` read only the last one. `ai sessions unpin` reverts by appending `{"t":"config","pinned":false,"ts":...}`; nothing is deleted.
 
 ### What's in `usage`
 
@@ -332,17 +332,20 @@ This separation means `build_messages` can be unit-tested independently and call
 
 ## Pinning
 
-A session can be **pinned** to a specific provider and/or model. On resume, the pinned config beats task-level resolution.
+A session can be **pinned** to a specific model. On resume, the pinned model beats task-level resolution. Sessions always run on ollama, so the model is the only meaningful pin — there is no provider pin.
 
 ### Pin
 
 ```
-ai sessions pin NAME --provider ollama --model qwen2.5-coder:32b
-ai sessions pin NAME --model qwen2.5-coder:32b      # provider unchanged
-ai sessions pin NAME --provider claude              # ⚠ session becomes invalid (claude is ollama-only)
+ai sessions pin NAME --model qwen2.5-coder:32b
+ai sessions pin NAME --provider ollama --model qwen2.5-coder:32b   # same; provider recorded for symmetry
+ai sessions pin NAME --provider claude --model ...                 # error: sessions are ollama-only
+ai sessions pin NAME                                               # error: specify --model to pin
 ```
 
-Appends `{"t":"config", "pinned":true, "provider":..., "model":..., "ts":...}` to the file.
+`--model` is required. `--provider` is optional and may only be `ollama`; any other value is rejected with `Error: sessions are ollama-only — cannot pin provider '<P>'`.
+
+Appends `{"t":"config", "pinned":true, "provider":..., "model":..., "ts":...}` to the file (`provider` is `null` when not given).
 
 ### Unpin
 
@@ -350,13 +353,13 @@ Appends `{"t":"config", "pinned":true, "provider":..., "model":..., "ts":...}` t
 ai sessions unpin NAME
 ```
 
-Appends `{"t":"config", "pinned":false, "ts":...}`. Future resumes will fall back to task-level resolution.
+Appends `{"t":"config", "pinned":false, "ts":...}`. Because only the latest `config` record counts, the next resume falls back to task-level resolution and `ai sessions ls` drops the `[pinned]` marker.
 
 ### Resolve order on resume
 
 ```
-1. --model flag passed at run time (highest)
-2. latest {t:"config", pinned:true} record (if any)
+1. --model flag passed at run time (highest; applies to that whole REPL run)
+2. the latest {t:"config"} record, if it is a pin (pinned:true with a model)
 3. _ai_default_model chat ollama (task resolver)
 ```
 
@@ -392,13 +395,15 @@ For a fully serialized workflow, use `flock` around critical operations. Not ena
 
 ### `ai sessions search QUERY`
 
-Case-insensitive substring search over **user and assistant** message content. System prompts, summaries, and meta are not searched.
+Case-insensitive substring search over **user and assistant** message content (or a case-insensitive regex with `--regex`). System prompts, summaries, and meta are not searched.
 
 ```
 ai sessions search "migration"
-ai sessions search "Option[String]" --name "refactor*"
+ai sessions search "Option[String]" --name refactor
 ai sessions search "marina" --since 2026-05-01
-ai sessions search "fix" --all                       # include archived
+ai sessions search "fix" --all                       # active + archived
+ai sessions search "fix" --archived                  # archived only
+ai sessions search 'retry|backoff' --regex           # regex (jq test, case-insensitive)
 ```
 
 Output: matching messages with session name, scope, and timestamp context. Multiple matches per session shown as separate Turn-N lines.
@@ -409,7 +414,8 @@ Filters:
 |---|---|
 | `--name PATTERN` | Substring match on session name (not glob) |
 | `--since YYYY-MM-DD` | Filter to sessions updated on/after this date |
-| `--archived` | Search only archived sessions |
+| `--regex` | Treat QUERY as a case-insensitive regex (jq `test`) instead of a substring |
+| `--archived` | Search only archived sessions (same scoping as `ls --archived`) |
 | `-a`, `--all` | Include both active and archived |
 
 ### `ai sessions stats`
@@ -419,7 +425,10 @@ Aggregated counts across all visible sessions.
 ```
 ai sessions stats                    project + global active sessions
 ai sessions stats --all              include archived
+ai sessions stats --archived         same as --all here (include archived)
 ```
+
+Note the asymmetry: for `ls` and `search`, `--archived` means archived **only**; for `stats` it means **include** archived.
 
 Output includes total sessions, total assistant turns, total tokens (input + output), oldest/newest activity, and a breakdown of models used by turn count.
 
@@ -535,13 +544,13 @@ ai chat -c
 ai chat -s refactor-auth --new
 ```
 
-### "Same conversation, but switch to a heavier model for one turn"
+### "Same conversation, but switch to a heavier model for a while"
 
 ```
 ai chat -c --model qwen2.5-coder:32b
 ```
 
-(Model used for that turn only; doesn't persist.)
+(Model used for every turn of this REPL run, until you exit; not persisted — the next `ai chat -c` without `--model` goes back to the pin / task default.)
 
 ### "Lock this session to a model permanently"
 

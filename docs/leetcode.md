@@ -105,15 +105,16 @@ class TreeNode(var _value: Int = 0) // binary tree
 | `LC.fromTreeNode(root)` | `TreeNode` | `"[1,2,3,null,4]"` |
 | `LC.fmt(value)` | Any result | String for comparison |
 
-### Available Imports
+### Imports
 
-Automatically included (matches LeetCode Scala 3 environment):
+Scala imports are scoped to the file they're written in, so the imports at the top of `LeetCode.scala` do **not** reach your solution. Add what you need to the solution file itself, e.g.:
 
 ```scala
 import scala.collection.mutable
-import scala.collection.mutable.*
 import scala.math.*
 ```
+
+Without them, `mutable.ArrayBuffer` or a bare `max(...)` fails with `Not found`.
 
 ## Rust Runner
 
@@ -124,6 +125,10 @@ For Rust, `lc-run` auto-generates:
 - `use std::rc::Rc;` and `use std::cell::RefCell;`
 
 No separate library file needed.
+
+### rust-analyzer support — `lc-init`
+
+Bare `.rs` solutions have no Cargo project, so rust-analyzer can't index them. Run `lc-init [DIR]` (defaults to the current dir) to generate a `Cargo.toml` plus wrapper sources under `src/` for every `.rs` file in DIR. Your solution files are not modified; re-run it after adding new ones.
 
 ## Output
 
@@ -145,16 +150,16 @@ Debug: some println output
 
 ```
 leetcode/
-  LeetCode.scala              # shared library (Scala)
-  3546_equal_sum_grid_partition.scala
-  1594_max_non_negative_product.scala
-  1594_max_non_negative_product.rs
-  ...
+  LeetCode.scala                       # shared library (Scala)
+  3546_equal_sum_grid_partition.scala  # a solution with @test lines
+  <id>_<name>.scala / .rs              # more solutions
 ```
+
+`lc-run` looks for `LeetCode.scala` next to the solution first and falls back to `~/dotfiles-mac/leetcode/LeetCode.scala`, so solutions can live in any directory.
 
 ## Tips
 
-- **No `main` needed** — `lc-run` generates it from `@test` comments
+- **No `main` needed** — `lc-run` generates it from `@test` comments (a Scala file with no `@test` lines is just run as-is, with your own `main`)
 - **Debug with `println`** — output appears in the test runner
 - **No build.sbt needed** — uses `scala` CLI directly
 - **Multiple solutions** — use different filenames (e.g., `3546_v1.scala`, `3546_v2.scala`)

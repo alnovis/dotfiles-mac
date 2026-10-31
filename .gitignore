@@ -2,7 +2,6 @@ kitty/.config/kitty/kitty-themes/
 kitty/.config/kitty/*.bak
 kitty/.config/kitty/theme.conf
 nvim/.config/nvim/LICENSE
-nvim/.config/nvim/README.md
 .DS_Store
 
 # Local experiments / scratch (not published)

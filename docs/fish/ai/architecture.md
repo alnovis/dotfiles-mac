@@ -31,17 +31,20 @@ flowchart TD
     end
 
     subgraph L3["Layer 3 — dispatcher"]
-        dispatch["_ai_run<br/>provider selection,<br/>workdir, output, dry-run"]
+        dispatch["_ai_run<br/>provider selection, --agentic routing,<br/>workdir, output, dry-run"]
     end
 
-    subgraph L2["Layer 2 — provider plugins (auto-discovered)"]
+    subgraph L2["Layer 2 — plug-ins (auto-discovered)"]
         p_ollama["_ai_provider_ollama"]
         p_claude["_ai_provider_claude"]
+        a_ollama["_ai_agent_ollama<br/>(agent runner, default)"]
+        a_pi["_ai_agent_pi<br/>(agent runner)"]
     end
 
     subgraph L1["Layer 1 — external tools"]
-        t_ollama["ollama CLI<br/>/api/chat /api/show"]
+        t_ollama["ollama server<br/>/api/generate, /api/chat,<br/>ollama show / run"]
         t_claude["claude CLI<br/>claude -p"]
+        t_pi["pi CLI<br/>pi -p"]
     end
 
     sessions_pipeline["sessions pipeline<br/>(parallel — see below)"]
@@ -52,18 +55,26 @@ flowchart TD
     cmd_sess --> sessions_pipeline
     dispatch --> p_ollama
     dispatch --> p_claude
-    sessions_pipeline -.-> p_ollama
+    dispatch -.->|"--agentic (ollama)"| a_ollama
+    dispatch -.->|"--agentic, agent=pi"| a_pi
+    sessions_pipeline -.-> t_ollama
     p_ollama --> t_ollama
+    a_ollama --> t_ollama
+    a_pi --> t_pi
     p_claude --> t_claude
 ```
+
+(Simplification: of the interactive entry points, only top-level `ai` goes through
+`_ai_run`. Stateless `ai chat` runs `ollama run MODEL` itself, and `ai code` calls
+`_ai_agent_pi --interactive` directly.)
 
 **Layer responsibilities (bottom-up):**
 
 | Layer | Responsibility | Knows about |
 |---|---|---|
 | 1 (boundary) | The external tool itself | — (external) |
-| 2 (provider plugin) | How to invoke this specific tool | The tool's CLI/API |
-| 3 (dispatcher) | Provider selection, workdir, output, dry-run | All providers via discovery |
+| 2 (plug-ins) | How to invoke this specific tool — a *provider* answers from the prompt; an *agent runner* explores the repo with tools | The tool's CLI/API |
+| 3 (dispatcher) | Provider selection, `--agentic` routing, workdir, output, dry-run | All providers and runners via discovery |
 | 4 (prompt assembly) | Build the prompt with context for the chosen provider | The task domain + provider capabilities |
 | 5 (command handler) | The user-facing command | The task (commit/review/etc) |
 
@@ -76,7 +87,8 @@ The toolkit treats providers as plug-ins. Each provider is a single fish functio
 **Contract** (called by the dispatcher):
 
 ```
-_ai_provider_<name> [--interactive] [--model M] [--think]
+_ai_provider_<name> [--interactive] [--model M] [--think] [--agentic]
+                    [--no-think] [--thinking-output FILE]     (ollama only)
 
 Non-interactive (default):
   reads stdin (prompt + piped input as a single stream)
@@ -88,7 +100,22 @@ Interactive (--interactive):
   ignores --model if the tool doesn't support one
 ```
 
-`--think` is accepted by all plugins for interface symmetry; providers without thinking support silently ignore it.
+`--think` and `--agentic` are accepted by every provider for interface symmetry. claude
+ignores `--think`, and `--agentic` is a no-op for it (`claude -p` is always tool-grounded).
+The ollama provider gates thinking on the model's capability (from `ollama show`): a
+thinking-capable model gets `think:true` by default, and `--think` on a non-thinking model
+prints a warning (`does not support thinking — ignoring --think`) rather than failing.
+`--no-think` and `--thinking-output` exist only on the ollama provider; the dispatcher
+forwards them only when it dispatches there.
+
+**The ollama provider** talks to the server over HTTP, not the CLI: non-interactive calls
+POST to `/api/generate` with `stream:true` and an explicit `think` boolean, size
+`options.num_ctx` to the prompt (≈chars/3 + 8k output reserve, floor 8k, ceiling
+`AI_OLLAMA_MAX_CTX` = 131072 by default — over the ceiling it errors instead of
+truncating), and stream `.response` through `jq --unbuffered`. With `--thinking-output`
+the `.thinking` channel is written to that file (the reasoning sidecar). It honors
+`OLLAMA_HOST`. Interactive mode uses `ollama run --think=true|false`. `/api/chat` is used
+only by the sessions pipeline and the built-in agent runner.
 
 **Discovery.** `_ai_providers` enumerates plugin functions via `functions -an`, filters to names matching `^_ai_provider_(?<name>.+)$`, then validates each is loadable with `functions -q`. The result is the canonical list of available providers — used by completions, config validation, and the dispatcher.
 
@@ -98,19 +125,52 @@ Interactive (--interactive):
 fish/.config/fish/functions/_ai_provider_<name>.fish
 ```
 
-It is picked up automatically. No registration step, no code changes elsewhere. The function is autoloaded on first invocation by fish.
+It is picked up automatically. No registration step, no code changes elsewhere. The function is autoloaded on first invocation by fish. Internal helpers that are not providers deliberately avoid the `_ai_provider_` prefix (e.g. `_ai_ollama_chat`, `_ai_agentic_native`), so `_ai_providers` returns exactly `claude ollama`.
 
-**Dispatcher behavior.** `_ai_run` argparses common flags (`--provider`, `--model`, `--think`, `--workdir`, `--output`, `--dry-run`), resolves the provider name via the resolver chain (Layer 2), looks up the function via `functions -q _ai_provider_$provider`, then:
+### Agent runners (second plug-in family)
+
+A provider answers from the prompt alone; an **agent runner** explores the repo with
+tools. Runners are discovered the same way — `_ai_agents` lists `_ai_agent_<name>`
+functions (today: `ollama`, `pi`).
+
+```
+_ai_agent_<name> [--interactive] [--provider P] [--model M] [--no-session] [--edit] ...
+
+Non-interactive: reads the prompt from stdin, streams the final answer to stdout,
+                 live progress to stderr. Read-only unless --edit.
+```
+
+- `_ai_agent_ollama` — the default. Drives ollama's `/api/chat` tool-calling loop itself
+  with four read-only tools (`read_file`, `grep`, `find_files`, `list_dir`) executed in
+  the working directory (relative paths; not a sandbox — absolute paths are not
+  rejected; outputs are byte-capped), re-sizing `num_ctx` every turn to the growing history (clamped
+  to `min(model native context, AI_OLLAMA_MAX_CTX)`), thinking off, max 24 turns.
+- `_ai_agent_pi` — wraps `pi -p` with a read-only allowlist (`read,grep,find,ls`) and
+  `--no-session`; context is the server's static `OLLAMA_CONTEXT_LENGTH`. `ai code` also
+  uses it, interactively, with its own tool policy.
+
+`_ai_agentic_native PROVIDER` says whether a provider is already tool-grounded (today:
+`claude`) and therefore needs no runner. `_ai_default_agent` picks the runner: the `agent`
+config key (project → global), default `ollama`. Adding a runner is one
+`_ai_agent_<name>.fish` file plus `agent=<name>` in config.
+
+## Layer 3: dispatcher
+
+`_ai_run` argparses common flags (`--provider`, `--model`, `-t/--think`, `--no-think`, `--agentic`, `--workdir`, `--output`, `--thinking-output`, `--dry-run`), takes the provider from `--provider` or else the **top-level `provider` key only** (`_ai_config_read provider`, default `ollama` — per-task resolution is the caller's job, see [Per-task resolution](#per-task-model-and-provider-resolution)), validates it via `functions -q _ai_provider_$provider`, then:
 
 - If `--dry-run`: prints the assembled prompt to stdout, label to stderr, returns 0 without invoking the plugin.
-- If interactive (no prompt, no piped stdin, no output redirect): calls the plugin with `--interactive`.
-- Otherwise: pipes `_ai_pipe_input "$prompt"` (which emits the prompt argument followed by stdin if piped) into the plugin, redirects output to `--output` file or stdout via `/dev/stdout`.
+- Picks the dispatch target: normally the provider. With `--agentic` on a provider that is **not** natively tool-grounded (`_ai_agentic_native` false — i.e. ollama), it dispatches to `_ai_agent_<agent>` instead, passing `--provider P --no-session [--model M]` (the runner does not take `--think`/`--agentic`).
+- Forwards `--no-think` and the reasoning-sidecar path (`--thinking-output`) only when the target is `_ai_provider_ollama`. For a direct `--output` on ollama (non-agentic) it derives the sidecar path itself, reports it, and deletes it if empty.
+- If interactive (no prompt, no piped stdin, no output redirect): calls the target with `--interactive`.
+- Otherwise: pipes `_ai_pipe_input "$prompt"` (which emits the prompt argument followed by stdin if piped) into the target, and redirects stdout to the `--output` file — or, with no file, simply inherits fd 1. It deliberately does **not** write via `/dev/stdout`: that reopens the controlling terminal and escapes an enclosing pipe (e.g. `_ai_run_watched`'s `tee`).
 
-`--workdir` is honored at the dispatcher level: `cd` before invocation, restore original PWD on exit. This is how Claude can read project files in `ai review PATH` mode.
+`--workdir` is honored at the dispatcher level: `cd` before invocation, restore original PWD on exit. This is how Claude — and an agent runner under `--agentic` — reads project files in `ai review` (both modes).
 
-## Layer 3: configuration
+`_ai_run_watched` wraps `_ai_run` for file output with a progress readout: one foreground pipeline (`_ai_run | tee FILE`) so Ctrl-C reaches `curl` and actually stops the model; on the agentic path it lets the runner's own live trace through instead.
 
-Configuration is layered, not monolithic. A value can be set globally, scoped to a project, or scoped to a specific task. The resolver returns the most specific match.
+## Configuration
+
+Configuration is not a layer of the stack above — it is a set of pure resolvers that the dispatcher (Layer 3) and the command handlers (Layer 5) consult. It is layered, not monolithic. A value can be set globally, scoped to a project, or scoped to a specific task. The resolver returns the most specific match.
 
 **Files:**
 
@@ -126,10 +186,14 @@ Configuration is layered, not monolithic. A value can be set globally, scoped to
 |---|---|---|
 | `provider` | Top-level | Default provider for unspecified tasks |
 | `<task>_provider` | Per-task | Override for a specific task |
-| `<task>_model` | Per-task | Model for a specific task (any provider) |
+| `<task>_model` | Per-task | Model for a specific task — used only while the provider in use is the task's configured provider |
+| `review_verify` | Review | Truthy (`1`/`true`/`yes`/`on`) → `ai review` runs the verify pass by default |
+| `agent` | Agentic | Agent runner behind `--agentic` for non-native providers: `ollama` (default) or `pi` |
 | `sessions_recent_turns` | Sessions | Sliding-window target |
 | `sessions_token_threshold` | Sessions | Truncation threshold (fraction of context window) |
 | `sessions_summary_model` | Sessions | Override model used for rolling summary |
+
+`review_verify`, `agent`, and the `sessions_*` keys have no `ai config` setter — they are edited by hand.
 
 Known tasks: `chat`, `code`, `review`, `verify`, `commit`, `summary` (enumerated by `_ai_tasks`). The `verify` task configures the second-opinion pass of `ai review --verify` independently of the review task itself (so you can review with one provider/model and verify with another).
 
@@ -160,7 +224,7 @@ So once a project has a `.ai/config`, both reads and writes to it are sticky.
 
 **`move` semantics.** `ai config move --task X --to {project|global}` is shorthand for "read keys from the opposite layer, write to the target layer, remove from source". Conflict resolution: target's value is overwritten by source's. The user said "move", which means the source value wins.
 
-## Layer 4: per-task model and provider resolution
+## Per-task model and provider resolution
 
 Tasks are an axis of personalization. The user may want:
 
@@ -187,14 +251,18 @@ _ai_default_model [TASK] [PROVIDER]
   PROVIDER optional provider hint
   Returns: model name (may be empty for non-ollama)
   Chain:
-    1. <task>_model from config (if TASK given) — any provider
+    1. <task>_model from config (if TASK given) — only if PROVIDER is
+       unspecified or equals _ai_default_provider TASK (a model name is
+       provider-specific, so a --provider override must not leak it)
     2. $AI_DEFAULT_MODEL env (only if PROVIDER is ollama or unspecified)
     3. Hardcoded fallback "qwen3.5:9b" (only if PROVIDER is ollama or unspecified)
   Non-ollama with no per-task model → empty result; caller passes no
   --model and lets the provider use its native default.
 ```
 
-**Origin tracking** (`_ai_origin_provider`, `_ai_origin_model`) mirrors the same logic but returns a label instead of the value (`project`, `global`, `env`, `default`). This is what powers the resolved view (`ai config status`).
+The provider-match guard cuts both ways: switching a task's provider (`ai config provider claude --task review`) makes an existing `review_model` apply to the *new* provider, so the two keys should be changed together.
+
+**Origin tracking** (`_ai_origin_provider`, `_ai_origin_model`) mirrors the same logic but returns a label instead of the value. Provider labels: `project`, `global` (per-task key), `project+top`, `global+top` (inherited from that layer's top-level `provider`), `default`. Model labels: `project`, `global`, `env`, `default`, or `—` (non-ollama provider, no model → provider default). This is what powers the resolved view (`ai config status`).
 
 **Where callers use this.** Each command handler resolves before any side effects:
 
@@ -205,7 +273,7 @@ model    = --model flag          OR _ai_default_model <task> <provider>
 
 This pre-resolution happens BEFORE any `cd $workdir` or session loading, so resolvers see the user's invocation PWD (not the internal workdir).
 
-## Layer 5: prompt templates
+## Layer 4: prompt templates
 
 Prompts are user-editable, not buried in shell code. Each generation/review command has a template file:
 
@@ -215,7 +283,10 @@ Prompts are user-editable, not buried in shell code. Each generation/review comm
 ├── meta-summary.md          (ai gen summary)
 ├── meta-review.md           (ai review PATH — target mode)
 ├── meta-review-diff.md      (ai review — git mode)
-└── meta-session-summary.md  (rolling summary for long sessions)
+├── meta-verify.md           (verify pass: ai review --verify / --verify-only)
+├── meta-session-summary.md  (rolling summary for long sessions)
+└── lenses/                  (ai review --lens NAME — one <name>.md checklist each,
+                              discovered by _ai_review_lens; README.md excluded)
 ```
 
 (These are symlinked from the dotfiles repo via stow.)
@@ -234,20 +305,21 @@ end
 
 If the user deletes or moves a template, the command still works with a compact built-in default. The user can iterate on prompt engineering without touching fish code, just by editing the `.md` file.
 
-**Where assembly happens.** Templates are the "what to say" part. Assembly (combining template + context + language instruction + custom user prompt + the actual content) is the responsibility of each command handler. See [Layer 6: provider-specific assembly](#layer-6-provider-specific-assembly).
+**Where assembly happens.** Templates are the "what to say" part. Assembly (combining template + context + language instruction + custom user prompt + the actual content) is the responsibility of each command handler (Layer 5). See [Layer 4: provider-specific assembly](#layer-4-provider-specific-assembly).
 
-## Layer 6: provider-specific assembly
+## Layer 4: provider-specific assembly
 
-Different providers have different capabilities. Claude CLI can read files from the working directory. Ollama (which we invoke via HTTP API) has no filesystem access. The prompt assembly must reflect that.
+Different providers have different capabilities. Claude CLI can read files from the working directory. The ollama provider (invoked via HTTP API) has no filesystem access — unless `--agentic` routes the call to an agent runner. The prompt assembly must reflect that.
 
 **The split.** Inside a command handler:
 
 - Common: load template, resolve task model, build language prefix, attach custom prompt suffix.
 - Provider-specific: build the final `full_prompt` string.
   - **Claude**: just the template + custom instructions. Tell it to review/summarize the target. The actual file content is read by Claude itself (it has access to the working directory).
-  - **Ollama**: template + embedded context (tree output, README excerpt, file content). Everything Ollama needs must be in the prompt because it cannot read files.
+  - **Ollama**: template + embedded context (tree output, README excerpt, file content; in git-mode review, the full changed files within the `--context-lines` budget). Everything plain Ollama needs must be in the prompt because it cannot read files.
+  - **`--agentic`** (git-mode review): the full-changed-files embed is skipped — the diff is still sent, and the model (claude, or ollama via an agent runner) fetches the rest itself.
 
-**Where the workdir matters.** `_ai_run --workdir DIR` does the `cd` before invoking the provider, so Claude sees the right directory. For ollama, the workdir cd happens too, but it's irrelevant (no files are read at runtime). The workdir is recorded only as context delivery to Claude.
+**Where the workdir matters.** `_ai_run --workdir DIR` does the `cd` before invoking the provider, so Claude sees the right directory. For plain ollama the cd happens too but is irrelevant (no files are read at runtime). For ollama **with `--agentic`** it matters just as much as for Claude: the agent runner's tools operate relative to that directory.
 
 **Why this split is right.** The provider plugin layer (Layer 2) handles HOW to invoke each tool. The prompt assembly (Layer 4–5) handles WHAT to send. Mixing them would either:
 
@@ -278,7 +350,7 @@ flowchart TD
     repl["_ai_session_chat<br/>REPL outer loop"]
     maybe["_ai_session_maybe_summarize<br/>side effect: appends {t:summary} row"]
     build["_ai_session_build_messages<br/>pure: reads file → JSON array"]
-    api["_ai_provider_ollama_chat<br/>streaming /api/chat"]
+    api["_ai_ollama_chat<br/>streaming /api/chat"]
     append["append {t:assistant} row"]
     jsonl[(".ai/sessions/&lt;name&gt;.jsonl<br/>append-only JSONL")]
 
@@ -317,7 +389,7 @@ These should stay true as the code evolves:
 
 6. **Sessions are ollama-only by design.** This is not a temporary limitation. Bridging claude (parsing its storage, mapping IDs) is rejected as architecturally wrong. See [the sessions boundary](#sessions-a-parallel-pipeline).
 
-7. **No filesystem access from provider plugins.** Plugins know about their tool. Reading files for context delivery is the command handler's responsibility (Layer 4-5).
+7. **No filesystem access from provider plugins.** Plugins know about their tool. Reading files for context delivery is the command handler's responsibility (Layer 4-5). Agent runners are the deliberate exception — reading the repo (read-only) is their whole purpose, and they are only reached via an explicit `--agentic`.
 
 8. **Resolvers are pure.** `_ai_default_provider`, `_ai_default_model`, `_ai_config_read` have no side effects, no caching mutations. Read-only.
 
@@ -329,7 +401,7 @@ These should stay true as the code evolves:
 
 **Dry-run.** `--dry-run` is implemented at the dispatcher (Layer 3) and forwarded through all command handlers. The dispatcher prints the assembled prompt to stdout, a label to stderr, and returns 0 before invoking the provider. Command handlers detect `--dry-run` to suppress side-effect cues ("Saved to: $file" message when nothing was saved).
 
-**Completions.** `completions/ai.fish` consumes the same discovery mechanisms used at runtime: `_ai_providers` for provider names, `_ai_tasks` for task names, `_ai_session_names` for session names, `ollama list` for installed models. So tab-completion is automatically consistent with what the toolkit knows about.
+**Completions.** `completions/ai.fish` consumes the same discovery mechanisms used at runtime: `_ai_providers` for provider names, `_ai_tasks` for task names, `_ai_session_names` for session names, `_ai_review_lens` (via `_ai_complete_lens`, which handles comma-stacked values) for lenses, and `_ai_complete_models` for models — it reads the installed-models cache (so it works with the server down), falls back to `ollama list` when the cache is cold, and adds the claude aliases for `--verify-model`. So tab-completion is automatically consistent with what the toolkit knows about.
 
 **Stow.** Files in the repo at `fish/.config/fish/functions/`, `prompts/`, `completions/` are symlinked into `~/.config/fish/` by `install.sh` (which wraps `stow`). When new files are added or deleted in the repo, `stow --restow fish` and `find … -type l ! -exec test -e {} \;` should be run to update symlinks and prune broken ones.
 
@@ -346,6 +418,5 @@ These should stay true as the code evolves:
 | Cross-provider session migration | Rejected — sessions are scoped to one provider for life |
 | Encryption for sessions storage | Not yet — could be added without changing architecture |
 | Per-project prompt templates | Not yet — straightforward extension of the walk-up pattern |
-| Streaming for `ai gen`/`ai review` | Not yet — current API path uses HTTP non-streaming for these |
-
+| Streaming for `ai gen`/`ai review` | Done — the ollama provider requests `stream:true` and emits chunks via `jq --unbuffered`; file output shows a live line count (`_ai_run_watched`) |
 These are architectural decisions, not bugs. They can be revisited if user pain emerges.

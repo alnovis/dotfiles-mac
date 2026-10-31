@@ -1,6 +1,6 @@
 # Neovim Keymaps Reference
 
-LazyVim-based configuration with Kanagawa theme. All custom keymaps are duplicated for Cyrillic layout.
+LazyVim-based configuration with Kanagawa theme. Keymaps defined via `bimap()` in `keymaps.lua` (save, `jk`, move lines, clipboard, terminal, build, LeetCode) and the AI keys are duplicated for the Cyrillic layout; plugin keymaps (gitsigns, diffview, hardtime, LazyVim defaults) are not.
 
 > `<leader>` = `Space`
 
@@ -90,13 +90,14 @@ LazyVim-based configuration with Kanagawa theme. All custom keymaps are duplicat
 | `?` | n | Search backward |
 | `n` / `N` | n | Next / previous match |
 | `*` | n | Search word under cursor |
-| `<leader>sr` | n | Open Spectre (project search & replace) |
-| `<leader>sw` | n | Search current word (Spectre) |
-| `<leader>sw` | v | Search selection (Spectre) |
-| `<leader>ff` | n | Find file (Telescope) |
-| `<leader>fg` | n | Live grep (Telescope) |
-| `<leader>fb` | n | Find buffer (Telescope) |
-| `<leader>fr` | n | Recent files (Telescope) |
+| `<leader>sr` | v | Search & replace in project (grug-far); in normal mode `<leader>sr` is sbt run |
+| `<leader>sw` | n | Grep word under cursor (Snacks picker) |
+| `<leader>sw` | v | Grep selection (Snacks picker) |
+| `<leader>/` / `<leader>sg` | n | Live grep (Snacks picker) |
+| `<leader>ff` | n | Find file (Snacks picker) |
+| `<leader>fg` | n | Find git-tracked file (Snacks picker) |
+| `<leader>fb` / `<leader>,` | n | Find buffer (Snacks picker) |
+| `<leader>fr` | n | Recent files (Snacks picker) |
 
 ## LSP (Language Server)
 
@@ -112,10 +113,13 @@ LazyVim-based configuration with Kanagawa theme. All custom keymaps are duplicat
 | `<leader>cr` | n | Rename symbol |
 | `<leader>cd` | n | Line diagnostics |
 | `]d` / `[d` | n | Next / previous diagnostic |
-| `Ctrl+Space` | i | Trigger autocomplete |
+| `Ctrl+Space` | i | Trigger autocomplete / toggle docs |
+| `Ctrl+n` / `Ctrl+p` | i | Next / previous completion item (also `Down` / `Up`) |
 | `CR` | i | Confirm completion |
-| `Tab` / `S-Tab` | i | Next / previous completion item |
-| `Ctrl+d` / `Ctrl+u` | i | Scroll docs down / up |
+| `Ctrl+y` | i | Select and confirm |
+| `Ctrl+e` | i | Cancel completion |
+| `Tab` / `S-Tab` | i | Jump to next / previous snippet field |
+| `Ctrl+f` / `Ctrl+b` | i | Scroll docs down / up |
 
 ## File Management
 
@@ -133,8 +137,9 @@ LazyVim-based configuration with Kanagawa theme. All custom keymaps are duplicat
 | `a` | — | Add file/directory |
 | `d` | — | Delete |
 | `r` | — | Rename |
-| `c` / `p` | — | Copy / paste |
-| `m` | — | Move |
+| `y` / `x` / `p` | — | Copy / cut to Neo-tree clipboard, paste |
+| `c` | — | Copy (prompts for destination) |
+| `m` | — | Move (prompts for destination) |
 
 ### Buffers
 
@@ -143,7 +148,7 @@ LazyVim-based configuration with Kanagawa theme. All custom keymaps are duplicat
 | `<S-h>` | n | Previous buffer |
 | `<S-l>` | n | Next buffer |
 | `<leader>bd` | n | Delete buffer |
-| `<leader>bb` | n | Switch buffer (Telescope) |
+| `<leader>bb` | n | Switch to other (alternate) buffer |
 
 ## Windows & Splits
 
@@ -170,10 +175,12 @@ LazyVim-based configuration with Kanagawa theme. All custom keymaps are duplicat
 |-----|------|-------------|
 | `]h` / `[h` | n | Next / previous hunk |
 | `<leader>gp` | n | Preview hunk |
-| `<leader>gr` | n | Reset hunk |
+| `<leader>ghr` | n | Reset hunk (LazyVim default; `<leader>gr` is gradle run) |
 | `<leader>gR` | n | Reset buffer |
 | `<leader>gs` | n | Stage hunk |
 | `<leader>gu` | n | Undo stage hunk |
+
+LazyVim's full hunk set lives under `<leader>gh…` (`ghs`, `ghr`, `ghp`, `ghb`, …), so `<leader>gh` itself (file history, below) fires after the which-key timeout.
 
 ### Diffview & Lazygit
 
@@ -186,6 +193,8 @@ LazyVim-based configuration with Kanagawa theme. All custom keymaps are duplicat
 ## Build & Run
 
 All build commands open a horizontal terminal split (15 lines).
+
+Some of these keys replace LazyVim defaults: `<leader>sc` (Command History → use `<leader>:`), `<leader>st` (Todo → use `<leader>sT`), `<leader>sr` in normal mode (grug-far stays on visual `<leader>sr`), `<leader>gr` (gitsigns reset hunk → `<leader>ghr`).
 
 ### Scala (sbt)
 
@@ -228,6 +237,12 @@ All build commands open a horizontal terminal split (15 lines).
 | `<leader>kr` | `<leader>лк` | gradle run |
 | `<leader>kt` | `<leader>ле` | gradle test |
 
+### LeetCode
+
+| Key | Cyrillic | Description |
+|-----|----------|-------------|
+| `<leader>lr` | `<leader>дк` | Run current solution with `lc-run` (see [docs/leetcode.md](../leetcode.md)) |
+
 ## AI (CodeCompanion + Ollama)
 
 Model: `qwen3.5:9b`. Auto-starts Ollama on first use.
@@ -243,10 +258,16 @@ Model: `qwen3.5:9b`. Auto-starts Ollama on first use.
 
 | Key | Description |
 |-----|-------------|
-| `@` | Add file/buffer to context |
-| `/` | Slash commands (model, clear, help) |
-| `gd` | Delete message |
-| `q` | Close chat |
+| `CR` (n) / `Ctrl+s` (i) | Send message |
+| `#{buffer}`, `/buffer`, `/file` | Add a buffer / file to context |
+| `@` | Tools |
+| `ga` | Change adapter and model |
+| `gx` | Clear chat |
+| `gr` | Regenerate last response |
+| `gd` | Show debug info |
+| `q` | Stop the current request |
+| `Ctrl+c` | Close chat |
+| `?` | Show all chat keymaps |
 
 ## Formatting
 

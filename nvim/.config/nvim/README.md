@@ -1,4 +1,3 @@
-# 💤 LazyVim
+# Neovim config
 
-A starter template for [LazyVim](https://github.com/LazyVim/LazyVim).
-Refer to the [documentation](https://lazyvim.github.io/installation) to get started.
+LazyVim-based setup (Scala, Rust, Java, Kotlin). See the repo [README](../../../README.md#neovim) for an overview and [docs/nvim/keymaps.md](../../../docs/nvim/keymaps.md) for the full keymap reference.

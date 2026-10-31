@@ -33,10 +33,10 @@ If `ai models list` shows nothing, Ollama isn't running or isn't installed. Inst
 ```
 ai models install qwen3.5:9b
 ai models use qwen3.5:9b
-ai chat "say hi"
+ai "say hi"
 ```
 
-This sets `qwen3.5:9b` as the global default and runs a one-shot test prompt.
+This sets `qwen3.5:9b` as the global default and runs a one-shot test prompt. (Not `ai chat "say hi"` — `ai chat` takes a model name as its positional, not a prompt.)
 
 ### Set Claude as available (optional)
 
@@ -59,6 +59,18 @@ ai config status            # check: review row should show provider: global, mo
 ```
 
 Now `ai review` (any mode) uses Claude; `ai gen commit`, `ai chat`, `ai code`, etc. continue with Ollama.
+
+Watch the model column. A per-task model follows the task's configured provider, so if
+you had earlier set `review_model` to an ollama tag (e.g. `ai models use review
+north-mini-code-1.0`), `ai config status` now shows `claude / north-mini-code-1.0` and
+that tag is passed to claude. Fix it one of two ways:
+
+```
+ai models use review sonnet                 pick a claude model for the review task
+# or
+ai config reset --task review               drop review_provider AND review_model …
+ai config provider claude --task review     … then set the provider again (model: — = claude's default)
+```
 
 ### Persistently: generate the review locally, verify with claude
 
@@ -104,7 +116,7 @@ ai config provider ollama --task commit --project
 ai models use code qwen2.5-coder:32b --project
 ```
 
-Result: a `.ai/config` file at the repo root. Outside this repo, your global config still applies. See [walk-up resolution](architecture.md#layer-3-configuration) for the precedence rules.
+Result: a `.ai/config` file at the repo root. Outside this repo, your global config still applies. See [walk-up resolution](architecture.md#configuration) for the precedence rules.
 
 ### See where each value comes from
 
@@ -112,7 +124,7 @@ Result: a `.ai/config` file at the repo root. Outside this repo, your global con
 ai config status
 ```
 
-The origin column shows `project`, `global`, `env`, or `default` for each task's resolved provider/model. Use this to debug "why is X using Y?"
+The origin column shows where each task's resolved provider/model came from. Provider: `project` / `global` (a per-task key), `project+top` / `global+top` (inherited from that layer's top-level `provider=`), or `default`. Model: `project`, `global`, `env` (`AI_DEFAULT_MODEL`), `default` (hardcoded fallback), or `—` (non-ollama provider with no model set — the provider's own default). Use this to debug "why is X using Y?"
 
 ### Promote a project setting to global
 
@@ -130,16 +142,20 @@ This reads the per-task keys from project, writes them to global, removes from p
 
 ```
 git diff --staged | ai "review for bugs and missing edge cases"
+git diff --staged | ai --provider claude "review for bugs and missing edge cases"
 ```
 
-Or via the dedicated command (more structured prompt, severity-tiered output):
+`ai review` only reviews **committed** history (branch vs base, `--last N`, `--commit`) —
+it never looks at the index or the working tree. `ai review --file src/foo.scala` does
+*not* review staged changes; it filters the committed merge-base..HEAD diff to that one
+file. For the structured, severity-tiered review of uncommitted work, commit first
+(even a WIP commit) and run `ai review --last`:
 
 ```
-git add -p src/foo.scala
-ai review --file src/foo.scala
+git commit -m wip
+ai review --last                    structured review of that commit
+git reset --soft HEAD~1             un-commit, keep the changes staged
 ```
-
-`--file` filters the branch-vs-base diff to one file.
 
 ### Review of the whole branch before pushing
 
@@ -150,7 +166,7 @@ ai review --brief                    short summary instead of detailed
 ai review --lang ru                  in Russian
 ```
 
-### Security-focused review with a lens
+### Focused review with a lens
 
 Add a specialist checklist for one class of bug. Lenses stack (comma-separated) and
 work in both git and target mode:
@@ -159,12 +175,25 @@ work in both git and target mode:
 ai review --lens access-control                 authorization checklist on the diff
 ai review . --lens crypto,logic-bug             two lenses on the whole project
 ai review --commit abc1234 --lens deserialization
+ai review --lens rust-async,rust-ownership      a tokio change
+ai review --lens reactive,resource-leak         a WebFlux / reactive Kafka service
+ai review k8s/ --lens k8s-manifest              deployment YAML
+ai review --lens sql-postgres                   a migration commit
 ```
 
-Pick by what the change touches: `access-control` for request handlers/APIs,
-`crypto` for signing/TLS, `deserialization` for JVM services reading untrusted input,
-`logic-bug` for concurrency/ordering-sensitive code. See the
-[lens table](toolkit.md#security-lenses---lens) for the full applicability guide.
+Pick by what the change touches:
+
+- **Security** — `access-control` for request handlers/APIs, `crypto` for signing/TLS,
+  `deserialization` for JVM services reading untrusted input, `logic-bug` for
+  concurrency/ordering-sensitive code.
+- **Quality** — `error-handling`, `resource-leak`, `reactive` (Reactor),
+  `documentation` (docs/comments drifting from code), `k8s-manifest`.
+- **Rust** — `rust-unsafe`, `rust-async`, `rust-ownership`.
+- **Data** — `sql-postgres`, `sql-clickhouse`, `hbase` (one engine each — don't mix
+  Postgres advice into ClickHouse).
+
+Tab-completion stacks lenses (`--lens crypto,<Tab>`). See the
+[lens table](toolkit.md#review-lenses---lens) for the full applicability guide.
 
 ### Adversarial second-opinion verify
 
@@ -176,9 +205,58 @@ ai review --provider ollama --verify --verify-provider claude
                                                 generate locally, verify with claude
 ```
 
-On claude the verify pass reads the repo itself; on a local model it reasons from the
-embedded diff only (and is a weaker verifier). See
+On claude the verify pass reads the repo itself. On a local model it reasons from the
+embedded diff only — unless you add `--agentic`, which runs the local verifier through
+the agent runner so it can open files and grep the repo too. Either way a local model is
+a weaker verifier than claude. See
 [Verify and local models](toolkit.md#verify-and-local-models) for why.
+
+With `-o review.md`, the review lands in `review.md` as soon as the first pass finishes
+and the verdicts go to `review.verify.md` (override with `--verify-output FILE`).
+
+### Re-verify a review you already paid for
+
+A claude review is expensive; re-running it just to get a second opinion is wasteful.
+Verify the saved file instead — no review pass runs:
+
+```
+ai review --provider claude -o review.md                     the costly review, once
+ai review --verify-only review.md --provider claude          verify it (claude reads the repo)
+git diff main...HEAD > /tmp/change.diff                     or a local verifier, grounded in the diff:
+ai review --verify-only review.md --provider ollama --verify-model north-mini-code-1.0 --file /tmp/change.diff
+```
+
+Output goes to `review.verify.md` (or `-o FILE`). Run it from the repo root so a claude /
+`--agentic` verifier sees the code.
+
+### Let a local model explore the repo (`--agentic`)
+
+A single-shot local review only sees what is embedded in the prompt. With `--agentic`
+the model gets read-only tools (`read_file`, `grep`, `find_files`, `list_dir`) and fetches
+context itself — useful when the change is small but its callers matter, or when the
+changed files are too big to embed:
+
+```
+ai review --agentic                              branch diff; model opens what it needs
+ai review --last 3 --agentic --verify -o r.md    agentic review + agentic local verify
+```
+
+The runner prints a live `turn / ctx / elapsed` line on stderr. The default runner is the
+built-in ollama tool loop; to use pi instead, add `agent=pi` to `~/.config/ai/config` (or
+a project `.ai/config`). On claude `--agentic` only skips embedding the full changed files
+— claude reads the repo either way.
+
+### Faster pass with a thinking model (`--no-think`)
+
+Thinking models (e.g. `laguna-xs-2.1`) spend most of their time reasoning. When you want
+a quick look rather than depth:
+
+```
+ai review --no-think
+ai review --no-think --verify               applies to both passes
+```
+
+No reasoning sidecar is written (nothing was reasoned). Has no effect on claude.
 
 ### Review a large commit that exceeds the diff cap
 
@@ -189,6 +267,20 @@ cap so the whole change is reviewed:
 git diff HEAD~1..HEAD | wc -l                    check the real size first
 ai review --last 1 --max-lines 4000 --provider claude --verify -o review.md
 ```
+
+Separately from the diff cap, git mode embeds the **full content** of the changed files
+up to a 2000-line budget (`--context-lines`). The run prints
+`Context window: N lines across M files (budget 2000)`; over budget it asks (in a
+terminal) whether to go diff-only or embed everything. Steer it up front:
+
+```
+ai review --context-lines 6000                   embed big files (claude, or a large-context local model)
+ai review --context-lines 0                      diff-only — smallest prompt
+```
+
+If a local model returns nothing or the provider errors with `over the 131072 ceiling`,
+the prompt is too big: drop to `--context-lines 0`, or switch to `--agentic` and let the
+model fetch files on demand.
 
 ### Generate a commit message and pipe to git
 
@@ -255,14 +347,14 @@ ai chat -s debug-foo
 > ... discuss the symptom ...
 ```
 
-When you hit a hard question, switch to a heavier model for one turn:
+When you hit a hard question, exit (Ctrl-D) and resume with a heavier model:
 
 ```
 ai chat -s debug-foo --model qwen2.5-coder:32b
 > ... ask the hard question ...
 ```
 
-Note: switching mid-session is per-turn only. To lock the session to a heavier model permanently:
+Note: `--model` applies to that whole invocation (every turn until you exit) and is not saved — the next plain `ai chat -s debug-foo` is back on the default. To lock the session to a heavier model permanently:
 
 ```
 ai sessions pin debug-foo --model qwen2.5-coder:32b
@@ -345,7 +437,7 @@ When happy, run for real:
 ai gen commit
 ```
 
-The same pattern applies to `meta-summary.md`, `meta-review.md`, `meta-review-diff.md`, and `meta-session-summary.md`. See [Prompt templates in toolkit.md](toolkit.md#prompt-templates) for the full list.
+The same pattern applies to `meta-summary.md`, `meta-review.md`, `meta-review-diff.md`, `meta-verify.md`, `meta-session-summary.md`, and the lens checklists in `lenses/` (`ai review --lens X --dry-run` shows the injected block; a new `lenses/<name>.md` becomes a selectable lens immediately). See [Prompt templates in toolkit.md](toolkit.md#prompt-templates) for the full list.
 
 ### One-off custom instruction for a single review
 
@@ -441,7 +533,7 @@ find ~/.config/fish/functions/ -maxdepth 1 -type l ! -exec test -e {} \; -print 
 stow --restow fish
 ```
 
-Without this, `functions -an` lists the dangling name as a candidate and `_ai_providers` (which uses it) may surface ghosts. The toolkit defensively filters via `functions -q`, but cleaning up is still good hygiene.
+Without this, `functions -an` still lists the dangling name. Discovery (`_ai_providers`, `_ai_agents`) filters such ghosts out via `functions -q`, but cleaning up is still good hygiene.
 
 ### Why is a session truncating earlier than expected?
 

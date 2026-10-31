@@ -14,11 +14,7 @@ Development environment configuration for MacBook Pro M4 Max (36GB), optimized f
 ## Quick Install
 
 ```bash
-# Install dependencies
-brew install neovim fish stow lazygit bat jq macmon ollama opencode pi-coding-agent
-brew install --cask kitty orbstack intellij-idea-ce rustrover
-
-# Clone and apply
+# Clone and apply (needs Homebrew; install.sh runs `brew bundle` from Brewfile, stows nvim/kitty/fish, installs fish plugins)
 git clone git@github.com:alnovis/dotfiles-mac.git ~/dotfiles-mac
 cd ~/dotfiles-mac
 ./install.sh
@@ -66,25 +62,25 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 | Docker | dockerfile LSP | — | — | — | — |
 
 **Plugins:**
-- Neo-tree — file explorer with git status
-- Telescope — fuzzy finder for files and text
+- Neo-tree — file explorer with git status (`Space e`)
+- Snacks picker — fuzzy finder for files and text (LazyVim default)
 - Gitsigns — inline git blame and hunk management
 - Lazygit — terminal UI for git (`Space gg`)
-- Spectre — project-wide search and replace (`Space sr`)
+- grug-far — project-wide search and replace (`Space sr` on a visual selection; in normal mode `Space sr` is sbt run)
 - Hardtime — vim motion trainer (`Space uh` to toggle)
 - CodeCompanion — local AI via Ollama (`Space ac/ag/ai`)
 - Diffview — git diff viewer (`Space gd/gh`)
 - conform.nvim — auto-format on save (scalafmt, rustfmt, ktlint, google-java-format)
 
 **Key bindings:**
-- All hotkeys are duplicated for Cyrillic keyboard layout
+- Custom hotkeys (save, `jk`, move lines, clipboard, terminal, build, AI) are duplicated for the Cyrillic layout
 - `Ctrl+Click` — go to definition
 - `Ctrl+Alt+Click` — find usages
 - `Ctrl+Alt+Left/Right` — navigate back/forward
 - `Ctrl+S` — save
 - `Space e` — toggle file tree
 - `Space ff` — find file
-- `Space fg` — live grep
+- `Space /` — live grep
 - `Space gg` — lazygit
 - `Space lr` — run LeetCode tests
 
@@ -103,10 +99,11 @@ Built on [LazyVim](https://www.lazyvim.org/) with the following customizations:
 | Close tab | `Cmd+W` |
 | Switch tab 1-5 | `Cmd+1-5` |
 | Next/prev tab | `Cmd+Shift+]/[` |
-| Vertical split | `Cmd+D` |
-| Horizontal split | `Cmd+Shift+D` |
+| New split (auto direction) | `Cmd+Enter` |
+| Horizontal split | `Cmd+Shift+Enter` |
+| Rotate splits | `Cmd+Shift+R` |
 | Navigate splits | `Ctrl+Shift+H/L/K/J` |
-| Toggle stack layout | `Cmd+Shift+Enter` |
+| Toggle stack layout (zoom) | `Cmd+Shift+Z` |
 | Font size +/−/reset | `Cmd+=/−/0` |
 | Copy/paste | `Cmd+C/V` (+ Cyrillic `Cmd+С/М`) |
 
@@ -132,7 +129,7 @@ All functions support `-h/--help`.
 
 *Text:*
 - `trim` — trim leading/trailing whitespace per line (args or stdin)
-- `clipclean` — dedent and trim clipboard (removes common leading indentation)
+- `clipclean` — dedent and trim clipboard (removes common leading indentation); `-f/--flat` strips all leading whitespace
 - `cheat` — cheat sheet for a command via cheat.sh (`cheat tar`, `cheat git rebase`)
 
 *Image clipboard (macOS):*
@@ -141,10 +138,14 @@ All functions support `-h/--help`.
 - Both support `.png .jpg/.jpeg .tif/.tiff .gif .bmp`
 
 *Files / paths:*
+- `take` — `mkdir -p` + `cd`; given a git URL clones and cds, given an archive extracts and cds
 - `fpath` — print a file's absolute path, like `pwd` for files (`fpath gitlab.log`); searches NAME recursively below the current dir (or a given DIR: `fpath ~/work '*.log'`), matches NAME as a glob, includes ignored/hidden files, and prints every match one per line. A path prefix on NAME folds into the search dir, so the basename is searched below it (`fpath ../project/docs/notes.md`)
 
 *Shell introspection:*
 - `describe` — inspect a fish function like psql's `\d` (`describe gstat`): a header card (name, description, source `file:line`, type) followed by the syntax-highlighted body via `fish_indent --ansi`. Flags: `-d/--description` (summary only), `-p/--path` (source file only, e.g. `v (describe -p gstat)`), `-b/--body` (highlighted body only), `--plain` (no ANSI). Colors/highlighting auto-disable off a tty. Non-function names fall back to `type` output. Tab-completes your functions.
+
+*Quick commands:*
+- `q` — lightweight named commands: `q add NAME CMD` (or `q add NAME` to write it in `$EDITOR`), then `q NAME [args…]`; also `q ls / show / edit / rm`. Stored in `~/.config/quick/` (machine-local, not in this repo)
 
 *Git:*
 - `clipcommit` — git commit using clipboard as message (`-y -a -p -d -e --no-color`)
@@ -190,7 +191,13 @@ All functions support `-h/--help`.
 - `ai review --last [N]` / `--commit SHA` / `--file FILE` — git mode: last N commits / specific commit / single file filter
 - `ai review PATH` — target mode: project (dir) or single-file review
 - `ai review FILE --with-project-context` — target mode: file + parent project context
-- Common: `--brief`, `--lang LANG`, `--lang-all LANG` (git only), `-o/--output FILE`, `--dry-run`
+- Common: `--provider`, `--model`, `--lang LANG`, `-o/--output FILE`, `--dry-run`
+- `--lens NAME[,NAME…]` — add specialist checklists (security, quality, Rust, SQL/HBase; see `prompts/lenses/`)
+- `--agentic` — let the model explore the repo itself (claude natively; ollama via the agent-runner)
+- `--no-think` — fast pass: disable a thinking model's reasoning
+- `--verify` / `--verify-provider P` / `--verify-model M` — adversarial second pass that tries to refute each finding; with `-o` it goes to `<output>.verify.<ext>`
+- `--verify-only FILE` — re-verify an existing review without re-running it
+- Git only: `--brief`, `--lang-all LANG`, `--max-lines N` (diff cap, default 500), `--context-lines N` (budget for embedding whole changed files, default 2000)
 
 **Generation:**
 - `ai gen commit` — commit message from staged/unstaged diff
@@ -200,10 +207,10 @@ All functions support `-h/--help`.
 **Sessions** (persistent chat history, ollama only — claude conversations use `claude --resume` natively):
 - Storage: walk-up `.ai/sessions/<name>.jsonl` (project) → `~/.config/ai/sessions/` (global)
 - `ai sessions ls [--archived|--all]` / `show NAME` / `info NAME` — browse + render
-- `ai sessions search QUERY [--name PAT] [--since DATE]` / `stats [--all]` — find + aggregate
+- `ai sessions search QUERY [--name PAT] [--since DATE] [--regex] [--archived|--all]` / `stats [--archived|--all]` — find + aggregate (`--archived`: search only the archive, stats includes it)
 - `ai sessions rm / rename / clear / edit` — modify
 - `ai sessions branch / archive / restore / move --to {project|global}` — lifecycle
-- `ai sessions export / import / pin / unpin` — share + lock provider/model per session
+- `ai sessions export / import / pin / unpin` — share + lock the model per session
 - Context management: rolling summary + sliding window (configurable thresholds)
 
 **Config (per-task / per-project, with global fallback):**
@@ -224,7 +231,9 @@ All functions support `-h/--help`.
 **Prompt templates** (`~/.config/fish/prompts/`, overridable, fall back to inline defaults):
 - `meta-commit.md`, `meta-summary.md` — generation
 - `meta-review.md` (project state), `meta-review-diff.md` (git diff)
+- `meta-verify.md` (verify pass)
 - `meta-session-summary.md` (rolling summary for long sessions)
+- `lenses/<name>.md` (review lenses, see `lenses/README.md`)
 
 **Other:**
 - `ai stop [MODEL]` — stop one or all running models, `--server` to kill Ollama entirely
@@ -232,6 +241,7 @@ All functions support `-h/--help`.
 
 *LeetCode:*
 - `lc-run` — run LeetCode solution with `@test` cases (Scala 3, Rust)
+- `lc-init` — generate a Cargo project around the `.rs` solutions so rust-analyzer works on them
 
 > LeetCode runner docs: [docs/leetcode.md](docs/leetcode.md)
 
@@ -240,7 +250,7 @@ All functions support `-h/--help`.
 | Tool | Install |
 |------|---------|
 | SDKMAN | `curl -s "https://get.sdkman.io" \| bash` |
-| JDK 21 | `sdk install java 21.0.5-tem` |
+| JDK | `sdk install java 25.0.2-tem` (17 and 21 also installed; switch with `sdk use java …`) |
 | Maven | `sdk install maven` |
 | Gradle | `sdk install gradle` |
 | Scala | `brew install sbt coursier/formulas/coursier && cs setup` |
@@ -278,7 +288,7 @@ ai config status                            # see resolved provider+model per ta
 
 - [Rectangle](https://rectangleapp.com/) — window management
 - [OrbStack](https://orbstack.dev/) — Docker runtime
-- [IntelliJ IDEA CE](https://www.jetbrains.com/idea/) — Scala/Java/Kotlin IDE
+- [IntelliJ IDEA](https://www.jetbrains.com/idea/) — Scala/Java/Kotlin IDE
 - [RustRover](https://www.jetbrains.com/rust/) — Rust IDE
 
 ## Docs
@@ -286,7 +296,7 @@ ai config status                            # see resolved provider+model per ta
 | Document | Description |
 |----------|-------------|
 | [docs/fish/ai/](docs/fish/ai/) | AI toolkit — architecture, reference, sessions, how-to |
-| [docs/fish/kube/toolkit.md](docs/fish/kube/toolkit.md) | Kube toolkit — `k` dispatcher, helpers, passthrough |
+| [docs/fish/kube/toolkit.md](docs/fish/kube/toolkit.md) | Kube toolkit — `k` dispatcher, helpers, `k x` raw kubectl |
 | [docs/nvim/keymaps.md](docs/nvim/keymaps.md) | Full Neovim keymaps reference |
 | [docs/leetcode.md](docs/leetcode.md) | LeetCode offline runner guide |
 
