@@ -1,0 +1,4 @@
+--- dry-run: prompt that would be sent to ollama ---
+hello
+
+[exit 0]

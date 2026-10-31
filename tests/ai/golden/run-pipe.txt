@@ -1,0 +1,5 @@
+--- dry-run: prompt that would be sent to ollama ---
+question
+
+context line
+[exit 0]

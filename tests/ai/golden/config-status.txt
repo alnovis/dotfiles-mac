@@ -1,0 +1,14 @@
+Sources:
+  project = (none — no .ai/config in walked-up tree)
+  global  = ~/.config/ai/config
+  env     = AI_DEFAULT_MODEL=default-model
+
+Resolved per task:
+  default:  ollama / default-model                   (provider: global+top | model: env)
+  chat:     ollama / default-model                   (provider: global+top | model: env)
+  code:     ollama / default-model                   (provider: global+top | model: env)
+  review:   ollama / review-model                    (provider: global+top | model: global)
+  verify:   ollama / default-model                   (provider: global+top | model: env)
+  commit:   ollama / commit-model                    (provider: global+top | model: global)
+  summary:  ollama / default-model                   (provider: global+top | model: env)
+[exit 0]

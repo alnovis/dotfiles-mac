@@ -1,0 +1,9 @@
+providers: claude ollama
+agents: ollama pi
+chat: ollama / default-model
+code: ollama / default-model
+review: ollama / review-model
+verify: ollama / default-model
+commit: ollama / commit-model
+summary: ollama / default-model
+[exit 0]
