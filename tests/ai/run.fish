@@ -116,7 +116,7 @@ set -g golden_cases \
     'ollama-num-ctx|fixture|_ai_ollama_num_ctx 3000; _ai_ollama_num_ctx 600000; echo "ceiling: "(_ai_ollama_max_ctx); set -gx AI_OLLAMA_MAX_CTX 16384; echo "env ceiling: "(_ai_ollama_max_ctx); _ai_ollama_num_ctx 30000' \
     'ollama-host|fixture|set -e OLLAMA_HOST; _ai_ollama_host; set -gx OLLAMA_HOST box:11434; _ai_ollama_host; set -gx OLLAMA_HOST https://ollama.example; _ai_ollama_host' \
     'code-dry|fixture|ai code --dry-run @src; ai code -e --dry-run; ai code --provider claude --dry-run; ai code --provider testcloud --dry-run; ai code --provider nosuch --dry-run' \
-    'chat-dry|fixture|ai chat --dry-run; ai chat other:7b --dry-run; ai chat --provider claude --dry-run; ai chat --provider testcloud --dry-run' \
+    'chat-dry|fixture|ai chat --dry-run; ai chat other:7b --dry-run; ai chat -c --dry-run; ai chat -r --provider claude --dry-run; ai chat --provider testcloud --dry-run' \
     'providers-ls|fixture|ai providers' \
     'providers-check|fixture|ai providers check testcloud; ai providers check ollama; ai providers check nosuch' \
     'models-list|fixture|ai models' \
@@ -132,7 +132,6 @@ set -g smoke_cases \
     'help-gen|fixture|ai gen --help' \
     'help-config|fixture|ai config --help' \
     'help-models|fixture|ai models --help' \
-    'help-sessions|fixture|ai sessions --help' \
     'help-code|fixture|ai code --help' \
     'help-chat|fixture|ai chat --help' \
     'help-stop|fixture|ai stop --help'

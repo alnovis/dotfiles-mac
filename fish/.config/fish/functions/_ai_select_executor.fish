@@ -1,13 +1,14 @@
-function _ai_select_executor --description "Pick the executor for PROVIDER and PROFILE (none|read|edit): prints its function, then a label" --argument-names provider profile
+function _ai_select_executor --description "Pick the executor for PROVIDER and PROFILE (none|read|edit) [runner]: prints its function, then a label" --argument-names provider profile need
     # docs/refactoring.md §5. claude → the claude CLI runner; ollama single-shot → the
     # native driver (only it honours a per-request num_ctx); everything else → the runner
     # from the agent config key, which must know the provider (it owns the provider config).
+    # NEED=runner skips the native driver — for what only a runner has (resumable sessions).
     if test "$provider" = claude
         echo _ai_agent_claude
         echo "claude (runner claude, profile $profile)"
         return 0
     end
-    if test "$provider" = ollama; and test "$profile" = none
+    if test "$provider" = ollama; and test "$profile" = none; and test "$need" != runner
         echo _ai_provider_ollama
         echo "ollama (native)"
         return 0

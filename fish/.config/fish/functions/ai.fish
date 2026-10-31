@@ -2,7 +2,7 @@ function ai --description "AI toolkit: chat, code, review, gen, config, provider
     set -l sub $argv[1]
 
     # ai <sub> [args...] → _ai_<sub> args...
-    if contains -- "$sub" gen config models review code chat stop sessions
+    if contains -- "$sub" gen config models review code chat stop
         _ai_$sub $argv[2..]
         return
     end
@@ -35,8 +35,7 @@ function _ai_help
     echo "  models               Manage models (list, install, rm, use, update, info, prune, running, label)"
     echo "  review               AI code review — project state (path) or git changes"
     echo "  code                 Interactive coding session (code task's provider, via its runner)"
-    echo "  chat                 Interactive chat (chat task's provider; --session: ollama REPL)"
-    echo "  sessions             Manage chat sessions (ls, show, search, pin, archive, … — ai sessions --help)"
+    echo "  chat                 Interactive chat (chat task's provider, history via the runner; -c/-r)"
     echo "  stop                 Stop running models or server"
     echo
     echo "Options (for chat mode):"

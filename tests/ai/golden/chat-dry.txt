@@ -1,5 +1,6 @@
-would start: ollama (native), interactive, model default-model
-would start: ollama (native), interactive, model other:7b
-would start: claude (runner claude, profile none), interactive, model (executor default)
+would start: ollama via pi (profile none), interactive, model default-model
+would start: ollama via pi (profile none), interactive, model other:7b
+would start: ollama via pi (profile none), interactive, continue last, model default-model
+would start: claude (runner claude, profile none), interactive, resume (pick), model (executor default)
 would start: testcloud via pi (profile none), interactive, model cloud-model
 [exit 0]
