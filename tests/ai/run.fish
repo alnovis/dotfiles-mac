@@ -33,7 +33,10 @@ end
 
 mkdir -p $sb/home/.config/fish $sb/home/.config/ai $sb/out
 ln -s $root/fish/.config/fish/prompts $sb/home/.config/fish/prompts
-printf '%s\n' provider=ollama review_model=review-model commit_model=commit-model >$sb/home/.config/ai/config
+# model= is shadowed by AI_DEFAULT_MODEL in every case except those that unset it
+printf '%s\n' provider=ollama model=config-model review_model=review-model commit_model=commit-model >$sb/home/.config/ai/config
+# A HOME with no ai config at all, for "nothing configured" cases
+mkdir -p $sb/home-empty
 cp $root/tests/ai/fixtures/review.md $sb/review.md
 
 # pi config for the runner paths: ollama, plus a cloud provider on a dead address so the
@@ -96,6 +99,10 @@ set -g golden_cases \
     'run-unknown-provider|fixture|ai --provider nosuch --dry-run hello' \
     'run-unreachable|fixture|ai --provider testcloud hello' \
     'config-status|fixture|ai config status' \
+    'config-status-model-key|fixture|set -e AI_DEFAULT_MODEL; ai config status' \
+    'no-model-configured|fixture|set -e AI_DEFAULT_MODEL; set -gx HOME (path dirname $HOME)/home-empty; ai hello' \
+    'ollama-num-ctx|fixture|_ai_ollama_num_ctx 3000; _ai_ollama_num_ctx 600000; echo "ceiling: "(_ai_ollama_max_ctx); set -gx AI_OLLAMA_MAX_CTX 16384; echo "env ceiling: "(_ai_ollama_max_ctx); _ai_ollama_num_ctx 30000' \
+    'ollama-host|fixture|_ai_ollama_host; set -gx OLLAMA_HOST box:11434; _ai_ollama_host; set -gx OLLAMA_HOST https://ollama.example; _ai_ollama_host' \
     'resolvers|fixture|echo providers: (_ai_providers); echo agents: (_ai_agents); for t in (_ai_tasks); set -l p (_ai_default_provider $t); echo "$t: $p / "(_ai_default_model $t $p); end'
 
 # Help surfaces: must exit 0 and print a usage line

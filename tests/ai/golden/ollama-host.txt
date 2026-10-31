@@ -1,0 +1,4 @@
+http://localhost:11434
+http://box:11434
+https://ollama.example
+[exit 0]

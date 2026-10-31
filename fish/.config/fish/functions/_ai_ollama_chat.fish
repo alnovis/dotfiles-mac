@@ -15,7 +15,7 @@ function _ai_ollama_chat --description "Stream chat completion via Ollama /api/c
     set -l usage_file (mktemp -t ai-chat-usage.XXXXX)
 
     # Stream: each line is a JSON chunk. Extract .message.content, print as it arrives.
-    curl -sN -X POST http://localhost:11434/api/chat \
+    curl -sN -X POST (_ai_ollama_host)/api/chat \
         -H 'Content-Type: application/json' \
         -d "$body" | while read -l line
         test -z "$line"; and continue

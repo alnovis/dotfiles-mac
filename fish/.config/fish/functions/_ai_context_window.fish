@@ -12,7 +12,7 @@ function _ai_context_window --description "Get context window size for ollama MO
 
     # Query ollama; pipe directly so multi-line response stays a single JSON
     set -l body (jq -nc --arg m "$model" '{name: $m}')
-    set -l ctx (curl -s -X POST http://localhost:11434/api/show \
+    set -l ctx (curl -s -X POST (_ai_ollama_host)/api/show \
         -H 'Content-Type: application/json' -d "$body" 2>/dev/null \
         | jq -r '[.model_info | to_entries[]? | select(.key | endswith("context_length")) | .value] | .[0] // empty' 2>/dev/null)
 

@@ -47,11 +47,6 @@ function _ai_models_use --description "Set the Ollama model — global default o
         return 1
     end
 
-    if set -q _flag_project; and test -z "$task"
-        _ai_models_use_err "--project requires a task (the project layer is per-task only)"
-        return 1
-    end
-
     # ---- Per-task: trust the model string; write to the global or project layer ----
     if test -n "$task"
         set -l target_file ~/.config/ai/config
@@ -78,7 +73,7 @@ function _ai_models_use --description "Set the Ollama model — global default o
         return 0
     end
 
-    # ---- Global default: must be an installed ollama model; sets the universal var ----
+    # ---- Default model: must be an installed ollama model; config key `model` ----
     _ai_fetch_local
     set -l installed (_ai_get_installed_names)
     if not contains -- $model $installed
@@ -89,11 +84,22 @@ function _ai_models_use --description "Set the Ollama model — global default o
         return 1
     end
 
-    set -U AI_DEFAULT_MODEL $model
+    set -l target_file ~/.config/ai/config
+    set -l scope global
+    if set -q _flag_project
+        set target_file (_ai_project_config_target)
+        set scope project
+    end
+    _ai_config_write_file $target_file model $model
     echo "---"
     set_color green
-    echo "Default model: $model"
+    echo "Default model: $model ($scope)"
     set_color normal
+    if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"; and test "$AI_DEFAULT_MODEL" != "$model"
+        set_color yellow
+        echo "Note: AI_DEFAULT_MODEL=$AI_DEFAULT_MODEL is set and overrides this (one-off override)."
+        set_color normal
+    end
 end
 
 function _ai_models_use_err
@@ -110,7 +116,7 @@ function _ai_models_use_help
     echo "Set which Ollama model a task uses, or the global default model."
     echo ""
     echo "Forms:"
-    echo "  ai models use MODEL                Set the global default (must be installed)"
+    echo "  ai models use MODEL                Set the default model (config key model; must be installed)"
     echo "  ai models use TASK MODEL           Set one task's model"
     echo "  ai models use TASK1,TASK2 MODEL    Set several tasks at once"
     echo "  ai models use all MODEL            Set every task"
@@ -120,12 +126,13 @@ function _ai_models_use_help
     echo ""
     echo "Layers:"
     echo "  (default)     Write to the global config (~/.config/ai/config)"
-    echo "  --project     Write to the project .ai/config (requires a TASK)"
+    echo "  --project     Write to the project .ai/config"
     echo ""
     echo "Notes:"
-    echo "  - The global default (no TASK) is validated against installed models."
+    echo "  - The default model (no TASK) is validated against installed models."
     echo "  - Per-task values are trusted as-is (may be a remote/uninstalled tag)."
-    echo "  - Resolution per task: project > global config > AI_DEFAULT_MODEL > built-in."
+    echo "  - Resolution: task model (project > global) > AI_DEFAULT_MODEL (one-off"
+    echo "    override) > model key (project > global). Nothing set → an error that says so."
     echo ""
     echo "Examples:"
     echo "  ai models use qwen2.5-coder:32b            Global default"

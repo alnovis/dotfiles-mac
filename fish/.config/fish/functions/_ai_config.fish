@@ -152,7 +152,7 @@ function _ai_config_do_status
         if test -n "$m"
             printf "  %-9s %s / %-30s  (provider: %s | model: %s)\n" "$t:" $p $m $p_orig $m_orig
         else
-            printf "  %-9s %s / (provider default)             (provider: %s | model: —)\n" "$t:" $p $p_orig
+            printf "  %-9s %s / (not set)                      (provider: %s | model: —)\n" "$t:" $p $p_orig
         end
     end
 end

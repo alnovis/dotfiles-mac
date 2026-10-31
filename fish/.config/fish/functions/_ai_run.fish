@@ -30,6 +30,10 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
     if test -z "$model"; and test "$dispatch" != _ai_provider_ollama; and test "$provider" != claude
         if test "$provider" = ollama
             set model (_ai_default_model "" ollama)
+            if test -z "$model"
+                echo "ollama: no model configured — set one with: ai models use MODEL" >&2
+                return 1
+            end
         else
             set -l runner (string replace _ai_agent_ '' -- $dispatch)
             set model (_ai_agent_{$runner}_models | string match -r -g (printf '^%s\t(.+)$' (string escape --style=regex -- $provider)))[1]

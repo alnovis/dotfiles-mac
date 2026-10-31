@@ -9,7 +9,7 @@ function _ai_models_info --description "Show detailed Ollama model info"
     _ai_ensure_running; or return 1
 
     set -l model $argv[1]
-    set -l info (curl -s http://localhost:11434/api/show -d "{\"name\": \"$model\", \"verbose\": true}" 2>/dev/null)
+    set -l info (curl -s (_ai_ollama_host)/api/show -d "{\"name\": \"$model\", \"verbose\": true}" 2>/dev/null)
 
     if test -z "$info"; or echo "$info" | jq -e '.error' &>/dev/null
         set_color red

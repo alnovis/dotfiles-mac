@@ -1,0 +1,7 @@
+12288
+1000
+ollama: prompt ~200000 tokens needs ~208896 context, over the 131072 ceiling. A single-shot would truncate the prompt and the model would return nothing. Use --context-lines 0 (diff-only) or a smaller commit — or raise ollama_max_ctx / AI_OLLAMA_MAX_CTX if you have the RAM.
+ceiling: 131072
+env ceiling: 16384
+ollama: prompt ~10000 tokens needs ~20480 context, over the 16384 ceiling. A single-shot would truncate the prompt and the model would return nothing. Use --context-lines 0 (diff-only) or a smaller commit — or raise ollama_max_ctx / AI_OLLAMA_MAX_CTX if you have the RAM.
+[exit 1]

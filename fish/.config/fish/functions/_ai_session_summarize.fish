@@ -20,7 +20,7 @@ Facts:"
     set -l body (jq -nc --arg m "$model" --arg p "$full_prompt" \
         '{model: $m, messages: [{role: "user", content: $p}], stream: false}')
 
-    curl -s -X POST http://localhost:11434/api/chat \
+    curl -s -X POST (_ai_ollama_host)/api/chat \
         -H 'Content-Type: application/json' \
         -d "$body" 2>/dev/null \
         | jq -r '.message.content // empty' 2>/dev/null

@@ -5,7 +5,8 @@ function _ai_fallback_prompt --description "PROVIDER (via RUNNER) is unreachable
     set -l model (_ai_default_model "" ollama)
     set -l msg "$provider unreachable (via $runner) — off-network?"
 
-    if set -q AI_NONINTERACTIVE; or not sh -c ': </dev/tty' 2>/dev/null
+    # Nothing to offer without a default ollama model, or without a terminal to ask on
+    if test -z "$model"; or set -q AI_NONINTERACTIVE; or not sh -c ': </dev/tty' 2>/dev/null
         set_color red >&2
         echo "$msg Rerun with --provider ollama" >&2
         set_color normal >&2

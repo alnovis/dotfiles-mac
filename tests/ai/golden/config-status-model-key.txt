@@ -1,0 +1,13 @@
+Sources:
+  project = (none — no .ai/config in walked-up tree)
+  global  = ~/.config/ai/config
+
+Resolved per task:
+  default:  ollama / config-model                    (provider: global+top | model: global)
+  chat:     ollama / config-model                    (provider: global+top | model: global)
+  code:     ollama / config-model                    (provider: global+top | model: global)
+  review:   ollama / review-model                    (provider: global+top | model: global)
+  verify:   ollama / config-model                    (provider: global+top | model: global)
+  commit:   ollama / commit-model                    (provider: global+top | model: global)
+  summary:  ollama / config-model                    (provider: global+top | model: global)
+[exit 0]

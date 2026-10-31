@@ -1,0 +1,2 @@
+ollama: no model configured — set one with: ai models use MODEL
+[exit 1]

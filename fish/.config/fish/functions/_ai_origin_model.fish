@@ -1,4 +1,4 @@
-function _ai_origin_model --description "Origin layer of resolved model for TASK with PROVIDER: project|global|env|default|—" --argument-names task provider
+function _ai_origin_model --description "Origin layer of resolved model for TASK with PROVIDER: project|global|env|—" --argument-names task provider
     set -l proj (_ai_project_config_file)
     set -l global_file ~/.config/ai/config
 
@@ -19,18 +19,20 @@ function _ai_origin_model --description "Origin layer of resolved model for TASK
         end
     end
 
-    # Env var only meaningful for ollama
-    if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"
-        if test -z "$provider"; or test "$provider" = ollama
+    # The default model (env override, then config key `model`) is ollama-only
+    if test -z "$provider"; or test "$provider" = ollama
+        if set -q AI_DEFAULT_MODEL; and test -n "$AI_DEFAULT_MODEL"
             echo env
             return 0
         end
-    end
-
-    # Hardcoded ollama fallback; otherwise no model (provider default)
-    if test -z "$provider"; or test "$provider" = ollama
-        echo default
-        return 0
+        if test -n "$proj"; and _ai_config_read_file $proj model >/dev/null
+            echo project
+            return 0
+        end
+        if _ai_config_read_file $global_file model >/dev/null
+            echo global
+            return 0
+        end
     end
 
     echo —
