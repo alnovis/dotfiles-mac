@@ -1,6 +1,6 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'dry-run' 'agentic' 'no-think' \
+    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'brief' 'dry-run' 'agentic' 'no-think' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
 
     # Resolve positional args: [DIR|FILE] ["custom prompt"]
@@ -45,10 +45,14 @@ function _ai_review_target --description "AI review of a project directory or si
         set lang $_flag_lang
     end
 
-    # Load prompt template
+    # Load prompt template (--brief: short fixed prompt instead, like git mode)
     set -l template_file ~/.config/fish/prompts/meta-review.md
     set -l prompt
-    if test -f $template_file
+    if set -q _flag_brief
+        set -l subject "project"
+        test -n "$target_file"; and set subject "file"
+        set prompt "Give a brief summary of this $subject in 3-5 bullet points: what it does, how it is structured, and the main risks or problems. Be concise."
+    else if test -f $template_file
         set prompt (cat $template_file | string collect)
     else
         set prompt "Review this project. Analyze architecture, code quality, potential issues, and suggest improvements."
@@ -60,8 +64,8 @@ function _ai_review_target --description "AI review of a project directory or si
 Additional instructions: $custom_prompt"
     end
 
-    # Security lens(es)
-    if set -q _flag_lens
+    # Security lens(es) — not applied to a brief summary
+    if set -q _flag_lens; and not set -q _flag_brief
         set -l lens_block (_ai_review_lens $_flag_lens | string collect)
         test $pipestatus[1] -eq 0; or return 1
         set prompt "$prompt
@@ -89,12 +93,24 @@ $prompt"
     end
     echo "Language: $lang_full"
     if set -q _flag_lens
-        echo "Lens: $_flag_lens"
+        if set -q _flag_brief
+            set_color yellow
+            echo "Lens: $_flag_lens (ignored — --brief mode)"
+            set_color normal
+        else
+            echo "Lens: $_flag_lens"
+        end
     end
     if _ai_verify_wanted (set -q _flag_verify; and echo 1) (set -q _flag_no_verify; and echo 1)
-        set -l vp $_flag_verify_provider
-        test -z "$vp"; and set vp "$provider"
-        echo "Verify: on ($vp)"
+        if set -q _flag_brief
+            set_color yellow
+            echo "Verify: requested (ignored — --brief mode)"
+            set_color normal
+        else
+            set -l vp $_flag_verify_provider
+            test -z "$vp"; and set vp "$provider"
+            echo "Verify: on ($vp)"
+        end
     end
     if set -q _flag_output
         echo "Output: $_flag_output"
@@ -148,9 +164,9 @@ $prompt"
 $scope_note
 
 ## File contents
-\`\`\`$file_ext
+```$file_ext
 $file_content
-\`\`\`
+```
 
 $prompt"
             else
@@ -163,9 +179,9 @@ $prompt"
             if test -n "$target_file"
                 set context "$context
 ## File: $file_basename
-\`\`\`$file_ext
+```$file_ext
 $file_content
-\`\`\`
+```
 "
             end
 
@@ -175,9 +191,9 @@ $file_content
                 if test -n "$tree_output"
                     set context "$context
 ## Project structure
-\`\`\`
+```
 $tree_output
-\`\`\`
+```
 "
                 end
 
@@ -214,8 +230,9 @@ $context"
             return 1
     end
 
+    # Verify runs only for the detailed (non-brief) review.
     set -l do_verify 0
-    if _ai_verify_wanted (set -q _flag_verify; and echo 1) (set -q _flag_no_verify; and echo 1)
+    if not set -q _flag_brief; and _ai_verify_wanted (set -q _flag_verify; and echo 1) (set -q _flag_no_verify; and echo 1)
         set do_verify 1
         set -l p1file (mktemp)
         printf '%s' "$full_prompt" >$p1file

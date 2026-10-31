@@ -191,13 +191,13 @@ All functions support `-h/--help`.
 - `ai review --last [N]` / `--commit SHA` / `--file FILE` — git mode: last N commits / specific commit / single file filter
 - `ai review PATH` — target mode: project (dir) or single-file review
 - `ai review FILE --with-project-context` — target mode: file + parent project context
-- Common: `--provider`, `--model`, `--lang LANG`, `-o/--output FILE`, `--dry-run`
+- Common: `--provider`, `--model`, `--brief`, `--lang LANG`, `-o/--output FILE`, `--dry-run`
 - `--lens NAME[,NAME…]` — add specialist checklists (security, quality, Rust, SQL/HBase; see `prompts/lenses/`)
 - `--agentic` — let the model explore the repo itself (claude natively; ollama via the agent-runner)
 - `--no-think` — fast pass: disable a thinking model's reasoning
 - `--verify` / `--verify-provider P` / `--verify-model M` — adversarial second pass that tries to refute each finding; with `-o` it goes to `<output>.verify.<ext>`
 - `--verify-only FILE` — re-verify an existing review without re-running it
-- Git only: `--brief`, `--lang-all LANG`, `--max-lines N` (diff cap, default 500), `--context-lines N` (budget for embedding whole changed files, default 2000)
+- Git only: `--lang-all LANG`, `--max-lines N` (diff cap, default 500), `--context-lines N` (budget for embedding whole changed files, default 2000)
 
 **Generation:**
 - `ai gen commit` — commit message from staged/unstaged diff

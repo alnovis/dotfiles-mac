@@ -112,9 +112,9 @@ $prompt"
             if test -n "$tree_output"
                 set context "$context
 ## Project structure
-\`\`\`
+```
 $tree_output
-\`\`\`
+```
 "
             end
 

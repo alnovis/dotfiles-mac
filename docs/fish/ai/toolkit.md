@@ -231,7 +231,7 @@ The dispatcher validates flag combinations before delegating:
 | `--no-think` | Fast pass: `think:false` on a thinking model — see [Reasoning sidecar](#reasoning-sidecar) |
 | `--verify`, `--no-verify`, `--verify-provider P`, `--verify-model M`, `--verify-output FILE` | Second-opinion pass — see [Verify](#second-opinion-verify---verify) |
 | `--verify-only FILE` | Verify a saved review, no review pass |
-| `--brief` | Short 3–5 bullet summary — git mode only (target mode rejects it as an unknown option) |
+| `--brief` | Short 3–5 bullet summary instead of the full review (both modes; same context is embedded, `--lens` and `--verify` are ignored with a note) |
 | `--lang LANG` | Response language (long form only — `-l` is not accepted by `ai review`) |
 
 ### Review lenses (`--lens`)
