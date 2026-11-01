@@ -7,6 +7,7 @@ function _ai_agent_claude --description "Runner: claude CLI (Anthropic models, s
     #   --skill FILE             --append-system-prompt-file
     #   --interactive            claude REPL (with --continue / --resume)
     #   --no-session             --no-session-persistence
+    # Non-interactive runs load no settings (--setting-sources ""), so no user hooks.
     # Non-interactive: the prompt comes on stdin. It must: --tools is variadic and would
     # swallow a prompt argument as a tool name.
     argparse 'provider=' 'model=' 'tools=' 'skill=' 'interactive' 'continue' 'resume' 'no-session' -- $argv; or return 1
@@ -30,6 +31,10 @@ function _ai_agent_claude --description "Runner: claude CLI (Anthropic models, s
     end
 
     set -q _flag_no_session; and set -a args --no-session-persistence
+    # No user/project settings: their hooks (e.g. a UserPromptSubmit that appends notes)
+    # would otherwise run inside a review and end up in the report. --bare would also
+    # skip CLAUDE.md and memory, but it ignores OAuth (subscription) auth.
+    set -a args --setting-sources ""
 
     # --tools goes last: it is variadic
     switch "$_flag_tools"

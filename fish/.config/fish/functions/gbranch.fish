@@ -5,8 +5,9 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
         echo "Usage: gbranch [OPTIONS] [BASE]"
         echo ""
         echo "Show commits and diff stat of current branch vs base branch."
-        echo "Auto-detects the nearest base among develop/main/master/release/stage"
-        echo "(override the list with \$GBRANCH_BASES) or specify manually."
+        echo "Auto-detects the base with the fewest commits ahead among"
+        echo "develop/main/master/release/stage, skipping one that already contains"
+        echo "HEAD (override the list with \$GBRANCH_BASES) or specify manually."
         echo ""
         echo "Options:"
         echo "      --stat=N     Set stat output width (default: terminal width)"
@@ -42,12 +43,14 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
     else
         set -l candidates develop main master release stage
         if set -q GBRANCH_BASES
-            set candidates $GBRANCH_BASES
+            # split too: exported from bash it arrives as one space-separated string
+            set candidates (string split -n ' ' -- $GBRANCH_BASES)
         end
         if contains -- "$branch" $candidates
             set base $branch
         else
             set -l best_count
+            set -l contains_head
             for c in $candidates
                 set -l ref
                 if git show-ref --verify --quiet refs/remotes/origin/$c
@@ -57,12 +60,20 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
                 else
                     continue
                 end
+                # A base that already contains HEAD (the branch was merged into stage
+                # for QA) would win with 0 and hide the branch's commits — keep it
+                # only as a fallback for a branch with no commits of its own
+                if git merge-base --is-ancestor HEAD $ref 2>/dev/null
+                    test -z "$contains_head"; and set contains_head $c
+                    continue
+                end
                 set -l n (git rev-list --count $ref..HEAD 2>/dev/null); or continue
                 if test -z "$best_count"; or test $n -lt $best_count
                     set best_count $n
                     set base $c
                 end
             end
+            test -z "$base"; and set base $contains_head
         end
         if test -z "$base"
             echo "No base branch found, specify manually: gbranch <branch>"
