@@ -1,0 +1,18 @@
+ testcloud (native, endpoint from pi)
+    Model        Context  Type  Capabilities  Price in/out per 1M  Used for
+ --------------------------------------------------------------------------
+ General:
+    cloud-model     1000
+ --------------------------------------------------------------------------
+
+ claude (claude CLI)
+    Model   Used for
+ -------------------
+ General:
+    haiku
+    opus
+    sonnet
+ -------------------
+
+Runner pi knows no provider 'nosuch' (providers: ollama, testcloud, claude)
+[exit 1]

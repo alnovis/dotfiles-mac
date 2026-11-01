@@ -32,6 +32,12 @@ function _ai_models_list --description "Installed ollama models (no network): on
         test -n "$m"; and set -a uses (_ai_model_norm $m)"|$t"
     end
 
+    # Which models the runner has registered for provider ollama: an unregistered one gets
+    # the runner's tiny default context under --agentic / ai code / ai chat (empty answers)
+    set -l runner (_ai_default_agent 2>/dev/null)
+    set -l in_runner
+    test -n "$runner"; and set in_runner (_ai_agent_{$runner}_models 2>/dev/null | string match -r -g '^ollama\t(.+)$')
+
     set -l rows
     set -l n_models 0
     set -l n_tags 0
@@ -54,6 +60,13 @@ function _ai_models_list --description "Installed ollama models (no network): on
         set -l caps (_ai_model_caps $tags[1] $digest | string split ' ')
         set -l capstr (for c in tools thinking vision; contains -- $c $caps; and echo $c; end | string join ,)
         set -l used (for u in $uses; set -l p (string split '|' -- $u); contains -- $p[1] $tags; and echo $p[2]; end | string join ', ')
+        set -l reg
+        for t in $tags
+            if contains -- $t $in_runner; or contains -- (string replace -r ':latest$' '' -- $t) $in_runner
+                set reg ✓
+                break
+            end
+        end
         set -l trial (_ai_models_meta_get $digest trial)
         set -l trialstr
         test -n "$trial"; and set trialstr "trial, "(_ai_relative_time $trial | string replace ' ago' '')
@@ -69,7 +82,7 @@ function _ai_models_list --description "Installed ollama models (no network): on
             end
         end
 
-        set -a rows (string join \t -- $label $name (math -s1 "$size / 1073741824")" GB" "$arch" "$capstr" "$used" "$trialstr")
+        set -a rows (string join \t -- $label $name (math -s1 "$size / 1073741824")" GB" "$arch" "$capstr" "$reg" "$used" "$trialstr")
     end
 
     if test $n_models -eq 0
@@ -82,8 +95,12 @@ function _ai_models_list --description "Installed ollama models (no network): on
     # widths without the colour codes and caps the name column.
     set -l groups (for r in $rows; string split -f1 \t -- $r; end | sort -u | string match -v general)
     contains -- general (for r in $rows; string split -f1 \t -- $r; end); and set -a groups general
+    # One table per provider (ai models --provider all): this one is titled like the others
+    set_color --bold
+    echo " ollama (local, native driver)"
+    set_color normal
     begin
-        printf '%s\t%s\t%s\t%s\t%s\t%s\n' '' Model Size Type Capabilities "Used for"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' '' Model Size Type Capabilities "$runner" "Used for"
         # Colours as "$(set_color …)" inside quotes: without a colour terminal set_color
         # prints nothing, and a bare (set_color …) would be an empty list that makes the
         # whole concatenated word vanish
@@ -92,12 +109,12 @@ function _ai_models_list --description "Installed ollama models (no network): on
             for r in (printf '%s\n' $rows | string match -- (printf '%s\t*' $g) | sort -t \t -k2)
                 set -l f (string split \t -- $r)
                 set -l mark ''
-                contains -- default (string split ', ' -- $f[6]); and set mark "$(set_color yellow)>$(set_color normal)"
+                contains -- default (string split ', ' -- $f[7]); and set mark "$(set_color yellow)>$(set_color normal)"
                 set -l used ''
-                test -n "$f[6]"; and set used "$(set_color yellow)$f[6]$(set_color normal)"
+                test -n "$f[7]"; and set used "$(set_color yellow)$f[7]$(set_color normal)"
                 set -l trial ''
-                test -n "$f[7]"; and set trial "$(set_color magenta)$f[7]$(set_color normal)"
-                printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' $mark $f[2] $f[3] $f[4] $f[5] $used $trial
+                test -n "$f[8]"; and set trial "$(set_color magenta)$f[8]$(set_color normal)"
+                printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' $mark $f[2] $f[3] $f[4] $f[5] $f[6] $used $trial
             end
         end
     end | table --header --rule --right 3 --max 2:46 --indent 1

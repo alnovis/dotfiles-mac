@@ -486,18 +486,20 @@ provider by the runner, which also owns its configuration: add or change provide
 with 3 tags, pi config with an `ollama` and a `testcloud` provider):
 
 ```
-PROVIDER     EXECUTOR                   MODELS
-ollama       native (127.0.0.1:9)       3 installed (single-shot)
-claude       claude CLI                 sonnet, opus, haiku
-ollama       via pi                     2 (--agentic, ai code)
-testcloud    via pi                     1
+ Provider   Single call               Tools / chat  Models
+ -----------------------------------------------------------------------
+ ollama     native (127.0.0.1:9)      via pi        2 installed, 2 in pi
+ claude     claude CLI                claude CLI    sonnet, opus, haiku
+ testcloud  native, endpoint from pi  via pi        1
+ -----------------------------------------------------------------------
 
- Reachable now? ai providers check NAME · runner: config key agent (pi)
+ Reachable now? ai providers check NAME · runner: config key agent (pi) · models: ai models --provider all
 ```
 
-`ollama` appears twice on purpose: the native driver (installed tags, single-shot) and the
-runner's ollama provider (models registered in the runner, used for `--agentic`, `ai code`,
-`ai chat`).
+Two executor columns, because one provider is served differently by mode: a single call
+(`ai review`, `ai gen`, top-level `ai`) goes to a native driver where there is one; tools or chat
+history (`--agentic`, `ai code`, `ai chat`) go through the runner. For `ollama`, "in pi" counts the
+models registered in the runner — the ones `--agentic` and `ai code` can use with a real context.
 
 `ai providers check NAME` runs the same probe as before a run:
 
@@ -523,13 +525,13 @@ Manages ollama models. Without a command: the installed models, no network.
 |---|---|---|
 | (none), `list [FILTER]` | Installed models: one row per model (tags sharing a digest merged), grouped by label, with size, capabilities, the tasks using it, trial age | no |
 | `FILTER` | Any other word filters the installed list by name | no |
-| `--provider P` | Models the runner has for provider P; `claude` → its aliases; `all` → every provider | runner-dependent |
+| `--provider P` | The table of provider P: `ollama` → the local table; a runner provider → its models with context, type, price; `claude` → its aliases; `all` → one table per provider | prices: once a day |
 | `info NAME[:TAG]` (alias `show`) | Installed → local details. Not installed → the ollama registry manifest: download size and RAM fit, family, params, quantization, vision, min ollama version | only when not installed |
 | `try NAME:TAG [-y]` | Show registry info, confirm, pull, mark as a trial | yes |
 | `keep NAME` | End a trial, keep the model | no |
 | `drop NAME [-y]` | Remove a model (all its tags) and its metadata; warns if a task or the default still uses it | no |
 | `search [QUERY]` | Open `https://ollama.com/search?q=QUERY` in the browser (ollama has no search API) | — |
-| `label NAME LABEL` | Group a model under LABEL (`general` clears it) | no |
+| `label [--provider P] NAME LABEL` | Group a model under LABEL (`general` clears it); `--provider` for a cloud or claude model | no |
 | `use [TASK] MODEL` | Set the default model, or a task's model | no |
 | `install MODEL` (alias `pull`) | Pull a model (no trial mark) | yes |
 | `rm MODEL` (alias `remove`) | Remove one tag (confirms) | no |
@@ -544,18 +546,21 @@ A name without a tag means `:latest` everywhere (`_ai_model_norm`).
 Excerpt of a real `ai models`:
 
 ```
-    Model                                          Size  Type       Capabilities           Used for
+ ollama (local, native driver)
+    Model                                          Size  Type       Capabilities           pi  Used for
+ -------------------------------------------------------------------------------------------------------
  Coding:
-    devstral-small-2:24b                        14.1 GB  dense      tools,vision           code
-    laguna-xs-2.1:latest, :q4_K_M               18.9 GB  MoE 8/256  tools,thinking
- >  north-mini-code-1.0:latest                  17.3 GB  MoE 8/128  tools,thinking         review
-    qwen2.5-coder:7b                             4.4 GB  dense      tools                  commit
+    devstral-small-2:24b                        14.1 GB  dense      tools,vision           ✓   code
+    laguna-xs-2.1:latest, :q4_K_M               18.9 GB  MoE 8/256  tools,thinking         ✓
+ >  north-mini-code-1.0:latest                  17.3 GB  MoE 8/128  tools,thinking         ✓   default, review
+    qwen2.5-coder:7b                             4.4 GB  dense      tools                  ✓   commit
  General:
-    qwen3.6:latest                              21.5 GB  MoE        tools,thinking,vision  chat
-    qwen3.8:27b                                 16.9 GB  dense      tools,thinking,vision  default, summary
+    qwen3.6:latest                              21.5 GB  MoE        tools,thinking,vision      chat, summary
+    qwen3.8:27b                                 16.9 GB  dense      tools,thinking,vision
    …
+ -------------------------------------------------------------------------------------------------------
 
- 12 models (13 tags), 164.2 GB on disk
+ 14 models (15 tags), 185.5 GB on disk
  Details: ai models info NAME · try one: ai models try NAME:TAG · find: ai models search QUERY
  Per-task models: ai config status
 ```
@@ -571,8 +576,44 @@ Excerpt of a real `ai models`:
 - **Capabilities** (`tools`, `thinking`, `vision`) come from `/api/show`, cached per digest.
 - **Used for** shows `default` and every task whose provider is ollama and that sets an explicit
   `<task>_model`. Full per-task resolution: `ai config status`.
+- **pi** (the runner's name): ✓ when the runner's config registers the model for provider
+  `ollama`. An unregistered model gets the runner's tiny default context under `--agentic`,
+  `ai code` and `ai chat`, and answers empty — register it ([adding models](howto.md)).
 - Labelled groups come first (alphabetical), unlabelled models last under **General**. A trial
   shows as `trial, 3d` (`5h`, `40m`; older than a week: the start date).
+
+### Other providers
+
+`ai models --provider P` prints the same kind of table for a runner provider or claude, and
+`--provider all` prints one table per provider: the local one, then each runner provider, then
+claude. Two levels everywhere: the table is where the model runs, the groups inside are labels.
+
+```
+ litellm (native, endpoint from pi)
+    Model                              Context  Type      Capabilities  Price in/out per 1M  Used for
+ ----------------------------------------------------------------------------------------------------
+ General:
+    selectel/qwen/qwen3.8-27b           131072            thinking      35 / 307
+    ycloud/qwen3-235b-a22b-fp8/latest           MoE A22B  thinking      500 / 500
+    ycloud/qwen3.6-35b-a3b/latest               MoE A3B   thinking      200 / 300
+ ----------------------------------------------------------------------------------------------------
+
+ claude (claude CLI)
+    Model          Used for
+ --------------------------
+ General:
+    (CLI default)  verify
+    opus
+ --------------------------
+```
+
+| Column | Source |
+|---|---|
+| Context | `contextWindow` of the model in the runner's config — blank until you fill it there (the native OpenAI driver uses it too) |
+| Type | the name only: `35b-a3b` is the usual total/active notation, so `MoE A3B`. No API reports the architecture, so a name without it stays blank rather than guessed |
+| Capabilities | `thinking` when the runner's config says `reasoning: true` |
+| Price in/out per 1M | a litellm gateway's `/model/info`, cached for a day in `~/.cache/ai/prices-<provider>.json`; a gateway out of reach gives the stale cache or nothing. The gateway sets the currency |
+| Used for | the default and the tasks on this provider; a claude task with no model shows as `(CLI default)` |
 
 ### Info
 
@@ -632,7 +673,11 @@ model shares one label.
 ```
 ai models label qwen3:30b coding     group it under Coding
 ai models label qwen3:30b general    clear the label
+ai models label --provider litellm ycloud/qwen3.6-35b-a3b/latest coding
 ```
+
+A cloud or claude model has no digest; its label is stored under `@PROVIDER/MODEL`. `--provider`
+is needed because a name alone can't tell `huihui_ai/glm…` (local) from `ycloud/…` (cloud).
 
 ### Use
 
@@ -782,6 +827,7 @@ back to a short inline prompt.
 | `~/.cache/ai-models.json` | Installed tags (from `/api/tags`), used offline by `ai models` and completion |
 | `~/.cache/ai/model-caps.json` | Capabilities per digest |
 | `~/.cache/ai/model-arch.json` | Architecture per digest (`MoE 8/128`, `MoE`, `dense`) |
+| `~/.cache/ai/prices-<provider>.json` | Cloud prices from a litellm gateway, refreshed after a day |
 | `~/.agents/skills/{ai-review,ai-verify}/` | Installed skills (pi, opencode; our runs read `SKILL.md` from here) |
 | `~/.claude/skills/{ai-review,ai-verify}` | The same skills for claude |
 | `~/.config/opencode/agents/ai-{none,read,edit}.md` | opencode profiles for the runner |

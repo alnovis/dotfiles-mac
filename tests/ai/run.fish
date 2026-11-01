@@ -133,6 +133,9 @@ set -g golden_cases \
     'providers-check|fixture|ai providers check testcloud; ai providers check ollama; ai providers check nosuch' \
     'models-list|fixture|ai models' \
     'models-filter|fixture|ai models other' \
+    'models-provider|fixture|ai models --provider testcloud; echo; ai models --provider claude; echo; ai models --provider nosuch' \
+    'models-label-cloud|fixture|ai models label --provider testcloud cloud-model coding; ai models label --provider testcloud nosuch x; ai models --provider testcloud; ai models label --provider testcloud cloud-model general; jq -S . ~/.config/ai/models.json' \
+    'config-provider|fixture|ai config provider; ai config provider --task review' \
     'models-label|fixture|ai models label review-model coding; ai models label other:7b general; ai models label nosuch:1b x; jq -S . ~/.config/ai/models.json' \
     'review-prompt-mode|fixture|_ai_review_prompt_mode --origin ollama; _ai_review_prompt_mode --origin claude; _ai_review_prompt_mode --origin testcloud; mkdir -p .ai; echo review_prompt=full >.ai/config; _ai_review_prompt_mode --origin ollama; echo review_prompt=bogus >.ai/config; _ai_review_prompt_mode --origin ollama 2>&1; rm -rf .ai' \
     'model-norm|fixture|_ai_model_norm qwen3; _ai_model_norm qwen3:30b; _ai_model_norm user/model; _ai_model_digest review-model; _ai_model_digest review-model:q4; _ai_model_digest missing; echo "missing rc=$status"' \

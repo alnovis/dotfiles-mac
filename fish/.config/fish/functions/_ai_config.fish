@@ -220,48 +220,31 @@ function _ai_config_do_provider --argument-names value task scope
 end
 
 function _ai_config_show_provider_global --argument-names scope
-    set -l current (_ai_default_provider)
-    set -l valid_providers (_ai_providers)
-    echo "     Provider        Status ($scope)"
-    echo " ────────────────────────────────"
-    for p in $valid_providers
-        if test "$p" = "$current"
-            set_color green
-            printf " > %-18s active\n" $p
-            set_color normal
-        else
-            printf "   %s\n" $p
-        end
-    end
-    echo " ────────────────────────────────"
+    _ai_config_provider_table (_ai_default_provider) active "Status ($scope)"
 end
 
 function _ai_config_show_provider_task --argument-names task scope
-    set -l current (_ai_default_provider $task)
-    set -l valid_providers (_ai_providers)
     set -l target_file (_ai_config_target_file $scope); or return 1
     set -l direct (_ai_config_read_file $target_file "$task"_provider)
-    set -l is_inherit 0
+    set -l state active
     if test $status -ne 0; or test -z "$direct"
-        set is_inherit 1
+        set state "active (inherited)"
     end
+    _ai_config_provider_table (_ai_default_provider $task) $state "Status (task $task, $scope)"
+end
 
-    echo "     Provider (task: $task, scope: $scope)"
-    echo " ─────────────────────────────────────────"
-    for p in $valid_providers
-        if test "$p" = "$current"
-            set_color green
-            if test $is_inherit -eq 1
-                printf " > %-18s active (inherited)\n" $p
+function _ai_config_provider_table --description "The providers as a table: a green > and STATE on CURRENT" --argument-names current state heading
+    # The same marker as the default model in ai models
+    begin
+        printf '%s\t%s\t%s\n' '' Provider $heading
+        for p in (_ai_providers)
+            if test "$p" = "$current"
+                printf '%s\t%s\t%s\n' "$(set_color green)>$(set_color normal)" "$(set_color green)$p$(set_color normal)" "$(set_color green)$state$(set_color normal)"
             else
-                printf " > %-18s active\n" $p
+                printf '%s\t%s\t%s\n' '' $p ''
             end
-            set_color normal
-        else
-            printf "   %s\n" $p
         end
-    end
-    echo " ─────────────────────────────────────────"
+    end | table --header --rule --indent 1
 end
 
 function _ai_config_do_reset --argument-names task scope

@@ -1,10 +1,11 @@
 [ollama not reachable — showing the cached list]
 
-   Model     Size  Type      Capabilities  Used for
- ----------------------------------------------------
+ ollama (local, native driver)
+   Model     Size  Type      Capabilities  pi  Used for
+ --------------------------------------------------------
  Coding:
    other:7b  2 GB  MoE 8/64
- ----------------------------------------------------
+ --------------------------------------------------------
 
  1 model (1 tag), 2 GB on disk
  Details: ai models info NAME · try one: ai models try NAME:TAG · find: ai models search QUERY

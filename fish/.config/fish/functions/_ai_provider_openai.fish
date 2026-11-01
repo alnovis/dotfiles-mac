@@ -24,7 +24,7 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
     end
 
     set -l ep (_ai_agent_{$runner}_endpoint $provider $model)
-    if test (count $ep) -ne 5; or test -z "$ep[1]"
+    if test (count $ep) -lt 5; or test -z "$ep[1]"
         echo "$provider: no endpoint in the $runner config — add the provider there (baseUrl, apiKey, models)" >&2
         return 1
     end

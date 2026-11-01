@@ -1,0 +1,13 @@
+    Provider   Status (global)
+ -----------------------------
+    claude
+ >  ollama     active
+    testcloud
+ -----------------------------
+    Provider   Status (task review, global)
+ ------------------------------------------
+    claude
+ >  ollama     active (inherited)
+    testcloud
+ ------------------------------------------
+[exit 0]

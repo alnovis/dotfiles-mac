@@ -164,8 +164,8 @@ _ai_agent_<runner> --provider P --model M
 _ai_agent_<runner>_models          # "provider<TAB>model" lines from the runner's own config
 _ai_agent_<runner>_probe PROVIDER  # optional; exit 0 reachable, 1 unreachable, 2 can't tell
 _ai_agent_<runner>_endpoint P [M]  # optional; baseUrl, api, apiKey reference, contextWindow,
-                                   # maxTokens — one per line (empty if unknown); fails when
-                                   # the runner's config has no such provider
+                                   # maxTokens, reasoning — one per line (empty if unknown);
+                                   # fails when the runner's config has no such provider
 ```
 
 The dispatcher passes `--no-session` on every non-interactive run, and `cd`s into the working
@@ -499,6 +499,7 @@ the executor, and starts it with `--interactive`. `--dry-run` prints
 | `~/.cache/ai-models.json` | installed-model list (from `/api/tags`; works offline) |
 | `~/.cache/ai/model-caps.json` | capabilities per digest (never stale: a digest's content doesn't change) |
 | `~/.cache/ai/model-arch.json` | architecture per digest (`MoE U/N`, `MoE`, `dense`; same never-stale rule) |
+| `~/.cache/ai/prices-<provider>.json` | a litellm gateway's `/model/info` (prices only), refreshed after a day |
 | `~/.pi/agent/models.json`, `~/.config/opencode/config.json` | the runners' own provider config (not ours, not in dotfiles) |
 
 ## Design invariants
