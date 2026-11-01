@@ -36,18 +36,35 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
         printf '  %s | %d runs in parallel… (Ctrl-C stops them)\n' $_flag_label $n >&2
         set -l setfp "set -g fish_function_path "(string escape -- $fish_function_path | string join ' ')
         set -l logs
+        set -l pids
         for k in (seq $n)
             set -l log (mktemp)
             set -a logs $log
             set -l cmd "$setfp; _ai_run_watched --label "(string escape -- "$_flag_label run $k/$n")" --output "(string escape -- $files[$k])" --dest "(string escape -- $files[$k])" -- "(string escape -- $run_args | string join ' ')
             fish --no-config -c $cmd <$_flag_prompt_file 2>$log &
+            set -a pids $last_pid
+        end
+        # Each run's own done / FAILED line as soon as that run ends (the runs have no tty,
+        # so no progress noise of their own); on a terminal, one live line for the stage
+        # until the last one ends. fish drops a finished job from `jobs -p`.
+        set -l tty 0
+        isatty stderr; and set tty 1
+        set -l left (seq $n)
+        while set -q left[1]
+            set -l running (jobs -p 2>/dev/null)
+            for k in $left
+                contains -- $pids[$k] $running; and continue
+                test $tty -eq 1; and printf '\r\033[K' >&2
+                cat $logs[$k] >&2
+                rm -f $logs[$k]
+                set -e left[(contains -i -- $k $left)]
+            end
+            set -q left[1]; or break
+            test $tty -eq 1; and printf '\r\033[K  %s | %d/%d done | %ds' \
+                $_flag_label (math $n - (count $left)) $n (math (date +%s) - $t0) >&2
+            sleep 1
         end
         wait
-        # Each run's own done / FAILED lines (non-tty, so no progress noise)
-        for log in $logs
-            cat $log >&2
-            rm -f $log
-        end
     else
         for k in (seq $n)
             _ai_run_watched --label "$_flag_label run $k/$n" --output $files[$k] --dest $files[$k] -- $run_args <$_flag_prompt_file

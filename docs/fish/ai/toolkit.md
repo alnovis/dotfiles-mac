@@ -406,7 +406,9 @@ review ×N  →  joined under "## Run K/N"  →  one verify over all of it  → 
   markdown. Two different problems on one line stay two comments.
 - **Parallel or one at a time:** parallel runs are separate fish processes (a backgrounded fish
   function runs in the same process, one after another). `auto` runs a cloud provider in
-  parallel and ollama one at a time (several local runs would not fit in memory).
+  parallel and ollama one at a time (several local runs would not fit in memory). Each run's
+  `done` line prints as soon as that run ends; on a terminal one live line
+  (`1/3 done | 95s`) stands for the stage until the last run ends.
 
 Both are config keys, scoped by provider and model — the narrowest scope wins inside a file,
 the project config beats the global one, a flag beats both:
@@ -439,6 +441,9 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
    code: `meta-comments.md` asks for the `[CONFIRMED]` and `[UNCERTAIN]` findings as a JSON array
    of `file`, `line`, `quote` (one line of code, verbatim), `severity`, `status`, `body`.
    `[REFUTED]` ones are dropped. The bodies follow `--lang` (English by default); code stays as is.
+   With no `[CONFIRMED]` and no `[UNCERTAIN]` verdict there is nothing to extract: no model call,
+   the stage line says `skipped`, and the same files are written — an empty array, and the
+   markdown with what verify refuted.
 2. **Anchoring (no model, `_ai_review_comments_anchor`).** A model's line numbers are often off
    (a cited `:24` was really `:36`), so each line is found again by its quote: in the new version
    of the file, then in the old one (removed code); the cited number only breaks ties. A quote

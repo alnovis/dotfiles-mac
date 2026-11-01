@@ -1,0 +1,16 @@
+  [3/3] Comments | skipped — verify confirmed nothing to comment on
+Comments:          none — the verify pass confirmed no finding (0 confirmed, 1 refuted)
+rc: 0
+{"comments":0,"runs":3,"base":40}
+# Review comments — check before publishing
+
+0 comment(s): 0 confirmed, 0 uncertain. Range: 1c4dced..8f00743. From 3 review runs.
+
+## Refuted by verify — skim before trusting
+
+Not comments. Verify threw these out; it can be wrong — check any that sound real.
+
+- `gbranch.fish:8` — the help text overstates the auto-detection — refuted 8/10
+  > the candidates loop does try every listed branch.
+
+[exit 0]

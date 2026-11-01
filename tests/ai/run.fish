@@ -56,6 +56,10 @@ cp $root/tests/ai/fixtures/review.md $sb/review.md
 # Extracted comments as a model would return them, for the anchoring case
 cp $root/tests/ai/fixtures/comments.json $sb/comments.json
 cp $root/tests/ai/fixtures/verify.md $sb/verify.md
+cp $root/tests/ai/fixtures/verify-refuted.md $sb/verify-refuted.md
+# A stub _ai_run_watched as a function FILE: parallel runs are separate fish processes and
+# see only fish_function_path, not functions defined in the parent
+cp -R $root/tests/ai/fixtures/stubfn $sb/stubfn
 
 # pi config for the runner paths: ollama, plus a cloud provider on a dead address so the
 # reachability probe fails at once (connection refused) and no model is ever called
@@ -93,7 +97,8 @@ set -g golden_cases \
     'git-no-verify|fixture|ai review --last 1 --no-verify --dry-run 2>&1 | string match -q -e "pass 2"; and echo "verify ran"; or echo "no verify pass"' \
     'comments-anchor|fixture|_ai_review_comments_anchor ../comments.json HEAD~1..HEAD (pwd) 3 >../anchored.json; jq -c "(.base_sha | length), (.head_sha | length), .runs, (.comments[] | {path, side, line, line_cited, in_diff, anchored, anchored_by, file_level, seen, status})" ../anchored.json; functions -q _ai_review_comments; _ai_review_comments_md ../anchored.json ../verify.md | string replace -r "Range: \S+" "Range: <range>"; echo "verdicts: "(_ai_verdict_counts ../verify.md)' \
     'review-settings|fixture|mkdir -p .ai; printf "%s\n" review_runs=2 review_runs@testcloud=3 review_runs@testcloud/cloud-model=4 review_parallel@claude=off review_parallel@ollama=on >.ai/config; _ai_review_runs_count testcloud cloud-model ""; _ai_review_runs_count testcloud other ""; _ai_review_runs_count ollama m ""; _ai_review_runs_count ollama m 5; _ai_review_runs_count ollama m abc; _ai_review_parallel_mode claude opus ""; _ai_review_parallel_mode testcloud m ""; _ai_review_parallel_mode ollama m ""; _ai_review_parallel_mode ollama m off; rm -rf .ai' \
-    'review-runs-redirect|fixture|function _ai_run_watched; argparse "label=" "output=" "dest=" -- $argv; printf "answer\n" >$_flag_output; echo "  $_flag_label done" >&2; end; echo prompt >../runs-prompt.txt; function _t; _ai_review_runs --runs 2 --mode sequential --prompt-file ../runs-prompt.txt --output ../runs-joined.md --label "[1/3] Review" -- --provider x; echo "answered: $__ai_review_runs_ok"; end; _t >../runs.out 2>../runs.err; echo "stdout:"; cat ../runs.out; echo "stderr:"; string replace -r "\| \d+s" "| <t>" <../runs.err; echo "joined:"; cat ../runs-joined.md' \
+    'comments-none|fixture|_ai_review_comments --findings ../review.md --verdicts ../verify-refuted.md --output ../none.md --provider testcloud --range HEAD~1..HEAD --runs 3 --label "[3/3] Comments"; echo "rc: $status"; jq -c "{comments: (.comments | length), runs, base: (.base_sha | length)}" ../none.comments.json; cat ../none.comments.md' \
+    'review-runs-redirect|fixture|set -p fish_function_path (realpath ../stubfn); echo prompt >../runs-prompt.txt; function _t; _ai_review_runs --runs 2 --mode $argv[1] --prompt-file ../runs-prompt.txt --output ../runs-joined.md --label "[1/3] Review" -- --provider x; echo "answered: $__ai_review_runs_ok"; end; for m in sequential parallel; echo "== $m"; _t $m >../runs.out 2>../runs.err; echo "stdout:"; cat ../runs.out; echo "stderr:"; string replace -r "\| \d+s" "| <t>" <../runs.err; end; echo "joined:"; cat ../runs-joined.md' \
     'git-runs|fixture|ai review --last 1 --runs 3 -o ../runs-out.md --dry-run 2>&1 | string match -e -r "Verify: on|Runs:|review runs:"; ai review --last 1 --runs 3 --brief --dry-run; ai review --last 1 --runs 3 --no-verify --dry-run; ai review --last 1 --parallel --no-parallel --dry-run; ai review --last 1 --runs 0 --dry-run' \
     'git-branch-auto|fixture|ai review --dry-run' \
     'git-branch-explicit|fixture|ai review master --dry-run' \

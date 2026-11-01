@@ -25,6 +25,26 @@ function _ai_review_comments --description "Third review stage: line comments fo
         return 1
     end
 
+    set -l label $_flag_label
+    test -n "$label"; or set label "Comments - $_flag_provider"
+
+    # Nothing confirmed or uncertain: nothing to comment on, so no model call — the same
+    # files (an empty array; the markdown still lists what verify refuted)
+    set -l counts (_ai_verdict_counts $_flag_verdicts)
+    if string match -q -r -- '^0 confirmed' $counts; and not string match -q -- '*uncertain*' $counts
+        printf '  %s | skipped — verify confirmed nothing to comment on\n' $label >&2
+        set -l arr (mktemp)
+        echo '[]' >$arr
+        _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
+        rm -f $arr
+        _ai_review_comments_md $json $_flag_verdicts >$md
+        set -q _flag_quiet; and return 0
+        set_color green
+        _ai_review_comments_saved $_flag_output $_flag_verdicts
+        set_color normal
+        return 0
+    end
+
     set -l prompt (cat ~/.config/fish/prompts/meta-comments.md | string collect)
     test -n "$_flag_lang"; and test "$_flag_lang" != English
     and set prompt "IMPORTANT: Write the comment bodies (\"body\") in $_flag_lang; keep code, identifiers and quotes as they are.
@@ -40,8 +60,6 @@ VERDICTS ON THEM:
 
     set -l run_args --provider $_flag_provider
     test -n "$_flag_model"; and set -a run_args --model $_flag_model
-    set -l label $_flag_label
-    test -n "$label"; or set label "Comments - $_flag_provider"
     set -l raw (mktemp)
     printf '%s' "$prompt" | _ai_run_watched --label $label --output $raw --dest "(terminal)" -- $run_args
     or begin
