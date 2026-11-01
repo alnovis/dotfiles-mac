@@ -40,6 +40,8 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
 
     set -l chars (wc -c <$pfile | string trim)
     set -l tokens (math "round($chars / 3.5)")
+    # Exact token counts from the native drivers, for the report footer
+    set -l ufile (mktemp)
 
     set -l rc
     if contains -- --agentic $run_args
@@ -59,7 +61,7 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
             $label (math "round($tokens / 1000)") $etime >&2
 
         set -l n 0
-        set -l na_args $run_args
+        set -l na_args $run_args --usage-output $ufile
         test -n "$sidecar"; and set -a na_args --thinking-output $sidecar
         _ai_run $na_args <$pfile 2>$errlog | tee $outfile | while read -l line
             set n (math $n + 1)
@@ -94,10 +96,21 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     # The run's cost goes into the report itself, so comparing toolkit versions or models
     # later needs nothing but the files. An HTML comment: invisible when the markdown is
     # rendered, one grep away otherwise. Not for a temp that is printed to the terminal.
+    # Exact counts when the driver reported them (native ollama and OpenAI drivers), the
+    # prompt-size estimate otherwise (runners, claude).
     if test "$rc" -eq 0; and test -s $outfile; and test "$dest" != "(terminal)"
-        printf '\n<!-- %s | %ds | prompt ~%dk tokens | thinking %d bytes -->\n' \
-            $label $total (math "round($tokens / 1000)") $thinking_bytes >>$outfile
+        set -l cost (jq -r '[
+            "prompt \(.prompt_tokens) tokens",
+            "completion \(.completion_tokens) tokens"
+                + (if (.completion_tokens_details.reasoning_tokens // 0) > 0
+                   then " (reasoning \(.completion_tokens_details.reasoning_tokens))" else "" end),
+            (if .tok_s then "\(.tok_s) tok/s" else empty end),
+            (if .cost then "cost \(.cost)" else empty end)
+            ] | join(" | ")' $ufile 2>/dev/null)
+        test -n "$cost"; or set cost "prompt ~"(math "round($tokens / 1000)")"k tokens (estimate)"
+        printf '\n<!-- %s | %ds | %s | thinking %d bytes -->\n' \
+            $label $total "$cost" $thinking_bytes >>$outfile
     end
-    rm -f $errlog $pfile
+    rm -f $errlog $pfile $ufile
     return $rc
 end

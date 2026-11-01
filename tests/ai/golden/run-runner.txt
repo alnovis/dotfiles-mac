@@ -1,4 +1,4 @@
---- dry-run: prompt that would be sent to testcloud via pi (profile none) ---
+--- dry-run: prompt that would be sent to testcloud (native, endpoint from pi) ---
 hello
 
 [exit 0]

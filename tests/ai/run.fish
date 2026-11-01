@@ -61,7 +61,7 @@ echo '{"providers": {
   "ollama":    {"baseUrl": "http://127.0.0.1:11434/v1", "api": "openai-completions", "apiKey": "x",
                 "models": [{"id": "review-model"}, {"id": "default-model"}]},
   "testcloud": {"baseUrl": "http://127.0.0.1:9/v1", "api": "openai-completions", "apiKey": "x",
-                "models": [{"id": "cloud-model"}]}
+                "models": [{"id": "cloud-model", "contextWindow": 1000, "maxTokens": 500}]}
 }}' >$sb/home/.pi/agent/models.json
 
 git clone -q --no-hardlinks $root $sb/fixture; or exit 1
@@ -113,6 +113,10 @@ set -g golden_cases \
     'run-pipe|fixture|printf "context line\n" | ai --dry-run question' \
     'run-claude|fixture|ai --provider claude --dry-run hello' \
     'run-runner|fixture|ai --provider testcloud --dry-run hello' \
+    'run-cloud-runner|fixture|mkdir -p .ai; echo cloud_driver=runner >.ai/config; ai --provider testcloud --dry-run hello; rm -rf .ai' \
+    'pi-endpoint|fixture|_ai_agent_pi_endpoint testcloud cloud-model; echo ---; _ai_agent_pi_endpoint testcloud testcloud/cloud-model; echo ---; _ai_agent_pi_endpoint nosuch x; echo "nosuch rc=$status"' \
+    'openai-too-big|fixture|string repeat -n 4000 x | _ai_provider_openai --provider testcloud --model cloud-model' \
+    'openai-unreachable|fixture|echo hi | _ai_provider_openai --provider testcloud --model cloud-model --no-think' \
     'run-unknown-provider|fixture|ai --provider nosuch --dry-run hello' \
     'run-unreachable|fixture|ai --provider testcloud hello' \
     'config-status|fixture|ai config status' \

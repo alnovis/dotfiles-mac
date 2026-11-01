@@ -1,7 +1,7 @@
 function _ai_review_prompt_mode --description "Review prompt depth for PROVIDER (AGENTIC 1|0): full or lean; --origin prints why"
     # The full prompt adds the ABSENCE gate and the sibling sweep (from VVAH, tuned for
     # Claude). A small local model turns each of those rules into another round of
-    # second-guessing: on RF-38946 qwen3.6 thought 2.2× longer and dropped the finding the
+    # second-guessing: on a real work change qwen3.6 thought 2.2× longer and dropped the finding the
     # lean prompt caught. So the depth follows the executor, never a list of "strong"
     # models: the native ollama driver (a local model) gets lean; claude, the runners
     # (cloud providers) and --agentic get full. Config key review_prompt overrides.

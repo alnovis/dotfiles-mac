@@ -16,5 +16,7 @@ function _ai_executor_model --description "Model for DISPATCH serving PROVIDER: 
         return 0
     end
     set -l runner (string replace _ai_agent_ '' -- $dispatch)
+    # The OpenAI driver serves the runner's providers, so the runner's list applies
+    test "$dispatch" = _ai_provider_openai; and set runner (_ai_default_agent)
     _ai_agent_{$runner}_models | string match -r -g (printf '^%s\t(.+)$' (string escape --style=regex -- $provider)) | head -1
 end

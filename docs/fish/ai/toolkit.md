@@ -44,8 +44,10 @@ ai --help                            top-level help
 Every command takes `-h` / `--help`.
 
 **Executors in one line:** `ollama` single-shot → the native ollama driver; `claude` → the claude
-CLI; any other provider, and anything with tools or chat history → the runner named by the config
-key `agent` (`pi` by default, or `opencode`). Details: [architecture.md](architecture.md#executor-selection).
+CLI; a single call to a provider the runner reaches over the OpenAI API (litellm, …) → the native
+OpenAI driver, with the endpoint read from the runner's config; anything with tools or chat
+history, and other providers → the runner named by the config key `agent` (`pi` by default, or
+`opencode`). Details: [architecture.md](architecture.md#executor-selection).
 
 ## Top-level `ai`
 
@@ -263,7 +265,7 @@ The working directory is the file's parent, or the directory itself.
 `meta-review*.md` mark two rules as `<!-- full-only -->`: the ABSENCE gate ("name where you looked
 for the control") and the sibling sweep ("check the rest of the diff for the same pattern, then ask
 what else is wrong at that site"). Both come from VVAH and suit Claude. A small local model turns
-each into another round of second-guessing. On RF-38946, qwen3.6 thought 2.2× longer (78 s → 139 s)
+each into another round of second-guessing. On a real two-commit work change, qwen3.6 thought 2.2× longer (78 s → 139 s)
 and talked itself out of the race the lean prompt reported.
 
 So the depth follows the executor, not a list of "strong" models:
@@ -405,10 +407,14 @@ driver.
 ### Run cost in the report
 
 Every report written with `-o` (and the verify file) ends with one HTML comment: the run label,
-the wall time, the prompt size estimate and the reasoning size:
+the wall time, the token counts and the reasoning size. The native drivers (ollama, OpenAI) report
+exact counts — ollama with the generation speed, a litellm gateway with the reasoning tokens and the
+cost; runners and claude get the prompt-size estimate:
 
 ```
-<!-- Review - ollama - qwen3.6:latest | 78s | prompt ~15k tokens | thinking 15769 bytes -->
+<!-- Review - ollama - qwen3.6:latest | 78s | prompt 15234 tokens | completion 4120 tokens | 65.3 tok/s | thinking 15769 bytes -->
+<!-- Review - litellm - ycloud/qwen3.6-35b-a3b/latest | 41s | prompt 15234 tokens | completion 9012 tokens (reasoning 8000) | cost 0.0681 | thinking 31002 bytes -->
+<!-- Review - claude | 95s | prompt ~15k tokens (estimate) | thinking 0 bytes -->
 ```
 
 It is invisible when the markdown is rendered, and it makes comparing toolkit versions or models
@@ -719,6 +725,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
 | `review_prompt` | by hand | Review prompt depth: `auto` (default: lean on the native ollama driver, full elsewhere), `full`, `lean` |
+| `cloud_driver` | by hand | Single calls to an OpenAI-API provider of the runner (litellm, …): `native` (default, direct HTTP) or `runner` (through pi / opencode) |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |
 
 Tasks: `chat`, `code`, `review`, `verify`, `commit`, `summary`. `verify_provider` / `verify_model`

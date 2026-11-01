@@ -47,6 +47,7 @@ flowchart TD
 
     sel -->|"claude"| claude["_ai_agent_claude<br/>claude CLI"]
     sel -->|"ollama, profile none"| native["_ai_provider_ollama<br/>native driver"]
+    sel -->|"OpenAI-API provider,<br/>profile none, single call"| openai["_ai_provider_openai<br/>native driver"]
     sel -->|"anything else<br/>(config key agent)"| runner["_ai_agent_pi<br/>_ai_agent_opencode"]
 
     run -.->|"runner provider:<br/>probe, at most 2 s"| probe["_ai_agent_&lt;runner&gt;_probe"]
@@ -55,6 +56,7 @@ flowchart TD
     native -->|"/api/generate, num_ctx"| ollama[("ollama server<br/>OLLAMA_HOST")]
     runner -->|"provider ollama (/v1)"| ollama
     runner -->|"other providers"| cloud[("providers in the<br/>runner's own config")]
+    openai -->|"/v1/chat/completions,<br/>endpoint from the runner's config"| cloud
     claude --> anthropic[("Anthropic")]
 ```
 
@@ -66,7 +68,7 @@ flowchart TD
 | Prompt templates | What to say — review rules, lenses, verify rules, commit/summary prompts | `prompts/meta-*.md`, `prompts/lenses/*.md` |
 | Dispatch | Single-shot: `_ai_run` (and `_ai_run_watched` for file output with progress). Interactive: `_ai_interactive` | `_ai_run`, `_ai_run_watched`, `_ai_interactive` |
 | Executor selection | Which executor serves this provider and profile; which model it gets | `_ai_select_executor`, `_ai_executor_model` |
-| Executors | How to invoke one tool | `_ai_provider_ollama` (native driver), `_ai_agent_{pi,opencode,claude}` (runners) |
+| Executors | How to invoke one tool | `_ai_provider_ollama`, `_ai_provider_openai` (native drivers), `_ai_agent_{pi,opencode,claude}` (runners) |
 | Config | Pure resolvers over `key=value` files (project walk-up, then global) | `_ai_config_*`, `_ai_default_*`, `_ai_origin_*` |
 
 ## Executors
@@ -79,9 +81,17 @@ per-request `num_ctx`. The OpenAI-compatible `/v1` endpoint that pi and opencode
 server's full `OLLAMA_CONTEXT_LENGTH` window every time. See
 [Native ollama driver](#native-ollama-driver).
 
+**Native OpenAI driver** — `_ai_provider_openai`. A single call to a provider the runner reaches
+over the OpenAI chat-completions API (litellm and the like), with no agent in between. The
+endpoint, key reference and limits come from the runner's config through
+`_ai_agent_<runner>_endpoint`, so `ai` still keeps no registry. It exists because a single call
+needs no agent, and pi in between meant silent defaults (a tiny context for an unregistered
+model → an empty review), pi's system prompt leaking in, no reasoning sidecar and no token
+counts. See [Native OpenAI driver](#native-openai-driver).
+
 **Runners** — agent CLIs behind one narrow contract: **pi**, **opencode**, **claude**. They do
 everything with tools (agentic review/verify, `ai code`), every interactive chat with history,
-and every single-shot call to a provider other than ollama.
+and the single calls the OpenAI driver cannot serve (a non-OpenAI API, or `cloud_driver=runner`).
 
 - `--provider claude` always means the claude CLI directly; pi and opencode are never involved.
 - **Providers and keys belong to the runner** — pi `~/.pi/agent/models.json`, opencode
@@ -98,12 +108,15 @@ read-only), `edit` (may change files).
 | provider | profile `none` | profile `read` / `edit` |
 |---|---|---|
 | `claude` | claude runner | claude runner |
-| `ollama` | **native driver** | runner from config key `agent`, provider `ollama` |
+| `ollama` | **native ollama driver** | runner from config key `agent`, provider `ollama` |
+| provider with `api = openai-completions` in the runner's config | **native OpenAI driver** | runner from `agent` |
 | anything else | runner from `agent` (must know the provider) | runner from `agent` |
 
 `agent` is `pi` (default) or `opencode`; `_ai_agents` is that explicit list. The optional third
-argument `runner` skips the native driver even for `ollama`/`none` — `ai chat` uses it, because
-only a runner keeps chat history.
+argument: `runner` skips both native drivers — `ai chat` uses it, because only a runner keeps
+chat history; `interactive` (every `_ai_interactive` call) keeps `ollama run` but skips the
+OpenAI driver, which has no REPL. Config key `cloud_driver=runner` sends single calls back
+through the runner.
 
 Which profile each command asks for:
 
@@ -119,6 +132,7 @@ The label shows up in dry-run headers and `would start:` lines:
 | Executor | Label |
 |---|---|
 | native driver | `ollama (native)` |
+| native OpenAI driver | `litellm (native, endpoint from pi)` |
 | claude | `claude (runner claude, profile none)` |
 | runner | `litellm via pi (profile read)` |
 | + injected skill | `…, skill ai-review` |
@@ -149,6 +163,9 @@ _ai_agent_<runner> --provider P --model M
 
 _ai_agent_<runner>_models          # "provider<TAB>model" lines from the runner's own config
 _ai_agent_<runner>_probe PROVIDER  # optional; exit 0 reachable, 1 unreachable, 2 can't tell
+_ai_agent_<runner>_endpoint P [M]  # optional; baseUrl, api, apiKey reference, contextWindow,
+                                   # maxTokens — one per line (empty if unknown); fails when
+                                   # the runner's config has no such provider
 ```
 
 The dispatcher passes `--no-session` on every non-interactive run, and `cd`s into the working
@@ -169,6 +186,7 @@ directory before calling the runner (runners take no `--workdir`).
 | Extra args | passed to pi (e.g. `@files`) | passed to opencode | ignored |
 | `_models` | `pi --offline --list-models` | `opencode models` | static: `sonnet`, `opus`, `haiku` |
 | `_probe` | `.providers[P].baseUrl` in `~/.pi/agent/models.json` | `.provider[P].options.baseURL` in `~/.config/opencode/opencode.json` or `config.json` | none |
+| `_endpoint` | `.providers[P]`: `baseUrl`, `api`, `apiKey` (`$VAR`), the model's `contextWindow` / `maxTokens` | `.provider[P]`: `options.baseURL`, `npm` (`@ai-sdk/openai-compatible` → `openai-completions`), `options.apiKey` (`{env:VAR}`), the model's `limit.context` / `limit.output` | none |
 | Before an `ollama` run | `_ai_ensure_running` | `_ai_ensure_running` | — |
 
 Details worth knowing:
@@ -281,14 +299,47 @@ review" bug). Capability comes from `ollama show`:
 | thinking-capable + `--no-think` | `think:false` | no reasoning: faster, shallower |
 | not thinking-capable | `think:false` | harmless no-op; `--think` prints a warning instead of failing |
 
-**Reasoning sidecar.** With a destination file (`--thinking-output F`, set by `_ai_run_watched`
-or derived by `_ai_run` for a direct `--output`), `.thinking` is streamed to the file and
-`.response` to stdout via a per-chunk loop. An empty sidecar is deleted. Runners have no such
-channel, so runner paths never produce one.
+**Reasoning sidecar and token counts.** One `jq --unbuffered` streams `.response` to stdout; the
+raw NDJSON is kept, and once the stream ends `.thinking` goes to the sidecar (`--thinking-output
+F`, set by `_ai_run_watched` or derived by `_ai_run` for a direct `--output`) and the final chunk's
+counts go to `--usage-output F` as `{prompt_tokens, completion_tokens, tok_s}`. An empty sidecar is
+deleted. (The old sidecar path ran three `jq` per chunk, ~7 ms a token, a ceiling of ~140 tok/s
+that a fast MoE model reaches.) Runners have no such channel, so runner paths never produce one.
 
-**Request.** `POST $host/api/generate` with `stream:true`, `options.num_ctx`, and `think`; the
-stream goes through `jq --unbuffered`. The driver prints `ollama: num_ctx=N (prompt ~T tokens,
-model M)` to stderr. Interactive mode is `ollama run --think=false|true MODEL` (no history).
+**Request.** `POST $host/api/generate` with `stream:true`, `options.num_ctx`, and `think`. The
+driver prints `ollama: num_ctx=N (prompt ~T tokens, model M)` to stderr. Interactive mode is
+`ollama run --think=false|true MODEL` (no history).
+
+## Native OpenAI driver
+
+`_ai_provider_openai`: one `POST {baseUrl}/chat/completions` to a provider the runner's config
+lists with `api = openai-completions` (litellm and the like). Interactive use is handed to the
+runner.
+
+| Value | Where it comes from |
+|---|---|
+| URL, key, limits | `_ai_agent_<runner>_endpoint`: the runner's config. The key reference (`$VAR`, `{env:VAR}` or a literal) is resolved by `_ai_endpoint_key` from the fish environment |
+| Model | `--model`, else the runner's first model for the provider (`_ai_executor_model`) |
+| `max_tokens` | the model's `maxTokens`, else 16384 — reasoning counts against it, so a reasoner needs room for both |
+
+**Request.** One `user` message and no system prompt (as for ollama), `stream:true`,
+`stream_options.include_usage:true`. The prompt and the body go through files (a big review would
+overflow the argument limit); the `Authorization` header goes through a 600-mode file, never the
+command line. With a known `contextWindow` a prompt that cannot fit is refused before sending, and
+`max_tokens` is lowered to what is left; without one the driver says the context is unknown.
+
+**Response.** One `jq` streams `delta.content` to stdout, leading blank lines dropped. From the
+kept raw stream: `delta.reasoning_content` (or `delta.reasoning`) → the sidecar; the final
+`usage` (tokens, reasoning tokens, litellm's `cost`) → `--usage-output`; `finish_reason: length`
+→ a warning that the answer was cut off at `max_tokens`.
+
+**Errors**, each one line on stderr: DNS failure → `cannot resolve the host in the pi config —
+off the VPN?`; connection refused; timeout; HTTP non-200 with a JSON body → its `error.message`;
+an HTML page (a proxy's 504) → its `<title>`; an error inside the stream → its message.
+
+**Not supported:** `--no-think`. The gateway rejects `chat_template_kwargs` (HTTP 500), so the
+flag prints a warning and is not sent. Config key `cloud_driver=runner` sends single calls back
+through the runner.
 
 ## Configuration
 

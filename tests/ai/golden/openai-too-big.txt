@@ -1,0 +1,2 @@
+testcloud: prompt ~1334 tokens does not fit cloud-model's 1000-token context. Use --context-lines 0 (diff-only) or a smaller change.
+[exit 1]

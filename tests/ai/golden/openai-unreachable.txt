@@ -1,0 +1,4 @@
+testcloud: prompt ~1 tokens, max_tokens 500, context 1000 (model cloud-model)
+testcloud: --no-think is not supported for cloud models (the gateway rejects chat_template_kwargs) — ignoring
+testcloud: connection refused (http://127.0.0.1:9/v1)
+[exit 1]

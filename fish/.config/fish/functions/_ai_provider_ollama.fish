@@ -13,7 +13,10 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     # prompt (num_ctx per request, clamped to a RAM-safe ceiling) so a large embed
     # is not silently truncated — the global OLLAMA_CONTEXT_LENGTH is a one-size cap
     # that is wrong per-task. Streams the response to stdout.
-    argparse 'interactive' 'model=' 'think' 'no-think' 'thinking-output=' -- $argv; or return 1
+    #   --usage-output F       write the run's token counts to F as JSON (prompt_tokens,
+    #                          completion_tokens, tok_s) — read by _ai_run_watched for the
+    #                          report footer.
+    argparse 'interactive' 'model=' 'think' 'no-think' 'thinking-output=' 'usage-output=' -- $argv; or return 1
 
     # Resolve the model before touching the server: a missing model is a config error
     set -l model $_flag_model
@@ -80,37 +83,33 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     # way. Non-thinking models accept think:false as a harmless no-op. Verified on
     # laguna-xs-2.1 (leaked with no field, clean with explicit think:false) and
     # qwen2.5-coder:7b (think:false → no error).
-    set -l thinking_out $_flag_thinking_output
+    # One jq for the whole stream: .response to stdout as it arrives; the raw NDJSON is
+    # kept, and the reasoning, the token counts and an error are read from it once at the
+    # end. (Three jq per chunk — the old sidecar loop — cost ~7 ms a token, a ceiling of
+    # ~140 tok/s that a fast MoE model reaches.)
+    # Two files: the request is built while tee already writes the stream (one pipeline)
+    set -l pfile (mktemp)
+    set -l raw (mktemp)
+    printf '%s' "$prompt" >$pfile
+    jq -cn --arg m $model --rawfile p $pfile --argjson ctx $num_ctx --argjson think $think \
+        '{model:$m, prompt:$p, stream:true, think:$think, options:{num_ctx:$ctx}}' \
+        | curl -s --no-buffer $host/api/generate -d @- \
+        | tee $raw \
+        | jq -R -j --unbuffered 'fromjson? | .response // empty'
 
-    if test -n "$thinking_out"; and test "$think" = true
-        # Sidecar split: reasoning is real (think:true) and a destination was given, so
-        # route .thinking -> file and .response -> stdout. Done as a per-chunk read loop
-        # because jq writes one output stream — two sinks need
-        # two extractions per NDJSON line. fish pipeline bodies run in a subshell (locals
-        # are lost), so the error signal is captured to a FILE and checked afterwards.
-        : >$thinking_out
-        set -l errfile (mktemp)
-        jq -cn --arg m $model --arg p "$prompt" --argjson ctx $num_ctx --argjson think $think \
-            '{model:$m, prompt:$p, stream:true, think:$think, options:{num_ctx:$ctx}}' \
-            | curl -s --no-buffer $host/api/generate -d @- 2>/dev/null | while read -l chunk
-            test -z "$chunk"; and continue
-            printf '%s' $chunk | jq -j '.thinking // empty' 2>/dev/null >>$thinking_out
-            printf '%s' $chunk | jq -j '.response // empty' 2>/dev/null
-            printf '%s' $chunk | jq -r 'select(.error) | .error' 2>/dev/null >>$errfile
-        end
-        if test -s $errfile
-            echo "ollama: "(head -1 $errfile) >&2
-            rm -f $errfile
-            return 1
-        end
-        rm -f $errfile
-    else
-        # Fast path: single streaming jq, reasoning dropped (only .response kept). Used
-        # when there is no sidecar destination, or the model doesn't reason (think:false
-        # → nothing would land in .thinking anyway, so skip the slower per-chunk loop).
-        jq -n --arg m $model --arg p "$prompt" --argjson ctx $num_ctx --argjson think $think \
-            '{model:$m, prompt:$p, stream:true, think:$think, options:{num_ctx:$ctx}}' \
-            | curl -s $host/api/generate -d @- \
-            | jq -j --unbuffered 'if .error then error(.error) else (.response // empty) end'
+    set -l rc 0
+    set -l err (jq -r 'select(.error) | .error' $raw 2>/dev/null | head -1)
+    if test -n "$err"
+        echo "ollama: $err" >&2
+        set rc 1
     end
+    test -n "$_flag_thinking_output"; and jq -j '.thinking // empty' $raw >$_flag_thinking_output 2>/dev/null
+    if test -n "$_flag_usage_output"
+        jq -c 'select(.done == true and .eval_count)
+            | {prompt_tokens: .prompt_eval_count, completion_tokens: .eval_count,
+               tok_s: (if (.eval_duration // 0) > 0 then (.eval_count / (.eval_duration / 1e9) | . * 10 | round / 10) else null end)}' \
+            $raw 2>/dev/null | tail -1 >$_flag_usage_output
+    end
+    rm -f $raw $pfile
+    return $rc
 end

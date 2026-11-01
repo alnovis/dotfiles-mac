@@ -11,7 +11,7 @@ function _ai_interactive --description "Start an interactive session for TASK wi
     set -l model $_flag_model
     test -n "$model"; or set model (_ai_default_model $_flag_task $provider)
 
-    set -l need
+    set -l need interactive
     set -q _flag_runner; and set need runner
     set -l sel (_ai_select_executor $provider $_flag_profile $need); or return 1
     set -l dispatch $sel[1]
