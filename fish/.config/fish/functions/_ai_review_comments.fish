@@ -60,6 +60,7 @@ VERDICTS ON THEM:
         mv $raw $kept
         rm -f $arr
         echo "comments: the model's answer is not a JSON array — kept as $kept" >&2
+        set -g __ai_last_failure "the model's answer is not a JSON array — kept as $kept"
         return 1
     end
     rm -f $raw

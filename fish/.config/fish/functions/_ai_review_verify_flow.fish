@@ -128,7 +128,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     end
 
     if test $rc1 -ne 0; or not test -s $find_src
-        echo "  Review pass produced no output (provider=$provider). Aborting before verify." >&2
+        set -l why "$__ai_last_failure"
+        test $runs -gt 1; and set why "no run answered — see each run's line above"
+        echo "  Review pass produced no output (provider=$provider)"(test -n "$why"; and echo ": $why")". Aborting before verify." >&2
         test $find_is_temp -eq 1; and rm -f $find_src
         return 1
     end
@@ -164,6 +166,8 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
 
     _ai_review_verify $vargs --output $ver_target --label "[2/$n_stages] $ver_label" --dest $ver_dest
     set -l rc2 $status
+    # Kept now: the comments stage below would overwrite it
+    set -l ver_why "$__ai_last_failure"
 
     # Stage 3 — comments, only over a verify pass that produced verdicts
     set -l rc3 0
@@ -174,6 +178,8 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
                 --provider $vprovider --model "$vmodel" --lang "$lang" --range "$_flag_range" --root $workdir \
                 --runs $runs_ok --label "[3/3] $com_label" --quiet
             set rc3 $status
+            set -l com_why "$__ai_last_failure"
+            test $rc3 -ne 0; and set com_note "Comments failed:   "(test -n "$com_why"; and echo $com_why; or echo "see the error above")
         else
             set com_note "Comments skipped: no verdicts to build them from."
             set rc3 1
@@ -200,14 +206,16 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
             # An empty file next to the review would read as a result — remove it
             rm -f "$ver_target"
             set_color yellow
-            echo "Verify produced no output ($verify_out not written)."
+            if test -n "$ver_why"
+                echo "Verify failed:     $ver_why"
+            else
+                echo "Verify produced no output ($verify_out not written)."
+            end
         end
         set_color green
         set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_out $ver_target
         set_color yellow
         test -n "$com_note"; and echo $com_note
-        set -q _flag_comments; and test -z "$com_note"; and test $rc3 -ne 0
-        and echo "Comments not written (see the error above)."
         set_color normal
     else
         cat $find_src

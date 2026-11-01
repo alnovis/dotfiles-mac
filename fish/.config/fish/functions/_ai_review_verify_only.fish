@@ -125,20 +125,28 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     if not test -s "$verify_out"
         rm -f "$verify_out"
         set_color red
-        echo "Verify produced no output ($verify_out not written)." >&2
+        if test -n "$__ai_last_failure"
+            echo "Verify failed:     $__ai_last_failure" >&2
+        else
+            echo "Verify produced no output ($verify_out not written)." >&2
+        end
         set_color normal
         return 1
     end
     set -l rc3 0
+    set -l com_why
     if set -q _flag_comments
         _ai_review_comments $com_args --label $com_label --quiet
         set rc3 $status
+        set com_why "$__ai_last_failure"
     end
 
     # Every file of the run together, after the last stage
     set_color green
     echo "Verify saved to:   $verify_out ("(_ai_verdict_counts $verify_out)")"
     set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_file $verify_out
+    set_color yellow
+    test $rc3 -ne 0; and echo "Comments failed:   "(test -n "$com_why"; and echo $com_why; or echo "see the error above")
     set_color normal
     test $rc3 -eq 0; or set rc 1
     return $rc
