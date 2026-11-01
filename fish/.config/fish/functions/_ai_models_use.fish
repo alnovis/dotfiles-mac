@@ -52,7 +52,7 @@ function _ai_models_use --description "Set the Ollama model — global default o
         set -l target_file ~/.config/ai/config
         set -l scope global
         if set -q _flag_project
-            set target_file (_ai_project_config_target)
+            set target_file (_ai_project_config_target); or return 1
             set scope project
         end
 
@@ -86,7 +86,7 @@ function _ai_models_use --description "Set the Ollama model — global default o
     set -l target_file ~/.config/ai/config
     set -l scope global
     if set -q _flag_project
-        set target_file (_ai_project_config_target)
+        set target_file (_ai_project_config_target); or return 1
         set scope project
     end
     _ai_config_write_file $target_file model $model

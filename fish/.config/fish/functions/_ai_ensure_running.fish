@@ -4,7 +4,7 @@ function _ai_ensure_running --description "Ensure Ollama server is running"
     # in the review/output file.
     # A remote server (OLLAMA_HOST elsewhere) is not ours to start — only check it answers
     set -l host (_ai_ollama_host)
-    if not string match -qr '^https?://(localhost|127\.0\.0\.1)(:|/|$)' -- $host
+    if not string match -qr '^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|/|$)' -- $host
         _ai_url_reachable $host; and return 0
         echo "Error: ollama at $host is not reachable" >&2
         return 1

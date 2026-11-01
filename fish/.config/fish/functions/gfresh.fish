@@ -46,13 +46,15 @@ function gfresh --description "Fetch and rebase current branch onto base branch"
     echo "Rebase onto: $base"
     set_color normal
 
-    # Check for uncommitted changes
+    # Check for uncommitted changes. `stashed` is declared out here: a `set -l` inside the
+    # `if` would be local to that block and gone by the time we pop.
+    set -l stashed 0
     if not git diff --quiet; or not git diff --cached --quiet
         set_color yellow
         echo "Stashing uncommitted changes..."
         set_color normal
         git stash push -m "gfresh: auto-stash"
-        set -l stashed 1
+        set stashed 1
     end
 
     echo "Fetching..."
@@ -64,10 +66,15 @@ function gfresh --description "Fetch and rebase current branch onto base branch"
         echo "---"
         echo "Rebase conflict — resolve manually, then 'git rebase --continue'"
         set_color normal
+        if test $stashed -eq 1
+            set_color yellow
+            echo "Your uncommitted changes are in the stash (gfresh: auto-stash) — 'git stash pop' after the rebase"
+            set_color normal
+        end
         return 1
     end
 
-    if set -q stashed
+    if test $stashed -eq 1
         set_color yellow
         echo "Restoring stashed changes..."
         set_color normal

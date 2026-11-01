@@ -344,9 +344,11 @@ $context_block"
         set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
         set -q _flag_agentic; and set -a flow_args --agentic
         set -q _flag_no_think; and set -a flow_args --no-think
-        # The diff is the code context embedded for the verifier.
+        # The verifier gets the code pass 1 saw: the diff, plus the full changed files when
+        # they were embedded — a finding citing a line outside the hunks needs them.
         set -l diff_tmp (mktemp)
         printf '%s' "$diff_content" >$diff_tmp
+        test -n "$context_block"; and printf '\n\n%s' "$context_block" >>$diff_tmp
         set -a flow_args --code-file $diff_tmp
         _ai_review_verify_flow $flow_args
         rm -f $diff_tmp $p1file

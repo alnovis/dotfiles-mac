@@ -14,6 +14,10 @@ function dclean --description "Clean up Docker: stopped containers, dangling ima
 
     echo "Docker cleanup"
 
+    # Volumes that are unused NOW — taken before the containers go: removing a stopped
+    # compose stack's containers would make its named volumes (a database) dangling too
+    set -l volumes (docker volume ls -q --filter dangling=true 2>/dev/null)
+
     # Stopped containers
     set -l containers (docker ps -aq --filter status=exited 2>/dev/null)
     set -l container_count (count $containers)
@@ -34,14 +38,19 @@ function dclean --description "Clean up Docker: stopped containers, dangling ima
         docker rmi $images 2>/dev/null
     end
 
-    # Unused volumes
-    set -l volumes (docker volume ls -q --filter dangling=true 2>/dev/null)
-    set -l volume_count (count $volumes)
-    if test $volume_count -gt 0
+    # Unused volumes (the list from before the containers were removed). Volumes hold data,
+    # so ask, and show what goes.
+    set -l volume_count 0
+    if test (count $volumes) -gt 0
         set_color yellow
-        echo "Unused volumes: $volume_count"
+        echo "Unused volumes: "(count $volumes)
         set_color normal
-        docker volume rm $volumes 2>/dev/null
+        printf '  %s\n' $volumes
+        read -l -P "Remove these volumes? (y/N) " confirm
+        if test "$confirm" = y -o "$confirm" = Y
+            docker volume rm $volumes 2>/dev/null
+            set volume_count (count $volumes)
+        end
     end
 
     # Full prune with --all flag
@@ -55,7 +64,6 @@ function dclean --description "Clean up Docker: stopped containers, dangling ima
     end
 
     echo "---"
-    set -l space (docker system df --format '{{.Reclaimable}}' 2>/dev/null | head -1)
     set_color green
     echo "Done — $container_count containers, $image_count images, $volume_count volumes removed"
     set_color normal

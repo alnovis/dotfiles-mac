@@ -206,14 +206,7 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
 
     # --- Execute ---
 
-    # 1. Delete old tag if re-release
-    if test "$is_rerelease" = true
-        echo "Deleting old tag $tag..."
-        git tag -d $tag
-        git push origin :refs/tags/$tag 2>/dev/null
-    end
-
-    # 2. Commit if needed
+    # 1. Commit if needed
     if test "$will_commit" = true
         git add -A
         if not git commit -m "$commit_msg"
@@ -221,6 +214,18 @@ function grelease --description "Tag a release: commit, tag, push (with re-relea
             echo "Error: commit failed"
             set_color normal
             return 1
+        end
+    end
+
+    # 2. Delete the old tag if re-release — only now, after the commit succeeded: deleting
+    # it first and then failing the commit (a hook) would leave no tag anywhere
+    if test "$is_rerelease" = true
+        echo "Deleting old tag $tag..."
+        git tag -d $tag
+        if not git push origin :refs/tags/$tag
+            set_color yellow
+            echo "Warning: could not delete $tag on origin — the push below may be rejected"
+            set_color normal
         end
     end
 

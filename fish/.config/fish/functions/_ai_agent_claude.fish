@@ -26,7 +26,19 @@ function _ai_agent_claude --description "Runner: claude CLI (Anthropic models, s
     if set -q _flag_interactive
         set -q _flag_continue; and set -a args --continue
         set -q _flag_resume; and set -a args --resume
-        claude $args $argv
+        # The profile holds in the REPL too (`ai code` promises no edits without -e).
+        # One comma-joined --tools value, then `--`: --tools is variadic.
+        switch "$_flag_tools"
+            case none
+                set -a args --tools ""
+            case read ''
+                set -a args --tools Read,Grep,Glob
+            case edit
+            case '*'
+                echo "claude: unknown tool profile '$_flag_tools' (none|read|edit)" >&2
+                return 1
+        end
+        claude $args -- $argv
         return
     end
 

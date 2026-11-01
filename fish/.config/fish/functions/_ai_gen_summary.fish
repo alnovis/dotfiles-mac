@@ -130,6 +130,9 @@ $readme_content
 Directory: $dir
 $context"
 
+    # Absolute before _ai_run: it cd's into --workdir before redirecting, so a relative -o
+    # would land in the summarised project instead of where the user ran the command
+    test -n "$output"; and set output (path resolve -- $output)
     set -l runner_args --provider $provider --workdir $dir $model_flag
     if test -n "$output"
         set -a runner_args --output $output

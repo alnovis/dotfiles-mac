@@ -164,7 +164,7 @@ directory before calling the runner (runners take no `--workdir`).
 | `read` | `--tools read,grep,find,ls` | `--agent ai-read` | `--strict-mcp-config --tools Read Grep Glob` |
 | `edit` | full toolset | `--agent ai-edit` | default tools |
 | `--skill FILE` | `--append-system-prompt FILE` | prepended to the stdin prompt | `--append-system-prompt-file FILE` |
-| `--interactive` | pi TUI with the profile's tools (`read` uses `--exclude-tools edit,write`, so bash stays and pi prompts for it); `--continue` / `--resume` | opencode TUI, `--continue`; agent and model are picked in the TUI | claude REPL, `--continue` / `--resume`; claude's own permission prompts (no tool restriction) |
+| `--interactive` | pi TUI with the profile's tools (`read` uses `--exclude-tools edit,write`, so bash stays and pi prompts for it); `--continue` / `--resume` | opencode TUI, `--continue`; agent and model are picked in the TUI, so only profile `edit` is accepted (others are refused) and a `--model` is reported as not applied | claude REPL, `--continue` / `--resume`; the profile's tools (`--tools ""` / `Read,Grep,Glob` / default) |
 | `--no-session` | `--no-session` | accepted, no effect (`opencode run` always keeps a session) | `--no-session-persistence` |
 | Extra args | passed to pi (e.g. `@files`) | passed to opencode | ignored |
 | `_models` | `pi --offline --list-models` | `opencode models` | static: `sonnet`, `opus`, `haiku` |
@@ -479,7 +479,7 @@ the executor, and starts it with `--interactive`. `--dry-run` prints
 |---|---|
 | Fallback provenance | Recorded on stderr only, not inside the `-o` file |
 | Interactive sessions not probed | `ai code` / `ai chat` start the runner without a reachability check |
-| Interactive tool profiles | opencode's TUI picks agent and model itself; the claude REPL uses its own permission prompts; pi's interactive `read` keeps bash |
+| Interactive tool profiles | opencode's TUI can't take a profile or model, so `ai code`/`ai chat` via opencode need `-e` (profile edit); pi's interactive `read` keeps bash |
 | Runner context window | Runners use the server's `OLLAMA_CONTEXT_LENGTH` for ollama, not a per-request size. Register ollama models in the runner with a matching context window, or big agentic prompts come back empty |
 | claude runner isolation | `claude -p` loads the user's Claude Code memory and the project's `CLAUDE.md`, which can bias a review |
 | Runner model lists are live | `_models` runs the runner's listing on each selection (no cache) |

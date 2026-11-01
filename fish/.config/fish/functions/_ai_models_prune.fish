@@ -22,9 +22,23 @@ function _ai_models_prune --description "Clean up partial downloads and orphaned
     end
 
     # Find orphaned blobs (not referenced by any manifest)
+    # One jq per manifest: a single stream stops at the first unparseable file (a .DS_Store,
+    # a truncated pull) and every manifest after it would look unreferenced — its blobs
+    # deleted as orphans. Any manifest that doesn't parse aborts the prune.
+    if not command -q jq
+        echo "Error: jq is required to read the manifests" >&2
+        return 1
+    end
     set -l referenced_digests
     if test -d $manifests_dir
-        set referenced_digests (find $manifests_dir -type f -exec cat {} \; 2>/dev/null | jq -r '.. | .digest? // empty' 2>/dev/null | sort -u)
+        for m in (find $manifests_dir -type f 2>/dev/null)
+            set -l digests (jq -r '.. | .digest? // empty' $m 2>/dev/null)
+            if test $status -ne 0
+                echo "Error: cannot parse manifest $m — remove or fix it, then retry (nothing deleted)" >&2
+                return 1
+            end
+            set -a referenced_digests $digests
+        end
     end
 
     set -l orphan_count 0

@@ -49,15 +49,29 @@ function _k_pods --description "k pods: overview of pods across namespaces; prob
     echo $header
     set_color normal
 
+    # Classify by the READY and STATUS columns, located in the header (the columns before
+    # them — NAMESPACE, NAME — never contain spaces, so the field index is stable):
+    # Completed/Succeeded is fine whatever READY says (a finished job is 0/1); any other
+    # non-Running status is red; Running with fewer ready than total (1/2) is yellow.
+    set -l cols (string split -n ' ' -- $header)
+    set -l ready_i (contains -i -- READY $cols)
+    set -l status_i (contains -i -- STATUS $cols)
+
     set -l ok 0
     set -l problem 0
     for row in $rows
-        if not string match -rq 'Running|Completed|Succeeded' -- $row
+        set -l f (string split -n ' ' -- $row)
+        set -l st $f[$status_i]
+        set -l rd (string split / -- $f[$ready_i])
+        if contains -- $st Completed Succeeded
+            echo $row
+            set ok (math $ok + 1)
+        else if test "$st" != Running
             set_color red
             echo $row
             set_color normal
             set problem (math $problem + 1)
-        else if string match -rq ' 0/[0-9]' -- $row
+        else if test "$rd[1]" != "$rd[2]"
             set_color yellow
             echo $row
             set_color normal

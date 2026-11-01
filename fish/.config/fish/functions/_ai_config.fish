@@ -81,6 +81,13 @@ function _ai_config_target_file --argument-names scope
 end
 
 function _ai_config_expand_tasks --argument-names spec
+    # A typo (`--task reveiw`) would write a key nothing reads — refuse it, like ai models use
+    if not _ai_is_task "$spec"
+        set_color red >&2
+        echo "Error: unknown task '$spec' (valid: "(string join ', ' (_ai_tasks))", or 'all')" >&2
+        set_color normal >&2
+        return 1
+    end
     if test "$spec" = all
         _ai_tasks
     else
@@ -159,7 +166,7 @@ end
 
 function _ai_config_do_provider --argument-names value task scope
     set -l valid_providers (_ai_providers)
-    set -l target_file (_ai_config_target_file $scope)
+    set -l target_file (_ai_config_target_file $scope); or return 1
 
     # Show form
     if test -z "$value"
@@ -188,7 +195,7 @@ function _ai_config_do_provider --argument-names value task scope
 
     # Set
     if test -n "$task"
-        set -l tasks (_ai_config_expand_tasks $task)
+        set -l tasks (_ai_config_expand_tasks $task); or return 1
         for t in $tasks
             _ai_config_write_file $target_file "$t"_provider $value
         end
@@ -223,7 +230,7 @@ end
 function _ai_config_show_provider_task --argument-names task scope
     set -l current (_ai_default_provider $task)
     set -l valid_providers (_ai_providers)
-    set -l target_file (_ai_config_target_file $scope)
+    set -l target_file (_ai_config_target_file $scope); or return 1
     set -l direct (_ai_config_read_file $target_file "$task"_provider)
     set -l is_inherit 0
     if test $status -ne 0; or test -z "$direct"
@@ -256,8 +263,8 @@ function _ai_config_do_reset --argument-names task scope
         return 1
     end
 
-    set -l target_file (_ai_config_target_file $scope)
-    set -l tasks (_ai_config_expand_tasks $task)
+    set -l target_file (_ai_config_target_file $scope); or return 1
+    set -l tasks (_ai_config_expand_tasks $task); or return 1
 
     for t in $tasks
         _ai_config_remove_file $target_file "$t"_provider
@@ -286,14 +293,14 @@ function _ai_config_do_move --argument-names task to
     set -l target_file
     set -l source_file
     if test "$to" = global
-        set source_file (_ai_project_config_target)
+        set source_file (_ai_project_config_target); or return 1
         set target_file ~/.config/ai/config
     else
         set source_file ~/.config/ai/config
-        set target_file (_ai_project_config_target)
+        set target_file (_ai_project_config_target); or return 1
     end
 
-    set -l tasks (_ai_config_expand_tasks $task)
+    set -l tasks (_ai_config_expand_tasks $task); or return 1
 
     set -l moved
     for t in $tasks

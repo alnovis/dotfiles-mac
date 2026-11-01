@@ -129,7 +129,8 @@ would start: claude (runner claude, profile none), interactive, resume (pick), m
 ```
 
 With opencode as the runner, `-r` has no effect (its TUI takes only `--continue`) and the model is
-picked in the TUI.
+picked in the TUI. The TUI can't restrict tools either, so the runner refuses any profile below
+`edit` — `ai chat` (profile none) and `ai code` without `-e` fail with a hint; use `agent=pi`.
 
 ## `ai code`
 
