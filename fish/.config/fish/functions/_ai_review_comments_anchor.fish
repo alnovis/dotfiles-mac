@@ -1,4 +1,5 @@
-function _ai_review_comments_anchor --description "Anchor extracted comments (JSON array file) to real lines: prints the comments JSON for GitLab/GitHub" --argument-names comments_file range root
+function _ai_review_comments_anchor --description "Anchor extracted comments (JSON array file) to real lines: prints the comments JSON for GitLab/GitHub" --argument-names comments_file range root runs
+    test -n "$runs"; or set runs 1
     # No model here. A model's line numbers are often off, so the line is found again by
     # the quote: first in the new version of the file, then in the old one (removed code).
     # The model's number only breaks ties. in_diff says whether the line sits inside a
@@ -83,17 +84,24 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
             set -e hunks
         end
 
+        # A file the repo has but no line to put the comment on (a missing test, a stale
+        # document): a file-level comment, posted as a general one — not "unanchored"
+        set -l found false
+        contains -- $path $files_at_head; and set found true
         printf '%s' $c | jq -c --arg path $path --arg side "$side" --argjson line $line --argjson in_diff $in_diff \
-            --arg by "$by" --arg code "$code" \
+            --arg by "$by" --arg code "$code" --argjson found $found --argjson runs $runs \
             '{path: $path, side: (if $side == "" then null else $side end), line: (if $line > 0 then $line else null end),
-              line_cited: (.line // null), anchored: ($side != ""), anchored_by: (if $by == "" then null else $by end),
+              line_cited: (if (.line // 0) > 0 then .line else null end), anchored: ($side != ""),
+              anchored_by: (if $by == "" then null else $by end),
+              file_level: ($side == "" and $found and ((.line // 0) <= 0)),
               code: (if $side == "" then null else $code end), quote: (.quote // ""), in_diff: $in_diff,
+              seen: ([((.seen // 1) | tonumber? // 1), 1] | max | [., $runs] | min), runs: $runs,
               severity: (.severity // "important"), status: (.status // "confirmed"), body: (.body // "")}' >>$out
     end
 
-    jq -s --arg base "$base" --arg head "$head" \
+    jq -s --arg base "$base" --arg head "$head" --argjson runs $runs \
         '{base_sha: (if $base == "" then null else $base end), head_sha: (if $head == "" then null else $head end),
-          start_sha: (if $base == "" then null else $base end), comments: .}' $out
+          start_sha: (if $base == "" then null else $base end), runs: $runs, comments: .}' $out
     rm -f $out
 end
 

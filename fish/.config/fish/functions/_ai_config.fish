@@ -166,11 +166,20 @@ function _ai_config_do_status
         end
     end | table --header --indent 2
 
+    # The review settings that resolve per provider/model (scoped keys, _ai_review_setting)
+    set -l rp (_ai_default_provider review)
+    set -l rm (_ai_default_model review $rp)
     echo
     set_color cyan
-    echo "Review prompt:"
+    echo "Review ($rp"(test -n "$rm"; and echo " / $rm")"):"
     set_color normal
-    echo "  "(_ai_review_prompt_mode --origin (_ai_default_provider review))
+    begin
+        printf '%s\t%s\n' prompt (_ai_review_prompt_mode --origin $rp)
+        set -l r (_ai_review_runs_count $rp "$rm" "" 2>/dev/null | string split \t)
+        test -n "$r[1]"; and printf '%s\t%s\n' runs "$r[1] ($r[2])"
+        set -l m (_ai_review_parallel_mode $rp "$rm" "" 2>/dev/null | string split \t)
+        test -n "$m[1]"; and printf '%s\t%s\n' parallel "$m[1] ($m[2])"
+    end | table --indent 2
 end
 
 function _ai_config_do_provider --argument-names value task scope

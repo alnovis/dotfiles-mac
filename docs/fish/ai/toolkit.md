@@ -383,6 +383,43 @@ one, so run it from the repo when the verifier uses `--agentic`.
 | `--range BASE..HEAD` | With `--comments`: the reviewed range, to anchor lines and check the diff |
 | `--verdicts FILE` | With `--comments`: an existing verify file — no verify pass, comments only |
 
+### Several review runs (`--runs`)
+
+One run of a review — an agentic one above all — is a sample: the model decides which files to
+open and goes a different way each time. On the same seven commits, three runs of qwen3.8 found
+three sets of findings that did not overlap. `--runs N` runs the review N times and joins them
+before verify:
+
+```
+review ×N  →  joined under "## Run K/N"  →  one verify over all of it  →  (comments)
+```
+
+- Several runs turn `--verify` on (they exist to be judged together) and refuse `--brief` and
+  `--no-verify`.
+- The joined review is `<output>`; each run is kept as `<base>.runK.<ext>` with its own footer.
+  A run that fails is skipped; the join fails only if none answered (`2/3 runs answered`).
+- With `--comments`, the extraction merges the same problem reported by several runs into one
+  comment and counts it: `"seen": 2, "runs": 3` in the JSON, `found by 2 of 3 runs` in the
+  markdown. Two different problems on one line stay two comments.
+- **Parallel or one at a time:** parallel runs are separate fish processes (a backgrounded fish
+  function runs in the same process, one after another). `auto` runs a cloud provider in
+  parallel and ollama one at a time (several local runs would not fit in memory).
+
+Both are config keys, scoped by provider and model — the narrowest scope wins inside a file,
+the project config beats the global one, a flag beats both:
+
+```
+review_runs=1                                      # everyone (the built-in default too)
+review_runs@litellm=3                              # every model of a provider
+review_runs@litellm/selectel/qwen/qwen3.8-27b=3    # one model
+review_parallel@claude=off                         # auto | on | off
+```
+
+Flags: `--runs N`, `--parallel`, `--no-parallel`. `ai config status` shows what the review task
+resolves to and where it comes from. Three runs are a good number for a small model; a claude
+review is steadier, so one run there is usually enough — and parallel claude runs spend a
+subscription's usage limit three times as fast.
+
 ### Merge-request comments (`--comments`)
 
 A third stage over the verdicts: line comments for a GitLab merge request or a GitHub pull
@@ -408,13 +445,19 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
    - `review.comments.md` — for a human to check: per file, each comment with its line and side,
      severity, `uncertain — needs a human check` where so, the quoted line and the text. A line
      outside the diff says to post it as a general comment; one not found says `Unanchored`.
+     A finding about a whole file (a missing test, a stale document) has no line: it is
+     `Whole file` (`"file_level": true`), also posted as a general comment. A quote that did
+     not match but whose cited line exists is placed by that number and flagged
+     (`"anchored_by": "line"`); the markdown always shows the real line from the code.
    - `review.comments.json` — for publishing, one shape for both platforms:
 
      ```json
-     {"base_sha": "…", "head_sha": "…", "start_sha": "…",
+     {"base_sha": "…", "head_sha": "…", "start_sha": "…", "runs": 3,
       "comments": [{"path": "src/…/WhitelistOrgCache.java", "side": "new", "line": 36,
-                    "line_cited": 24, "quote": "localCache = Stream.concat(…)", "in_diff": true,
-                    "anchored": true, "severity": "important", "status": "confirmed", "body": "…"}]}
+                    "line_cited": 24, "anchored": true, "anchored_by": "quote", "file_level": false,
+                    "code": "        localCache = Stream.concat(…)", "quote": "localCache = Stream.concat(…)",
+                    "in_diff": true, "seen": 2, "runs": 3,
+                    "severity": "important", "status": "confirmed", "body": "…"}]}
      ```
 
      GitLab: `position` = `base_sha`, `start_sha`, `head_sha`, `new_path`/`old_path` and
@@ -832,6 +875,8 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
 | `review_prompt` | by hand | Review prompt depth: `auto` (default: full for claude, lean for every other model), `full`, `lean` |
+| `review_runs` | by hand | How many review runs to join before verify (default 1); scoped: `review_runs@PROVIDER`, `review_runs@PROVIDER/MODEL` |
+| `review_parallel` | by hand | Those runs: `auto` (default: cloud in parallel, ollama one at a time), `on`, `off`; scoped like `review_runs` |
 | `cloud_driver` | by hand | Single calls to an OpenAI-API provider of the runner (litellm, …): `native` (default, direct HTTP) or `runner` (through pi / opencode) |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |
 

@@ -1,17 +1,19 @@
 40
 40
-{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":8,"line_cited":3,"in_diff":true,"anchored":true,"anchored_by":"quote","status":"confirmed"}
-{"path":"fish/.config/fish/functions/gbranch.fish","side":"old","line":39,"line_cited":99,"in_diff":true,"anchored":true,"anchored_by":"quote","status":"uncertain"}
-{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":115,"line_cited":115,"in_diff":false,"anchored":true,"anchored_by":"quote","status":"confirmed"}
-{"path":"nope.fish","side":null,"line":null,"line_cited":1,"in_diff":false,"anchored":false,"anchored_by":null,"status":"uncertain"}
-{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":8,"line_cited":8,"in_diff":true,"anchored":true,"anchored_by":"line","status":"confirmed"}
+3
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":8,"line_cited":3,"in_diff":true,"anchored":true,"anchored_by":"quote","file_level":false,"seen":3,"status":"confirmed"}
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"old","line":39,"line_cited":99,"in_diff":true,"anchored":true,"anchored_by":"quote","file_level":false,"seen":1,"status":"uncertain"}
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":115,"line_cited":115,"in_diff":false,"anchored":true,"anchored_by":"quote","file_level":false,"seen":1,"status":"confirmed"}
+{"path":"nope.fish","side":null,"line":null,"line_cited":1,"in_diff":false,"anchored":false,"anchored_by":null,"file_level":false,"seen":1,"status":"uncertain"}
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":8,"line_cited":8,"in_diff":true,"anchored":true,"anchored_by":"line","file_level":false,"seen":1,"status":"confirmed"}
+{"path":"fish/.config/fish/functions/gbranch.fish","side":null,"line":null,"line_cited":null,"in_diff":false,"anchored":false,"anchored_by":null,"file_level":true,"seen":2,"status":"confirmed"}
 # Review comments — check before publishing
 
-5 comment(s): 3 confirmed, 2 uncertain. Range: <range>
+6 comment(s): 4 confirmed, 2 uncertain. Range: <range> From 3 review runs.
 
 ## fish/.config/fish/functions/gbranch.fish
 
-### Line 8 (new) · nit
+### Line 8 (new) · nit · found by 3 of 3 runs
 
 ```
 echo "Auto-detects the nearest base among develop/main/master/release/stage"
@@ -20,7 +22,7 @@ echo "Auto-detects the nearest base among develop/main/master/release/stage"
 An added line, cited with an abbreviated path and a wrong line number.
 
 
-### Line 39 (old) · important · uncertain — needs a human check
+### Line 39 (old) · important · uncertain — needs a human check · found by 1 of 3 runs
 
 ```
 else if git show-ref --verify --quiet refs/heads/develop
@@ -29,7 +31,7 @@ else if git show-ref --verify --quiet refs/heads/develop
 A removed line: found in the old version.
 
 
-### Line 115 (new) · nit
+### Line 115 (new) · nit · found by 1 of 3 runs
 
 ```
 set -l parts (string split \t $line)
@@ -39,7 +41,7 @@ An unchanged line far from the change: anchored, not in the diff.
 
 > Not in the diff: GitLab/GitHub take a line comment only inside the changes — post it as a general comment.
 
-### Line 8 (new) · nit
+### Line 8 (new) · nit · found by 1 of 3 runs
 
 ```
 echo "Auto-detects the nearest base among develop/main/master/release/stage"
@@ -49,9 +51,15 @@ An invented quote with a right line number: placed by the line, flagged.
 
 > Placed by the cited line number: the quote did not match the code (model quoted: `echo "a line the model invented"`) — check this is the right line.
 
+### Whole file · important · found by 2 of 3 runs
+
+A file-level finding (a missing test): no line, posted as a general comment; found by 2 runs.
+
+> File-level: no line to attach it to — post it as a general comment.
+
 ## nope.fish
 
-### Line 1 cited, not found · nit · uncertain — needs a human check
+### Line 1 cited, not found · nit · uncertain — needs a human check · found by 1 of 3 runs
 
 ```
 x

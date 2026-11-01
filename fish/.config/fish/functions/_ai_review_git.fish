@@ -1,7 +1,7 @@
 function _ai_review_git --description "AI review of git changes (branch, last N, or specific commit)"
     # Called by _ai_review dispatcher after mode detection.
     argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' 'o/output=' 'lens=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'dry-run' \
-             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'comments' -- $argv; or return 1
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'comments' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
     # Quoted: an empty (…) would vanish and shift the arguments
     _ai_review_comments_check "$(set -q _flag_comments; and echo 1)" "$(set -q _flag_brief; and echo 1)" \
         "$(set -q _flag_no_verify; and echo 1)" "$_flag_output"; or return 1
@@ -27,6 +27,13 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     if test -z "$model"
         set model (_ai_default_model review $provider)
     end
+
+    # How many review runs, and how they go (scoped config, see _ai_review_setting)
+    set -l plan (_ai_review_runs_plan $provider "$model" "$_flag_runs" "$(set -q _flag_parallel; and echo 1)" \
+        "$(set -q _flag_no_parallel; and echo 1)" "$(set -q _flag_brief; and echo 1)" "$(set -q _flag_no_verify; and echo 1)")
+    or return 1
+    set plan (string split \t -- $plan)
+    set -l runs $plan[1]
 
     set -l lang en
     set -l lang_all 0
@@ -189,7 +196,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
             echo "Lens: $_flag_lens"
         end
     end
-    if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
+    if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; or test $runs -gt 1; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
         if set -q _flag_brief
             set_color yellow
             echo "Verify: requested (ignored — --brief mode)"
@@ -199,6 +206,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
             test -z "$vp"; and set vp "$provider"
             echo "Verify: on ($vp)"
             set -q _flag_comments; and echo "Comments: on (MR line comments from the verdicts)"
+            test $runs -gt 1; and echo "Runs: $runs ($plan[3])"
         end
     end
     if test -n "$lang"
@@ -337,7 +345,7 @@ $context_block"
     # --comments needs the verdicts, so it turns verify on.
     set -l do_verify 0
     if not set -q _flag_brief
-        if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
+        if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; or test $runs -gt 1; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
             set do_verify 1
         end
     end
@@ -347,6 +355,7 @@ $context_block"
         printf '%s' "$prompt" >$p1file
         set -l flow_args --prompt-file $p1file --provider $provider --workdir $repo_root
         set -q _flag_comments; and set -a flow_args --comments --range $range
+        set -a flow_args --runs $runs --parallel-mode $plan[2]
         test -n "$model"; and set -a flow_args --model $model
         test -n "$output"; and set -a flow_args --output $output
         set -q _flag_dry_run; and set -a flow_args --dry-run

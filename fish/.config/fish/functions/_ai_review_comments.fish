@@ -5,7 +5,10 @@ function _ai_review_comments --description "Third review stage: line comments fo
     # line; _ai_review_comments_anchor then finds each line in the code itself. Nothing is
     # posted: the .md is for a human to check, the .json is shaped for GitLab and GitHub.
     # --quiet: no "saved to" lines — the caller lists every file of the run at the end
-    argparse 'findings=' 'verdicts=' 'output=' 'provider=' 'model=' 'lang=' 'range=' 'root=' 'label=' 'dry-run' 'quiet' -- $argv; or return 1
+    # --runs N: how many review runs answered — each comment's "seen" is out of N
+    argparse 'findings=' 'verdicts=' 'output=' 'provider=' 'model=' 'lang=' 'range=' 'root=' 'label=' 'dry-run' 'quiet' 'runs=' -- $argv; or return 1
+    set -l runs $_flag_runs
+    test -n "$runs"; or set runs 1
 
     set -l md (_ai_comments_output_path $_flag_output md)
     set -l json (_ai_comments_output_path $_flag_output json)
@@ -61,7 +64,7 @@ VERDICTS ON THEM:
     end
     rm -f $raw
 
-    _ai_review_comments_anchor $arr "$_flag_range" $root >$json
+    _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
     rm -f $arr
     _ai_review_comments_md $json >$md
 
@@ -85,9 +88,13 @@ function _ai_review_comments_saved --description "The 'saved to' lines of the co
         echo "Comments:          none — $why"
         return 0
     end
-    set -l off (jq '[.comments[] | select(.anchored and (.in_diff | not))] | length' $json)
-    set -l lost (jq '[.comments[] | select(.anchored | not)] | length' $json)
-    echo "Comments saved to: $md ($n; not in the diff: $off, unanchored: $lost)"
+    # Only the counts that are not zero: general = not in the diff or file-level
+    set -l general (jq '[.comments[] | select((.anchored and (.in_diff | not)) or .file_level)] | length' $json)
+    set -l lost (jq '[.comments[] | select((.anchored | not) and (.file_level | not))] | length' $json)
+    set -l parts "$n"
+    test $general -gt 0; and set -a parts "$general as general comments"
+    test $lost -gt 0; and set -a parts "$lost unanchored"
+    echo "Comments saved to: $md ("(string join ', ' -- $parts)")"
     echo "                   $json"
 end
 
@@ -100,26 +107,30 @@ end
 function _ai_review_comments_md --description "The comments JSON as markdown for a human to check before publishing" --argument-names json
     jq -r '
         # The file is the section heading; a comment heading names only its line
-        def where: if .anchored then "Line \(.line) (\(.side))" else "Line \(.line_cited // "?") cited, not found" end;
+        def where:
+            if .anchored then "Line \(.line) (\(.side))"
+            elif .file_level then "Whole file"
+            else "Line \(.line_cited // "?") cited, not found" end;
+        def found_by: if (.runs // 1) > 1 then " · found by \(.seen) of \(.runs) runs" else "" end;
         def notes:
-            (if (.anchored | not) then "> Unanchored: the quoted line was not found in the code — check it by hand."
+            (if .file_level then "> File-level: no line to attach it to — post it as a general comment."
+             elif (.anchored | not) then "> Unanchored: the quoted line was not found in the code — check it by hand."
              elif .anchored_by == "line" then "> Placed by the cited line number: the quote did not match the code (model quoted: `\(.quote)`) — check this is the right line."
              else empty end),
             (if .anchored and (.in_diff | not) then "> Not in the diff: GitLab/GitHub take a line comment only inside the changes — post it as a general comment." else empty end);
         "# Review comments — check before publishing",
         "",
         "\(.comments | length) comment(s): \([.comments[] | select(.status == "confirmed")] | length) confirmed, \([.comments[] | select(.status != "confirmed")] | length) uncertain."
-            + (if .base_sha then " Range: \(.base_sha[0:7])..\(.head_sha[0:7])." else "" end),
+            + (if .base_sha then " Range: \(.base_sha[0:7])..\(.head_sha[0:7])." else "" end)
+            + (if (.runs // 1) > 1 then " From \(.runs) review runs." else "" end),
         "",
         (.comments | group_by(.path)[] |
             "## \(.[0].path)", "",
             (.[] |
-                "### \(where) · \(.severity)" + (if .status == "confirmed" then "" else " · uncertain — needs a human check" end),
+                "### \(where) · \(.severity)" + (if .status == "confirmed" then "" else " · uncertain — needs a human check" end) + found_by,
                 "",
-                "```",
-                ((.code // .quote) | sub("^[[:space:]]+"; "")),
-                "```",
-                "",
+                (if (.code // .quote) == "" then empty else
+                    "```", ((.code // .quote) | sub("^[[:space:]]+"; "")), "```", "" end),
                 .body,
                 "",
                 notes,

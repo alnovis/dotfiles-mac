@@ -14,6 +14,8 @@ Resolved per task:
   commit   ollama    commit-model   global+top     global
   summary  ollama    default-model  global+top     env
 
-Review prompt:
-  lean (auto: not claude)
+Review (ollama / review-model):
+  prompt    lean (auto: not claude)
+  runs      1 (default)
+  parallel  sequential (auto: a local model)
 [exit 0]

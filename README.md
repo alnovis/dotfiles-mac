@@ -200,6 +200,7 @@ All functions support `-h/--help`.
 - `--no-think` — fast pass: disable a thinking model's reasoning
 - `--verify` / `--verify-provider P` / `--verify-model M` — adversarial second pass that tries to refute each finding; with `-o` it goes to `<output>.verify.<ext>`; `--verify-only FILE` re-verifies a saved review
 - `--comments` — a third stage: merge-request line comments from the confirmed and uncertain findings, each line found again by its quoted code (`<output>.comments.md` to check, `.comments.json` for GitLab/GitHub)
+- `--runs N` (`--parallel` / `--no-parallel`) — run the review N times and join them before verify, since one run of a small model is only a sample; config `review_runs` / `review_parallel`, scoped by provider and model (`review_runs@litellm=3`)
 - `--context-lines N` — line budget for embedding whole files: the changed files in git mode (default 2000), a directory target's files (default 10000); config keys `context_lines` / `dir_context_lines`
 - Git only: `--lang-all LANG`, `--max-lines N` (diff cap, default 500)
 

@@ -15,8 +15,12 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --code-file FILE         code/diff context embedded for the verifier
     #   --comments               a third stage: MR line comments from the verified findings
     #   --range BASE..HEAD       the reviewed range, for anchoring those comments
+    #   --runs N                 run the review N times and join them (_ai_review_runs)
+    #   --parallel-mode M        parallel | sequential, for those runs
     argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
-             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' -- $argv; or return 1
+    set -l runs $_flag_runs
+    test -n "$runs"; or set runs 1
 
     if test -z "$_flag_prompt_file"; or not test -f "$_flag_prompt_file"
         echo "verify-flow: missing --prompt-file" >&2
@@ -65,6 +69,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
 
     if set -q _flag_dry_run
         set_color cyan >&2; echo "--- dry-run: pass 1 (review) ---" >&2; set_color normal >&2
+        test $runs -gt 1; and echo "review runs: $runs ($_flag_parallel_mode), joined under ## Run K/$runs" >&2
         printf '%s' "$pass1_prompt" | _ai_run $run_args --dry-run
         set_color cyan >&2; echo "--- dry-run: pass 2 (verify) ---" >&2; set_color normal >&2
         set -l code_note "no code"
@@ -84,6 +89,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l n_stages 2
     set -q _flag_comments; and set n_stages 3
     set -l rev_label "Review - $provider"
+    test $runs -gt 1; and set rev_label "Review ×$runs - $provider"
     test -n "$model"; and set rev_label "$rev_label - $model"
     set -l ver_label "Verify - $vprovider"
     test -n "$vmodel"; and set ver_label "$ver_label - $vmodel"
@@ -110,8 +116,16 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l rev_dest $review_out
     test -z "$rev_dest"; and set rev_dest "(terminal)"
 
-    printf '%s' "$pass1_prompt" | _ai_run_watched --label "[1/$n_stages] $rev_label" --output $find_src --dest $rev_dest -- $run_args
-    set -l rc1 $status
+    set -l runs_ok 1
+    set -l rc1 0
+    if test $runs -gt 1
+        set runs_ok (_ai_review_runs --runs $runs --mode $_flag_parallel_mode --prompt-file $_flag_prompt_file \
+            --output $find_src --dest $rev_dest --label "[1/$n_stages] $rev_label" -- $run_args)
+        set rc1 $status
+    else
+        printf '%s' "$pass1_prompt" | _ai_run_watched --label "[1/$n_stages] $rev_label" --output $find_src --dest $rev_dest -- $run_args
+        set rc1 $status
+    end
 
     if test $rc1 -ne 0; or not test -s $find_src
         echo "  Review pass produced no output (provider=$provider). Aborting before verify." >&2
@@ -158,7 +172,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         if test -s "$ver_target"
             _ai_review_comments --findings $find_src --verdicts $ver_target --output $review_out \
                 --provider $vprovider --model "$vmodel" --lang "$lang" --range "$_flag_range" --root $workdir \
-                --label "[3/3] $com_label" --quiet
+                --runs $runs_ok --label "[3/3] $com_label" --quiet
             set rc3 $status
         else
             set com_note "Comments skipped: no verdicts to build them from."
@@ -171,6 +185,15 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     if test -n "$review_out"
         set_color green
         echo "Review saved to:   $review_out"
+        if test $runs -gt 1
+            set -l base (string replace -r '\.[^.]+$' '' -- $review_out)
+            set -l ext (path extension -- $review_out)
+            set -l kept (path filter -f -- $base.run(seq $runs)$ext)
+            echo "Runs saved to:     $kept[1] ($runs_ok/$runs answered)"
+            for f in $kept[2..]
+                echo "                   $f"
+            end
+        end
         if test -s "$ver_target"
             echo "Verify saved to:   $verify_out"
         else

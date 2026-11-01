@@ -29,7 +29,7 @@ function _ai_review --description "AI code review — project state (path target
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
              'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' \
-             'comments' 'range=' 'verdicts=' -- $argv
+             'comments' 'range=' 'verdicts=' 'runs=' 'parallel' 'no-parallel' -- $argv
     or return 1
 
     if set -q _flag_help
@@ -138,6 +138,13 @@ function _ai_review_print_help
     echo "                          <output>.comments.json for GitLab/GitHub. Each line is"
     echo "                          found by its quoted code, so a wrong line number is"
     echo "                          fixed; a line outside the diff is marked. Needs -o."
+    echo "  --runs N                Run the review N times and join them before verify:"
+    echo "                          one run is a sample, several find more (turns --verify"
+    echo "                          on). Default: config review_runs (scoped by provider/"
+    echo "                          model, e.g. review_runs@litellm=3), else 1"
+    echo "  --parallel, --no-parallel"
+    echo "                          How those runs go. Default: config review_parallel"
+    echo "                          (auto|on|off), auto = cloud in parallel, ollama in turn"
     echo "  --range BASE..HEAD      With --verify-only: the reviewed range, for anchoring"
     echo "  --verdicts FILE         With --verify-only: an existing verify file — no"
     echo "                          verify pass, comments only"

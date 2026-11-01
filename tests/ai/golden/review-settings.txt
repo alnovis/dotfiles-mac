@@ -1,0 +1,10 @@
+4	config project review_runs@testcloud/cloud-model
+3	config project review_runs@testcloud
+2	config project review_runs
+5	--runs
+Error: review runs must be a positive integer (got 'abc' from --runs)
+sequential	config project review_parallel@claude
+parallel	auto: a cloud provider
+parallel	config project review_parallel@ollama
+sequential	--no-parallel
+[exit 0]

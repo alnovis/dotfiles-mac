@@ -1,0 +1,8 @@
+review runs: 3 (sequential), joined under ## Run K/3
+Verify: on (ollama)
+Runs: 3 (runs from --runs, sequential: auto: a local model)
+Error: several runs make a full review, not --brief (runs: 3 from --runs)
+Error: several runs are joined for verify — drop --no-verify (runs: 3 from --runs)
+Error: --parallel and --no-parallel together
+Error: review runs must be a positive integer (got '0' from --runs)
+[exit 1]

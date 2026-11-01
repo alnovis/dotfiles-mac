@@ -5,7 +5,8 @@
     "quote": "echo \"Auto-detects the nearest base among develop/main/master/release/stage\"",
     "severity": "nit",
     "status": "confirmed",
-    "body": "An added line, cited with an abbreviated path and a wrong line number."
+    "body": "An added line, cited with an abbreviated path and a wrong line number.",
+    "seen": 3
   },
   {
     "file": "fish/.config/fish/functions/gbranch.fish",
@@ -38,5 +39,14 @@
     "severity": "nit",
     "status": "confirmed",
     "body": "An invented quote with a right line number: placed by the line, flagged."
+  },
+  {
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 0,
+    "quote": "",
+    "severity": "important",
+    "status": "confirmed",
+    "seen": 2,
+    "body": "A file-level finding (a missing test): no line, posted as a general comment; found by 2 runs."
   }
 ]
