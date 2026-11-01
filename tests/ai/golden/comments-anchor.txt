@@ -11,38 +11,38 @@
 
 ## fish/.config/fish/functions/gbranch.fish
 
-### fish/.config/fish/functions/gbranch.fish:8 (new) · nit
+### Line 8 (new) · nit
 
 ```
-        echo "Auto-detects the nearest base among develop/main/master/release/stage"
+echo "Auto-detects the nearest base among develop/main/master/release/stage"
 ```
 
 An added line, cited with an abbreviated path and a wrong line number.
 
 
-### fish/.config/fish/functions/gbranch.fish:39 (old) · important · uncertain — needs a human check
+### Line 39 (old) · important · uncertain — needs a human check
 
 ```
-    else if git show-ref --verify --quiet refs/heads/develop
+else if git show-ref --verify --quiet refs/heads/develop
 ```
 
 A removed line: found in the old version.
 
 
-### fish/.config/fish/functions/gbranch.fish:115 (new) · nit
+### Line 115 (new) · nit
 
 ```
-            set -l parts (string split \t $line)
+set -l parts (string split \t $line)
 ```
 
 An unchanged line far from the change: anchored, not in the diff.
 
 > Not in the diff: GitLab/GitHub take a line comment only inside the changes — post it as a general comment.
 
-### fish/.config/fish/functions/gbranch.fish:8 (new) · nit
+### Line 8 (new) · nit
 
 ```
-        echo "Auto-detects the nearest base among develop/main/master/release/stage"
+echo "Auto-detects the nearest base among develop/main/master/release/stage"
 ```
 
 An invented quote with a right line number: placed by the line, flagged.
@@ -51,7 +51,7 @@ An invented quote with a right line number: placed by the line, flagged.
 
 ## nope.fish
 
-### nope.fish (line 1 cited, not found) · nit · uncertain — needs a human check
+### Line 1 cited, not found · nit · uncertain — needs a human check
 
 ```
 x

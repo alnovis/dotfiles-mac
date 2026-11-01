@@ -151,41 +151,46 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     _ai_review_verify $vargs --output $ver_target --label "[2/$n_stages] $ver_label" --dest $ver_dest
     set -l rc2 $status
 
-    # Deliver. With files: report both paths (review already durable). Without:
-    # print the combined review + verification to the terminal.
+    # Stage 3 — comments, only over a verify pass that produced verdicts
+    set -l rc3 0
+    set -l com_note
+    if set -q _flag_comments; and test -n "$review_out"
+        if test -s "$ver_target"
+            _ai_review_comments --findings $find_src --verdicts $ver_target --output $review_out \
+                --provider $vprovider --model "$vmodel" --lang "$lang" --range "$_flag_range" --root $workdir \
+                --label "[3/3] $com_label" --quiet
+            set rc3 $status
+        else
+            set com_note "Comments skipped: no verdicts to build them from."
+            set rc3 1
+        end
+    end
+
+    # Deliver, after every stage: all the files of the run together. Without files: print
+    # the combined review + verification to the terminal.
     if test -n "$review_out"
         set_color green
-        echo "Review saved to: $review_out"
+        echo "Review saved to:   $review_out"
         if test -s "$ver_target"
-            echo "Verify saved to: $verify_out"
+            echo "Verify saved to:   $verify_out"
         else
             # An empty file next to the review would read as a result — remove it
             rm -f "$ver_target"
             set_color yellow
             echo "Verify produced no output ($verify_out not written)."
         end
+        set_color green
+        set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_out
+        set_color yellow
+        test -n "$com_note"; and echo $com_note
+        set -q _flag_comments; and test -z "$com_note"; and test $rc3 -ne 0
+        and echo "Comments not written (see the error above)."
         set_color normal
     else
         cat $find_src
         echo ""
         set_color --bold; echo "## Verification"; set_color normal
         cat $ver_target
-    end
-
-    # Stage 3 — comments, only over a verify pass that produced verdicts
-    set -l rc3 0
-    if set -q _flag_comments; and test -n "$review_out"
-        if test -s "$ver_target"
-            _ai_review_comments --findings $find_src --verdicts $ver_target --output $review_out \
-                --provider $vprovider --model "$vmodel" --lang "$lang" --range "$_flag_range" --root $workdir \
-                --label "[3/3] $com_label"
-            set rc3 $status
-        else
-            set_color yellow
-            echo "Comments skipped: no verdicts to build them from."
-            set_color normal
-            set rc3 1
-        end
     end
 
     test $find_is_temp -eq 1; and rm -f $find_src

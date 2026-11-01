@@ -122,19 +122,24 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     _ai_review_verify $vargs --output $verify_out --label "$ver_label" --dest $verify_out
     set -l rc $status
 
-    if test -s "$verify_out"
-        set_color green
-        echo "Verify saved to: $verify_out"
-        set_color normal
-    else
+    if not test -s "$verify_out"
         rm -f "$verify_out"
         set_color red
         echo "Verify produced no output ($verify_out not written)." >&2
         set_color normal
         return 1
     end
+    set -l rc3 0
     if set -q _flag_comments
-        _ai_review_comments $com_args --label $com_label; or set rc 1
+        _ai_review_comments $com_args --label $com_label --quiet
+        set rc3 $status
     end
+
+    # Every file of the run together, after the last stage
+    set_color green
+    echo "Verify saved to:   $verify_out"
+    set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_file
+    set_color normal
+    test $rc3 -eq 0; or set rc 1
     return $rc
 end

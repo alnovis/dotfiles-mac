@@ -4,7 +4,8 @@ function _ai_review_comments --description "Third review stage: line comments fo
     # The model only turns [CONFIRMED] / [UNCERTAIN] findings into comments with a quoted
     # line; _ai_review_comments_anchor then finds each line in the code itself. Nothing is
     # posted: the .md is for a human to check, the .json is shaped for GitLab and GitHub.
-    argparse 'findings=' 'verdicts=' 'output=' 'provider=' 'model=' 'lang=' 'range=' 'root=' 'label=' 'dry-run' -- $argv; or return 1
+    # --quiet: no "saved to" lines — the caller lists every file of the run at the end
+    argparse 'findings=' 'verdicts=' 'output=' 'provider=' 'model=' 'lang=' 'range=' 'root=' 'label=' 'dry-run' 'quiet' -- $argv; or return 1
 
     set -l md (_ai_comments_output_path $_flag_output md)
     set -l json (_ai_comments_output_path $_flag_output json)
@@ -64,13 +65,21 @@ VERDICTS ON THEM:
     rm -f $arr
     _ai_review_comments_md $json >$md
 
+    set -q _flag_quiet; and return 0
+    set_color green
+    _ai_review_comments_saved $_flag_output
+    set_color normal
+end
+
+function _ai_review_comments_saved --description "The 'saved to' lines of the comments of REVIEW_OUT, with their counts" --argument-names out
+    set -l md (_ai_comments_output_path $out md)
+    set -l json (_ai_comments_output_path $out json)
+    test -s $json; or return 1
     set -l n (jq '.comments | length' $json)
     set -l off (jq '[.comments[] | select(.anchored and (.in_diff | not))] | length' $json)
     set -l lost (jq '[.comments[] | select(.anchored | not)] | length' $json)
-    set_color green
     echo "Comments saved to: $md ($n; not in the diff: $off, unanchored: $lost)"
-    echo "              and: $json"
-    set_color normal
+    echo "                   $json"
 end
 
 function _ai_comments_output_path --description "review.md + EXT → review.comments.EXT" --argument-names out ext
@@ -81,7 +90,8 @@ end
 
 function _ai_review_comments_md --description "The comments JSON as markdown for a human to check before publishing" --argument-names json
     jq -r '
-        def where: if .anchored then "\(.path):\(.line) (\(.side))" else "\(.path) (line \(.line_cited // "?") cited, not found)" end;
+        # The file is the section heading; a comment heading names only its line
+        def where: if .anchored then "Line \(.line) (\(.side))" else "Line \(.line_cited // "?") cited, not found" end;
         def notes:
             (if (.anchored | not) then "> Unanchored: the quoted line was not found in the code — check it by hand."
              elif .anchored_by == "line" then "> Placed by the cited line number: the quote did not match the code (model quoted: `\(.quote)`) — check this is the right line."
@@ -98,7 +108,7 @@ function _ai_review_comments_md --description "The comments JSON as markdown for
                 "### \(where) · \(.severity)" + (if .status == "confirmed" then "" else " · uncertain — needs a human check" end),
                 "",
                 "```",
-                (.code // .quote),
+                ((.code // .quote) | sub("^[[:space:]]+"; "")),
                 "```",
                 "",
                 .body,
