@@ -66,7 +66,7 @@ VERDICTS ON THEM:
 
     _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
     rm -f $arr
-    _ai_review_comments_md $json >$md
+    _ai_review_comments_md $json $_flag_verdicts >$md
 
     set -q _flag_quiet; and return 0
     set_color green
@@ -110,7 +110,39 @@ function _ai_comments_output_path --description "review.md + EXT → review.comm
     echo $dir/$base.comments.$ext
 end
 
-function _ai_review_comments_md --description "The comments JSON as markdown for a human to check before publishing" --argument-names json
+function _ai_review_comments_md --description "The comments JSON as markdown for a human to check before publishing; VERDICTS adds what verify refuted" --argument-names json verdicts
+    _ai_review_comments_md_comments $json
+    test -n "$verdicts"; and _ai_review_comments_md_refuted $verdicts
+end
+
+function _ai_review_comments_md_refuted --description "What verify threw out, from its [REFUTED] lines and their why:, for a human to skim" --argument-names verdicts
+    # Verify is a filter, not a referee: on a real work change it refuted the very race
+    # that was fixed a commit later, calling a regression pre-existing. So the refuted
+    # findings are listed too — not as comments, not in the JSON, only to be skimmed.
+    set -l items (awk '
+        /\[REFUTED/ {
+            t = $0
+            conf = t; sub(/.*\[REFUTED */, "", conf); sub(/\].*/, "", conf)
+            sub(/^[[:space:]]*[-*][[:space:]]*/, "", t); sub(/[[:space:]]*[—-]*[[:space:]]*\[REFUTED.*$/, "", t)
+            gsub(/\*\*/, "", t)
+            why = ""
+            if ((getline w) > 0 && w ~ /^[[:space:]]*why:/) { why = w; sub(/^[[:space:]]*why:[[:space:]]*/, "", why) }
+            printf "%s\t%s\t%s\n", t, conf, why
+        }' $verdicts 2>/dev/null)
+    test (count $items) -gt 0; or return 0
+    echo "## Refuted by verify — skim before trusting"
+    echo
+    echo "Not comments. Verify threw these out; it can be wrong — check any that sound real."
+    echo
+    for it in $items
+        set -l f (string split \t -- $it)
+        echo "- $f[1] — refuted $f[2]"
+        test -n "$f[3]"; and echo "  > $f[3]"
+    end
+    echo
+end
+
+function _ai_review_comments_md_comments --description "The comment sections of the markdown" --argument-names json
     jq -r '
         # The file is the section heading; a comment heading names only its line
         def where:

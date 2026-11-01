@@ -455,6 +455,10 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
      comment is about (`quoted` names, camelCase and CONSTANT words, case-insensitive) and a
      line within ten does, that one is taken (`"anchored_by": "nearby"`); else the cited line
      (`"anchored_by": "line"`). Both are flagged; the markdown always shows the real line.
+     At the end, **Refuted by verify — skim before trusting** lists what verify threw out,
+     each with its confidence and its `why:` — read straight from the verify file, not as
+     comments and not in the JSON. Verify is a filter, not a referee: on a real work change it
+     refuted the very race fixed a commit later, calling the regression pre-existing.
    - `review.comments.json` — for publishing, one shape for both platforms:
 
      ```json

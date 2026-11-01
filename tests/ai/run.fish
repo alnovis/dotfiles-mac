@@ -55,6 +55,7 @@ echo '{"aaaa": "dense", "bbbb": "MoE 8/64"}' >$sb/home/.cache/ai/model-arch.json
 cp $root/tests/ai/fixtures/review.md $sb/review.md
 # Extracted comments as a model would return them, for the anchoring case
 cp $root/tests/ai/fixtures/comments.json $sb/comments.json
+cp $root/tests/ai/fixtures/verify.md $sb/verify.md
 
 # pi config for the runner paths: ollama, plus a cloud provider on a dead address so the
 # reachability probe fails at once (connection refused) and no model is ever called
@@ -90,7 +91,7 @@ set -g golden_cases \
     'git-comments|fixture|ai review --last 1 --comments -o ../review-out.md --dry-run 2>&1 | string match -e -r "Verify: on|Comments: on|pass 3|comments provider|would write: comments"' \
     'comments-errors|fixture|ai review --last 1 --comments --dry-run; ai review --last 1 --comments --brief -o x.md --dry-run; ai review --last 1 --comments --no-verify -o x.md --dry-run; ai review --last 1 --range a..b; ai review --verify-only ../review.md --range a..b' \
     'git-no-verify|fixture|ai review --last 1 --no-verify --dry-run 2>&1 | string match -q -e "pass 2"; and echo "verify ran"; or echo "no verify pass"' \
-    'comments-anchor|fixture|_ai_review_comments_anchor ../comments.json HEAD~1..HEAD (pwd) 3 >../anchored.json; jq -c "(.base_sha | length), (.head_sha | length), .runs, (.comments[] | {path, side, line, line_cited, in_diff, anchored, anchored_by, file_level, seen, status})" ../anchored.json; functions -q _ai_review_comments; _ai_review_comments_md ../anchored.json | string replace -r "Range: \S+" "Range: <range>"' \
+    'comments-anchor|fixture|_ai_review_comments_anchor ../comments.json HEAD~1..HEAD (pwd) 3 >../anchored.json; jq -c "(.base_sha | length), (.head_sha | length), .runs, (.comments[] | {path, side, line, line_cited, in_diff, anchored, anchored_by, file_level, seen, status})" ../anchored.json; functions -q _ai_review_comments; _ai_review_comments_md ../anchored.json ../verify.md | string replace -r "Range: \S+" "Range: <range>"; echo "verdicts: "(_ai_verdict_counts ../verify.md)' \
     'review-settings|fixture|mkdir -p .ai; printf "%s\n" review_runs=2 review_runs@testcloud=3 review_runs@testcloud/cloud-model=4 review_parallel@claude=off review_parallel@ollama=on >.ai/config; _ai_review_runs_count testcloud cloud-model ""; _ai_review_runs_count testcloud other ""; _ai_review_runs_count ollama m ""; _ai_review_runs_count ollama m 5; _ai_review_runs_count ollama m abc; _ai_review_parallel_mode claude opus ""; _ai_review_parallel_mode testcloud m ""; _ai_review_parallel_mode ollama m ""; _ai_review_parallel_mode ollama m off; rm -rf .ai' \
     'git-runs|fixture|ai review --last 1 --runs 3 -o ../runs-out.md --dry-run 2>&1 | string match -e -r "Verify: on|Runs:|review runs:"; ai review --last 1 --runs 3 --brief --dry-run; ai review --last 1 --runs 3 --no-verify --dry-run; ai review --last 1 --parallel --no-parallel --dry-run; ai review --last 1 --runs 0 --dry-run' \
     'git-branch-auto|fixture|ai review --dry-run' \

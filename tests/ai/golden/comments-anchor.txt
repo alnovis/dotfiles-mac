@@ -80,4 +80,14 @@ A file that does not exist: unanchored.
 
 > Unanchored: the quoted line was not found in the code — check it by hand.
 
+## Refuted by verify — skim before trusting
+
+Not comments. Verify threw these out; it can be wrong — check any that sound real.
+
+- `gbranch.fish:40` — the candidate loop skips release — refuted 7/10
+  > The loop reads `$GBRANCH_BASES`, which includes release.
+- `gbranch.fish:115` — `string split \t` breaks on tabs in branch names — refuted 9/10
+  > Git refuses branch names with tabs.
+
+verdicts: 1 confirmed, 2 refuted
 [exit 0]
