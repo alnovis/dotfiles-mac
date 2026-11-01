@@ -119,9 +119,11 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l runs_ok 1
     set -l rc1 0
     if test $runs -gt 1
-        set runs_ok (_ai_review_runs --runs $runs --mode $_flag_parallel_mode --prompt-file $_flag_prompt_file \
-            --output $find_src --dest $rev_dest --label "[1/$n_stages] $rev_label" -- $run_args)
+        set -g __ai_review_runs_ok 0
+        _ai_review_runs --runs $runs --mode $_flag_parallel_mode --prompt-file $_flag_prompt_file \
+            --output $find_src --dest $rev_dest --label "[1/$n_stages] $rev_label" -- $run_args
         set rc1 $status
+        set runs_ok $__ai_review_runs_ok
     else
         printf '%s' "$pass1_prompt" | _ai_run_watched --label "[1/$n_stages] $rev_label" --output $find_src --dest $rev_dest -- $run_args
         set rc1 $status

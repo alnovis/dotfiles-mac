@@ -1,6 +1,8 @@
-function _ai_review_runs --description "Run the review N times (parallel or sequential) and join the runs into one review; prints how many succeeded"
+function _ai_review_runs --description "Run the review N times (parallel or sequential) and join the runs into one review; how many answered goes to \$__ai_review_runs_ok"
     # Usage: _ai_review_runs --runs N --mode parallel|sequential --prompt-file F --output OUT
     #          --label L [--dest NAME] -- <_ai_run args>
+    # The count is a global, not stdout: called as (_ai_review_runs …), fish would send the
+    # stage lines on stderr past the caller's redirect (2>file, | tee) straight to the terminal.
     # One run of an agentic review is a sample: on the same 7 commits three runs found
     # three disjoint sets. N runs join under "## Run K/N" into OUT — the verify pass then
     # judges them all at once, and the comments stage merges what several runs reported.
@@ -67,6 +69,6 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
     end
     test "$dest" = "(terminal)"; and rm -f $files
     printf '  %s | %d/%d runs answered | %ds -> %s\n' $_flag_label $ok $n (math (date +%s) - $t0) $dest >&2
-    echo $ok
+    set -g __ai_review_runs_ok $ok
     test $ok -gt 0
 end
