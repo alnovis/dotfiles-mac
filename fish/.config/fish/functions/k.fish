@@ -6,7 +6,7 @@ function k --description "kubectl toolkit: pods, log, sh, desc, ns, pf; 'k x' fo
         return
     end
 
-    set -lx KUBECONFIG (_k_kubeconfig)
+    set -lx KUBECONFIG (_k_kubeconfig); or return 1
 
     # Raw kubectl escape hatch (KUBECONFIG baked in).
     if test "$sub" = x

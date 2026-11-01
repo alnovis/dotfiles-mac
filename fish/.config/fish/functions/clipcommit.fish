@@ -120,6 +120,8 @@ function clipcommit --description "Git commit with trimmed clipboard as message"
     else
         git commit -m "$msg"
     end
+    # A hook may reject the commit — then there is nothing new to push
+    or return 1
 
     # Push after commit
     if set -q _flag_push

@@ -1,6 +1,6 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
+    argparse 'h/help' 'provider=' 'model=' 'lang=' 'o/output=' 'with-project-context' 'lens=' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
 
     # Resolve positional args: [DIR|FILE] ["custom prompt"]
@@ -155,12 +155,13 @@ $prompt"
         if set -q _flag_with_project_context
             set scope_note "Review this file. You may briefly consult neighboring files in the parent project for context if needed."
         end
+        set -l fence (_ai_md_fence "$file_content")
         set context "$scope_note
 
 ## File: $file_basename
-```$file_ext
+$fence$file_ext
 $file_content
-```
+$fence
 "
     end
 

@@ -7,7 +7,7 @@ function _k_resolve_pod --description "Resolve a pod-name substring to 'namespac
         return 1
     end
 
-    set -lx KUBECONFIG (_k_kubeconfig)
+    set -lx KUBECONFIG (_k_kubeconfig); or return 1
 
     set -l sel -A
     if test -n "$ns"

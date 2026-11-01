@@ -13,6 +13,7 @@ function _ai_review_files_block --description "Emit the full content of a direct
         test -z "$content"; and continue
         set -l ext ""
         string match -q '*.*' -- $path; and set ext (string match -r '[^.]+$' -- $path)
-        printf '\n## %s\n```%s\n%s\n```\n' $path $ext "$content"
+        set -l fence (_ai_md_fence "$content")
+        printf '\n## %s\n%s%s\n%s\n%s\n' $path $fence $ext "$content" $fence
     end
 end

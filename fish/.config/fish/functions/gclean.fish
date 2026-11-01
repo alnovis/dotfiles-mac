@@ -29,7 +29,8 @@ function gclean --description "Delete local branches already merged into base"
 
     git fetch --prune 2>/dev/null
 
-    set -l merged (git branch --merged $base | string trim | string match -rv "^\*|^\\s*($base|master|main|develop)\$")
+    # `*` is the current branch, `+` one checked out in another worktree — neither can be deleted
+    set -l merged (git branch --merged $base | string trim | string match -rv "^[*+]|^\\s*($base|master|main|develop)\$")
 
     echo "Repository: $repo_name ($branch)"
     echo "Base: $base"
@@ -54,13 +55,23 @@ function gclean --description "Delete local branches already merged into base"
     end
 
     set -l count 0
+    set -l failed
     for b in $merged
-        git branch -d $b 2>/dev/null
-        set count (math $count + 1)
+        if git branch -d $b >/dev/null 2>&1
+            set count (math $count + 1)
+        else
+            set -a failed $b
+        end
     end
 
     echo "---"
     set_color green
     echo "$count branch(es) deleted"
     set_color normal
+    if test (count $failed) -gt 0
+        set_color red
+        echo "Not deleted: $failed"
+        set_color normal
+        return 1
+    end
 end

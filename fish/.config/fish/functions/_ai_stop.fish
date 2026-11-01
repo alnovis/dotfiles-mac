@@ -32,7 +32,9 @@ function _ai_stop --description "Stop running models or Ollama server"
             echo ""
         end
 
-        pkill ollama
+        # The server only: a bare `pkill ollama` also kills `ollama pull` / `ollama run`
+        # clients in other terminals
+        pkill -f 'ollama serve'
 
         echo "---"
         set_color green
@@ -51,7 +53,13 @@ function _ai_stop --description "Stop running models or Ollama server"
 
     # Stop specific model
     if test (count $argv) -ge 1
-        if not contains -- $argv[1] $running_models
+        # `qwen3` and the running `qwen3:latest` are the same model
+        set -l want (_ai_model_norm $argv[1])
+        set -l normalized
+        for m in $running_models
+            set -a normalized (_ai_model_norm $m)
+        end
+        if not contains -- $want $normalized
             set_color red
             echo "Error: model '$argv[1]' is not running"
             set_color normal
@@ -59,10 +67,10 @@ function _ai_stop --description "Stop running models or Ollama server"
             return 1
         end
 
-        ollama stop $argv[1]
+        ollama stop $want
         echo "---"
         set_color green
-        echo "Stopped: $argv[1]"
+        echo "Stopped: $want"
         set_color normal
         return 0
     end

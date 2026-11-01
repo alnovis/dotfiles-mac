@@ -31,7 +31,7 @@ end
 # prints "value<tab>description" lines then a final ":<directive>" line; we strip
 # the directive and hand the rest to fish.
 function __k_x_complete
-    set -lx KUBECONFIG (_k_kubeconfig)
+    set -lx KUBECONFIG (_k_kubeconfig --quiet); or return
     set -l tokens (commandline -poc)
     set -l rest
     set -l after 0

@@ -174,7 +174,7 @@ All functions support `-h/--help`.
 - `k pf <sub> <PORT>` — port-forward (`PORT` = `LOCAL:REMOTE` or single)
 - `k x <args…>` — raw kubectl (`k x apply -f`, `k x get pods -A`, …) with the kubeconfig baked in and full native completion
 - Pods match by name **substring** across namespaces (`-n` to scope); completion is entirely ours (helpers) or bridged to `kubectl __complete` (`k x`)
-- KUBECONFIG: `$K_KUBECONFIG` override, else `~/work/rf/local-config/k3s/config`
+- KUBECONFIG: `$K_KUBECONFIG` (required, no default — `set -Ux K_KUBECONFIG /path/to/kubeconfig`)
 
 *AI — one `ai` command over local and cloud models, per-task / per-project config, Tab-completion. Full docs: [docs/fish/ai/](docs/fish/ai/).*
 

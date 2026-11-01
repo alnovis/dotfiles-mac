@@ -1,5 +1,5 @@
 function gsquash --description "Squash commits: reset --soft (default) or merge --squash"
-    argparse 'h/help' 'no-color' 'm/merge' -- $argv; or return 1
+    argparse 'h/help' 'no-color' 'm/merge' 'stat=' -- $argv; or return 1
 
     if set -q _flag_help
         echo "Usage: gsquash [OPTIONS] [BASE|BRANCH] [MESSAGE]"
@@ -16,6 +16,7 @@ function gsquash --description "Squash commits: reset --soft (default) or merge 
         echo ""
         echo "Options:"
         echo "  -m, --merge      Use merge --squash mode"
+        echo "      --stat=N     Set stat output width (default: terminal width)"
         echo "      --no-color   Disable colored output"
         echo "  -h, --help       Show this help"
         echo ""
@@ -26,10 +27,13 @@ function gsquash --description "Squash commits: reset --soft (default) or merge 
         return 0
     end
 
-    set -l color_flag --color=always
+    # Exported locals: _gsquash_reset / _gsquash_merge are separate functions and see
+    # only the caller's exported variables — a plain `set -l` would be empty there
+    set -lx color_flag --color=always
     if set -q _flag_no_color
         set color_flag --color=never
     end
+    set -q _flag_stat; and set -lx _flag_stat $_flag_stat
 
     set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
     if test $status -ne 0
@@ -167,6 +171,7 @@ function _gsquash_reset
         end
         set total_files (math $total_files + 1)
     end
+    _gsquash_summary $total_files $total_add $total_del
 
     # Commit message
     if test -z "$msg"
@@ -305,7 +310,7 @@ function _gsquash_merge
         end
         set total_files (math $total_files + 1)
     end
-    echo $stat_summary
+    _gsquash_summary $total_files $total_add $total_del
 
     # Commit message
     if test -z "$msg"
@@ -345,4 +350,12 @@ function _gsquash_merge
     set_color yellow
     echo "$msg"
     set_color normal
+end
+
+# "N file(s), +A, -D" under the Files: stat (same shape as gbranch's summary)
+function _gsquash_summary --argument-names files added deleted
+    set -l summary "$files file(s)"
+    test $added -gt 0; and set summary "$summary, "(set_color green)"+$added"(set_color normal)
+    test $deleted -gt 0; and set summary "$summary, "(set_color red)"-$deleted"(set_color normal)
+    echo $summary
 end

@@ -94,15 +94,27 @@ function _take_extract
 
     mkdir -p $dirname; or return 1
 
+    # Strip the top directory only when the tarball has exactly one: on a flat archive
+    # (files at the top level) --strip-components=1 extracts nothing and still succeeds
+    set -l strip
+    if string match -qr '\.(tar(\.(gz|bz2|xz))?|tgz)$' -- $archive
+        set -l tops (tar tf $archive_path 2>/dev/null | string replace -r '^\./' '' | string match -v '' | string replace -r '/.*' '' | sort -u)
+        set -l nested (tar tf $archive_path 2>/dev/null | string replace -r '^\./' '' | string match -r '^[^/]+/.')
+        if test (count $tops) -eq 1; and test (count $nested) -gt 0
+            set strip --strip-components=1
+        end
+    end
+
+    set -l rc 0
     switch $archive
         case '*.tar.gz' '*.tgz'
-            tar xzf $archive_path -C $dirname --strip-components=1
+            tar xzf $archive_path -C $dirname $strip; or set rc 1
         case '*.tar.bz2'
-            tar xjf $archive_path -C $dirname --strip-components=1
+            tar xjf $archive_path -C $dirname $strip; or set rc 1
         case '*.tar.xz'
-            tar xJf $archive_path -C $dirname --strip-components=1
+            tar xJf $archive_path -C $dirname $strip; or set rc 1
         case '*.tar'
-            tar xf $archive_path -C $dirname --strip-components=1
+            tar xf $archive_path -C $dirname $strip; or set rc 1
         case '*.zip'
             # zip doesn't have --strip-components, extract then move
             set -l tmpdir (mktemp -d)
@@ -116,15 +128,16 @@ function _take_extract
             # If archive has a single root dir, use its contents
             set -l entries $tmpdir/*/
             if test (count $entries) -eq 1
-                command mv $entries[1]/* $dirname/ 2>/dev/null
+                command mv $entries[1]/* $dirname/ 2>/dev/null; or set rc 1
+                # dotfiles: a no-match glob is fine, so this one doesn't count
                 command mv $entries[1]/.* $dirname/ 2>/dev/null
             else
-                command mv $tmpdir/* $dirname/ 2>/dev/null
+                command mv $tmpdir/* $dirname/ 2>/dev/null; or set rc 1
             end
             rm -rf $tmpdir
     end
 
-    if test $status -ne 0
+    if test $rc -ne 0
         set_color red
         echo "Error: extraction failed"
         set_color normal

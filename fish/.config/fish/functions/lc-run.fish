@@ -185,8 +185,7 @@ function _lc_run_rust
     echo "}" >>$runner
 
     # Compile and run
-    if rustc $runner -o $tmpdir/lc_test 2>&1
-        $tmpdir/lc_test
-    end
-    return $status
+    # Not `if rustc …; end; return $status`: an `if` whose condition fails returns 0
+    rustc $runner -o $tmpdir/lc_test 2>&1; or return 1
+    $tmpdir/lc_test
 end

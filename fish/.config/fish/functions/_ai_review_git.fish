@@ -64,12 +64,15 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
             set_color normal
             return 1
         end
-        set range "$commit_sha~1..$commit_sha"
+        # A root commit has no $sha~1 — diff it against the empty tree instead
+        set -l parent $commit_sha~1
+        git rev-parse --verify -q "$parent" >/dev/null; or set parent (git hash-object -t tree /dev/null)
+        set range "$parent..$commit_sha"
         set tip $commit_sha
         if test -n "$file_filter"
             set diff_content (git show $commit_sha -- $file_filter | string collect)
         else
-            set diff_content (git diff $commit_sha~1..$commit_sha | string collect)
+            set diff_content (git diff $range | string collect)
         end
         set header_info "Commit: $commit_msg"
 

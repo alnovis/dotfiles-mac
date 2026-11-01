@@ -52,7 +52,7 @@ function _ai_review --description "AI code review — project state (path target
 
     # Validate flag/mode compatibility
     if test "$mode" = target
-        for f in last commit file max-lines
+        for f in last commit file max-lines lang-all
             if set -q _flag_(string replace -a - _ $f)
                 set_color red
                 echo "Error: --$f is git-mode only and cannot combine with a path target" >&2

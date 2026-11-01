@@ -13,7 +13,7 @@ function set-ci-token --description "Set CI_PERSONAL_TOKEN or CI_REGISTRY"
         echo ""
         echo "Examples:"
         echo "  set-ci-token                  Interactive token input"
-        echo "  set-ci-token TOKEN            Set token directly"
+        echo "  set-ci-token TOKEN            Set token directly (lands in shell history)"
         echo "  set-ci-token -r               Interactive registry input"
         echo "  set-ci-token -r host:port     Set registry directly"
         return 0
@@ -35,7 +35,8 @@ function set-ci-token --description "Set CI_PERSONAL_TOKEN or CI_REGISTRY"
         if test (count $argv) -eq 1
             set -U CI_PERSONAL_TOKEN $argv[1]
         else
-            read -l -P "CI_PERSONAL_TOKEN: " value
+            # -s: a token must not echo to the screen (or a screen share)
+            read -s -l -P "CI_PERSONAL_TOKEN: " value
             if test -z "$value"
                 echo "Aborted"
                 return 1

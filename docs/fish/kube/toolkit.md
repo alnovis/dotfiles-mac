@@ -23,8 +23,11 @@ sides predictable.
 `k` resolves the kubeconfig once (via `_k_kubeconfig`) and exports it for the
 dispatched helper / kubectl call:
 
-- `$K_KUBECONFIG` if set (override per-shell or per-project), otherwise
-- the hardcoded default `~/work/rf/local-config/k3s/config`.
+- `$K_KUBECONFIG` — required; there is no default, since the path is machine-specific and
+  doesn't belong in the repo. Set it once: `set -Ux K_KUBECONFIG /path/to/kubeconfig`
+  (or per shell / per project with `set -gx`).
+- Unset, or pointing at a missing file: `k` stops with an error saying how to set it;
+  completions just offer nothing.
 
 Nothing is exported globally — it lives in `k`'s function scope only.
 
