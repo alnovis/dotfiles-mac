@@ -127,6 +127,7 @@ set -g golden_cases \
     'models-list|fixture|ai models' \
     'models-filter|fixture|ai models other' \
     'models-label|fixture|ai models label review-model coding; ai models label other:7b general; ai models label nosuch:1b x; jq -S . ~/.config/ai/models.json' \
+    'review-prompt-mode|fixture|_ai_review_prompt_mode --origin ollama 0; _ai_review_prompt_mode --origin ollama 1; _ai_review_prompt_mode --origin claude 0; _ai_review_prompt_mode --origin testcloud 0; mkdir -p .ai; echo review_prompt=full >.ai/config; _ai_review_prompt_mode --origin ollama 0; echo review_prompt=bogus >.ai/config; _ai_review_prompt_mode --origin ollama 0 2>&1; rm -rf .ai' \
     'model-norm|fixture|_ai_model_norm qwen3; _ai_model_norm qwen3:30b; _ai_model_norm user/model; _ai_model_digest review-model; _ai_model_digest review-model:q4; _ai_model_digest missing; echo "missing rc=$status"' \
     'resolvers|fixture|echo providers: (_ai_providers); echo agents: (_ai_agents); for t in (_ai_tasks); set -l p (_ai_default_provider $t); echo "$t: $p / "(_ai_default_model $t $p); end'
 

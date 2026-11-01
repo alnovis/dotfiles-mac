@@ -258,6 +258,26 @@ The working directory is the file's parent, or the directory itself.
 - `--with-project-context` without a path → `Error: --with-project-context is target-mode only (needs a file path)`.
 - `--verify-only FILE` short-circuits both modes.
 
+### Prompt depth: full or lean
+
+`meta-review*.md` mark two rules as `<!-- full-only -->`: the ABSENCE gate ("name where you looked
+for the control") and the sibling sweep ("check the rest of the diff for the same pattern, then ask
+what else is wrong at that site"). Both come from VVAH and suit Claude. A small local model turns
+each into another round of second-guessing. On RF-38946, qwen3.6 thought 2.2× longer (78 s → 139 s)
+and talked itself out of the race the lean prompt reported.
+
+So the depth follows the executor, not a list of "strong" models:
+
+| Executor | Prompt |
+|---|---|
+| native ollama driver (a local model, single call) | lean: the full-only blocks are dropped |
+| claude, the runners (pi / opencode: cloud providers), `--agentic` | full |
+
+Config key `review_prompt` (`auto` by default, `full`, `lean`; project → global) overrides it, for
+example `review_prompt=full` for a local model that handles the extra rules. `ai config status`
+shows the result and why. The `ai-review` skill reads the templates as they are, so agentic runs
+always get the full rules.
+
 ### Lenses (`--lens`)
 
 A lens injects a specialist checklist after the base review prompt. It says *where to look*; the
@@ -698,6 +718,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
+| `review_prompt` | by hand | Review prompt depth: `auto` (default: lean on the native ollama driver, full elsewhere), `full`, `lean` |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |
 
 Tasks: `chat`, `code`, `review`, `verify`, `commit`, `summary`. `verify_provider` / `verify_model`

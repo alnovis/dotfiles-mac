@@ -12,4 +12,7 @@ Resolved per task:
   verify   ollama    config-model  global+top     global
   commit   ollama    commit-model  global+top     global
   summary  ollama    config-model  global+top     global
+
+Review prompt:
+  lean (auto: local model on the native ollama driver)
 [exit 0]

@@ -165,6 +165,12 @@ function _ai_config_do_status
             printf '%s\t%s\t%s\t%s\t%s\n' $t $p $m $p_orig $m_orig
         end
     end | table --header --indent 2
+
+    echo
+    set_color cyan
+    echo "Review prompt:"
+    set_color normal
+    echo "  "(_ai_review_prompt_mode --origin (_ai_default_provider review) 0)
 end
 
 function _ai_config_do_provider --argument-names value task scope

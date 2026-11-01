@@ -300,7 +300,9 @@ $diff_content"
         set -l template_file ~/.config/fish/prompts/meta-review-diff.md
         set -l base
         if test -f $template_file
-            set base (cat $template_file | string collect)
+            set -l agentic 0
+            set -q _flag_agentic; and set agentic 1
+            set base (_ai_review_template $template_file (_ai_review_prompt_mode $provider $agentic))
         else
             set base "You are a senior code reviewer. Review this git diff. Provide: a 2-3 sentence summary, then issues by severity (critical/important/nits), then notes on tests and removed code. Cite file:line verbatim. If no issues, say 'No issues found.' and stop."
         end
