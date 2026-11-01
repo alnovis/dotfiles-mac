@@ -441,9 +441,13 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
    `[REFUTED]` ones are dropped. The bodies follow `--lang` (English by default); code stays as is.
 2. **Anchoring (no model, `_ai_review_comments_anchor`).** A model's line numbers are often off
    (a cited `:24` was really `:36`), so each line is found again by its quote: in the new version
-   of the file, then in the old one (removed code); the cited number only breaks ties. A path
-   abbreviated with `…/` is resolved by file name. Then the hunks of `git diff -U3` tell whether
-   the line is **in the diff** — GitLab and GitHub accept a line comment only there.
+   of the file, then in the old one (removed code); the cited number only breaks ties. A quote
+   that matches no single line is compared again without whitespace over two, then three
+   consecutive lines — a statement the code splits that the model quoted as one line — and
+   anchored on the first. A path abbreviated with `…/` is resolved by file name, a bare class
+   name (`SendTicketContainerizedTest`) by the one file called `NAME.<ext>`. Then the hunks of
+   `git diff -U3` tell whether the line is **in the diff** — GitLab and GitHub accept a line
+   comment only there.
 3. **Files next to the report.** Nothing is posted:
    - `review.comments.md` — for a human to check: per file, each comment with its line and side,
      severity, `uncertain — needs a human check` where so, the quoted line and the text. A line
@@ -454,7 +458,11 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
      lines off — landing on `try {` or a blank. If the cited line names none of the code the
      comment is about (`quoted` names, camelCase and CONSTANT words, case-insensitive) and a
      line within ten does, that one is taken (`"anchored_by": "nearby"`); else the cited line
-     (`"anchored_by": "line"`). Both are flagged; the markdown always shows the real line.
+     (`"anchored_by": "line"`). The comments model sees no code, so a review that names a
+     method without showing it (`` `loadFromRedis()` swaps… ``) leaves it no line and no quote:
+     then the first changed line of that file in the diff that names one of those words is
+     taken — an added line before a context line (`"anchored_by": "name"`); with none, the
+     comment stays `Whole file`. All three are flagged; the markdown always shows the real line.
      At the end, **Refuted by verify — skim before trusting** lists what verify threw out,
      each with its confidence and its `why:` — read straight from the verify file, not as
      comments and not in the JSON. Verify is a filter, not a referee: on a real work change it

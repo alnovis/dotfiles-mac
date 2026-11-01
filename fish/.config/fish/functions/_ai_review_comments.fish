@@ -156,6 +156,7 @@ function _ai_review_comments_md_comments --description "The comment sections of 
              elif (.anchored | not) then "> Unanchored: the quoted line was not found in the code — check it by hand."
              elif .anchored_by == "line" then "> Placed by the cited line number: the quote did not match the code (model quoted: `\(.quote)`) — check this is the right line."
              elif .anchored_by == "nearby" then "> Placed on a nearby line: the quote did not match, and the cited line \(.line_cited) names none of the code the comment is about — this one does. Check it."
+             elif .anchored_by == "name" then "> Placed by a name: the comment cites no line and quotes no code; this changed line names code it talks about. Check it."
              else empty end),
             (if .anchored and (.in_diff | not) then "> Not in the diff: GitLab/GitHub take a line comment only inside the changes — post it as a general comment." else empty end);
         "# Review comments — check before publishing",

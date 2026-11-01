@@ -77,6 +77,19 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
                     set code $new_lines[$line]
                 end
             end
+            # No line and no quote: the comments model sees no code, so a review that names a
+            # method without showing it ("`loadFromRedis()` swaps…") leaves it nothing to
+            # quote. The changed line of this file that names that code is meant.
+            if test $line -eq 0; and test -n "$base"
+                set -l tokens (_ai_review_comments_tokens (printf '%s' $c | jq -r '(.quote // "") + "\n" + (.body // "")'))
+                set -l named (_ai_review_comments_by_name $root $path $tokens -- $base $head)
+                if test -n "$named"
+                    set line $named
+                    set side new
+                    set by name
+                    set code $new_lines[$line]
+                end
+            end
         end
 
         set -l in_diff false
@@ -164,6 +177,35 @@ function _ai_review_comments_nearby --description "Line within 10 of WANT that c
         end
     end
     test $best -gt 0; and echo $best
+end
+
+function _ai_review_comments_by_name --description "New-side line of PATH's diff that names one of TOKENS (in token order; an added line before a context line; empty if none): args ROOT PATH TOKENS… -- BASE [HEAD]"
+    set -l root $argv[1]
+    set -l path $argv[2]
+    set -l sep (contains -i -- -- $argv)
+    test -n "$sep"; and test $sep -gt 3; or return
+    set -l tokens $argv[3..(math $sep - 1)]
+    set -l revs $argv[(math $sep + 1)..]
+    # "N<tab>+|space<tab>text" for each new-side line inside a hunk; removed lines are skipped
+    set -l rows (git -C $root diff -U3 $revs -- $path 2>/dev/null | awk '
+        /^@@/ { match($0, /\+[0-9]+/); n = substr($0, RSTART + 1, RLENGTH - 1); h = 1; next }
+        !h { next }
+        /^\+/ { print n "\t+\t" substr($0, 2); n++; next }
+        /^ /  { print n "\t \t" substr($0, 2); n++; next }')
+    test (count $rows) -gt 0; or return
+    for t in $tokens
+        # Case-insensitive, as in _ai_review_comments_nearby
+        set -l re '(?i)'(string escape --style=regex -- $t)
+        for kind in + ' '
+            for r in $rows
+                set -l f (string split -m2 \t -- $r)
+                if test "$f[2]" = "$kind"; and string match -q -r -- $re $f[3]
+                    echo $f[1]
+                    return
+                end
+            end
+        end
+    end
 end
 
 function _ai_review_comments_content --description "Lines of PATH at REV (empty REV: the file in ROOT)" --argument-names root rev path

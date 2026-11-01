@@ -72,5 +72,13 @@
     "severity": "nit",
     "status": "uncertain",
     "body": "The file named without directory or extension, as a bare class name: the one file called gbranch.*, file-level."
+  },
+  {
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 0,
+    "quote": "",
+    "severity": "important",
+    "status": "confirmed",
+    "body": "No line and no quote, only a name: `candidates` is placed on the first changed line that names it (43)."
   }
 ]
