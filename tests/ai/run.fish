@@ -82,6 +82,9 @@ set -g golden_cases \
     'git-last-ollama|fixture|ai review --last 1 --dry-run' \
     'git-last-claude|fixture|ai review --last 1 --provider claude --dry-run' \
     'git-commit|fixture|ai review --commit d6f255b --dry-run' \
+    'git-commit-range|fixture|ai review --commit 8f00743~2..8f00743 --dry-run' \
+    'git-commit-list|fixture|ai review --commit 8f00743,8f00743~1 --dry-run' \
+    'git-commit-broken|fixture|ai review --commit 8f00743~3,8f00743 --dry-run; ai review --commit 8f00743..8f00743~2 --dry-run; ai review --commit nosuch --dry-run' \
     'git-branch-auto|fixture|ai review --dry-run' \
     'git-branch-explicit|fixture|ai review master --dry-run' \
     'git-file|fixture|ai review --file Brewfile --dry-run' \

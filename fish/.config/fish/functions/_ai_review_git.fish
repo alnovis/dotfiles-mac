@@ -57,24 +57,27 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     set -l tip
 
     if test -n "$commit_sha"
-        set -l commit_msg (git log --oneline -1 $commit_sha 2>/dev/null)
-        if test -z "$commit_msg"
+        # SHA, A..B or SHA1,SHA2,… — validated as one contiguous, linear change
+        set -l resolved (_ai_review_commit_range $commit_sha 2>&1)
+        if test $status -ne 0
             set_color red
-            echo "Error: commit '$commit_sha' not found"
+            printf '%s\n' $resolved
             set_color normal
             return 1
         end
-        # A root commit has no $sha~1 — diff it against the empty tree instead
-        set -l parent $commit_sha~1
-        git rev-parse --verify -q "$parent" >/dev/null; or set parent (git hash-object -t tree /dev/null)
-        set range "$parent..$commit_sha"
-        set tip $commit_sha
+        set range $resolved[1]
+        set tip $resolved[2]
+        set -l commits $resolved[3..]
         if test -n "$file_filter"
-            set diff_content (git show $commit_sha -- $file_filter | string collect)
+            set diff_content (git diff $range -- $file_filter | string collect)
         else
             set diff_content (git diff $range | string collect)
         end
-        set header_info "Commit: $commit_msg"
+        if test (count $commits) -eq 1
+            set header_info "Commit: $commits[1]"
+        else
+            set header_info "Commits: "(count $commits)" ($range)" "  "$commits
+        end
 
     else if test $last_n -gt 0
         set range "HEAD~$last_n..HEAD"
@@ -163,7 +166,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     # Header
     echo "Repository: $repo_name ($branch)"
     set_color cyan
-    echo "$header_info"
+    printf '%s\n' $header_info
     set_color normal
     if test -n "$file_filter"
         set_color yellow

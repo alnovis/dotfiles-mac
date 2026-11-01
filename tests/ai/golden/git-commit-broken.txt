@@ -1,0 +1,10 @@
+Error: the range is broken — other commits sit between the listed ones:
+  between 5bf1c3d and 8f00743:
+    d6f255b fix(ai): stop verify verdict placeholders leaking into output
+    1c4dced Refresh Brewfile after excluding /opt/homebrew from backups
+Review the pieces separately:
+  ai review --commit 5bf1c3d
+  ai review --commit 8f00743
+Error: 8f00743 is not an ancestor of 8f00743~2 — not a range
+Error: commit 'nosuch' not found
+[exit 1]

@@ -192,7 +192,7 @@ All functions support `-h/--help`.
 
 **Review (mode auto-detected from the positional):**
 - `ai review` — git mode: branch vs base (develop/main/master); `ai review BRANCH` — vs that branch
-- `ai review --last [N]` / `--commit SHA` / `--file FILE` — last N commits / one commit / one file of the diff
+- `ai review --last [N]` / `--commit SHA|A..B|SHA1,SHA2` / `--file FILE` — last N commits / one commit, a range or a task's commits (checked to be one unbroken piece) / one file of the diff
 - `ai review PATH` — target mode: a directory or a single file; `--with-project-context` adds the project tree/README to a file review
 - Common: `--provider`, `--model`, `--brief`, `--lang LANG`, `-o/--output FILE`, `--dry-run`
 - `--lens NAME[,NAME…]` — specialist checklists (security, quality, Rust, shell, data/messaging; see `prompts/lenses/`)

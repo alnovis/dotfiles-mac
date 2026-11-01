@@ -215,7 +215,7 @@ ai review .                          target: current project
 | Flag | Effect |
 |---|---|
 | `--last [N]` | Review the last N commits (default 1). `--last 3` and `--last=3` both work |
-| `--commit SHA` | Review one commit |
+| `--commit SPEC` | One commit (`SHA`), a range (`A..B`: after A up to B) or a task's commits (`SHA1,SHA2,…`, any order). Checked to be one change, see below |
 | `--file FILE` | Filter the diff to one file |
 | `--max-lines N` | Cap the diff at N lines (default 500; larger diffs are truncated with a warning) |
 | `--lang-all LANG` | Full response and thinking in LANG (slower) |
@@ -224,6 +224,24 @@ ai review .                          target: current project
   `origin/<base>` when it exists, else the local branch. On the base branch itself:
   `Already on <base> — use --last or --commit to review`.
 - A diffstat of the range is always printed to stderr first.
+- **`--commit` ranges are checked before anything runs**, because a diff with someone else's
+  changes inside reviews the wrong thing. `A..B` must have A as an ancestor of B and no merge
+  inside. A list must be one unbroken line: each commit the direct, single-parent child of the
+  previous one. A broken list names what sits in the gaps and prints the pieces as commands:
+
+  ```
+  Error: the range is broken — other commits sit between the listed ones:
+    between bf17453 and d20bbff:
+      f28ab8e Merge branch 'feature/…' into 'release'
+      60488f0 … (another task's commit)
+  Review the pieces separately:
+    ai review --commit 4b31811~1..bf17453
+    ai review --commit d20bbff~1..64bd9e5
+  ```
+
+  The header lists the commits under review. File contents for the context come from the last
+  commit (`git show TIP:path`), so an old range needs no checkout — except with `--agentic`,
+  where the agent reads the working tree.
 - **Full changed files.** Besides the diff, the complete content of every changed file (as of the
   reviewed tip; deleted and binary files skipped) is embedded when the total fits the
   `--context-lines` budget, reported as `Context window: N lines across M files (budget B)`. Over
