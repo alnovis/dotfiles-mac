@@ -51,13 +51,12 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
 
     set -l workdir (pwd)
 
-    if set -q _flag_verdicts; or set -q _flag_range
-        if not set -q _flag_comments
-            set_color red
-            echo "Error: --verdicts and --range are for --comments" >&2
-            set_color normal
-            return 1
-        end
+    # --range also gives the verifier the diff, so it works without --comments
+    if set -q _flag_verdicts; and not set -q _flag_comments
+        set_color red
+        echo "Error: --verdicts is for --comments" >&2
+        set_color normal
+        return 1
     end
     # An existing verify file: no verify pass, straight to the comments
     if set -q _flag_verdicts
@@ -82,10 +81,29 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set_color normal
     echo "Verify provider: $vprovider"
     test -n "$vmodel"; and echo "Verify model: $vmodel"
-    if not set -q _flag_file; and not set -q _flag_agentic
+    # The diff of --range, when no --file: without the removed lines the verifier cannot
+    # tell a regression from a pre-existing problem, and guesses "pre-existing"
+    set -l diff_tmp
+    if not set -q _flag_file; and set -q _flag_range
+        set diff_tmp (mktemp)
+        if not git diff $_flag_range >$diff_tmp 2>/dev/null; or not test -s $diff_tmp
+            rm -f $diff_tmp
+            set_color red
+            echo "Error: --range $_flag_range gives no diff here (run it from the repo, check the range)" >&2
+            set_color normal
+            return 1
+        end
+        echo "Code: the diff of $_flag_range ("(count (cat $diff_tmp))" lines)"
+    end
+    if not set -q _flag_file; and test -z "$diff_tmp"
         set_color yellow
-        echo "Note: no code embedded — the verifier reasons from the findings text alone."
-        echo "  Pass --file DIFF for grounding, or --agentic to let it read the repo."
+        if set -q _flag_agentic
+            echo "Note: no diff — the verifier reads the repo but cannot see the old code, so it cannot"
+            echo "  tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF)."
+        else
+            echo "Note: no code embedded — the verifier reasons from the findings text alone."
+            echo "  Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo."
+        end
         set_color normal
     end
     echo "Output: $verify_out"
@@ -97,6 +115,8 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -q _flag_no_think; and set -a vargs --no-think
     if set -q _flag_file; and test -f "$_flag_file"
         set -a vargs --code-file (realpath $_flag_file)
+    else if test -n "$diff_tmp"
+        set -a vargs --code-file $diff_tmp
     end
 
     set -l com_args --findings $review_file --verdicts $verify_out --output $review_file \
@@ -106,6 +126,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         set -a vargs --dry-run
         _ai_review_verify $vargs
         set -q _flag_comments; and _ai_review_comments $com_args --dry-run
+        test -n "$diff_tmp"; and rm -f $diff_tmp
         return 0
     end
 
@@ -121,6 +142,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     end
     _ai_review_verify $vargs --output $verify_out --label "$ver_label" --dest $verify_out
     set -l rc $status
+    test -n "$diff_tmp"; and rm -f $diff_tmp
 
     if not test -s "$verify_out"
         rm -f "$verify_out"

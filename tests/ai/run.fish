@@ -116,6 +116,7 @@ set -g golden_cases \
     'target-agentic|fixture|ai review leetcode/LeetCode.scala --agentic --dry-run' \
     'target-verify|fixture|ai review leetcode/LeetCode.scala --verify --dry-run' \
     'verify-only-ollama|fixture|ai review --verify-only ../review.md --provider ollama --dry-run' \
+    'verify-only-range|fixture|ai review --verify-only ../review.md --range HEAD~1..HEAD --provider ollama --dry-run 2>&1 | string match -e -r "^Code: the diff|^Note:|CODE UNDER REVIEW|^diff --git"' \
     'verify-only-claude|fixture|ai review --verify-only ../review.md --provider claude --dry-run' \
     'gen-commit-ollama|gen|ai gen commit --dry-run' \
     'gen-commit-claude|gen|ai gen commit --provider claude --dry-run' \

@@ -2,7 +2,7 @@ Verify-only: <SANDBOX>/review.md
 Verify provider: ollama
 Verify model: default-model
 Note: no code embedded — the verifier reasons from the findings text alone.
-  Pass --file DIFF for grounding, or --agentic to let it read the repo.
+  Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo.
 Output: <SANDBOX>/review.verify.md
 ---
 --- dry-run: prompt that would be sent to ollama (native) ---
@@ -14,14 +14,16 @@ If you have Read/Grep/bash tools, USE them — do not reason from the finding's 
 
 For each finding, work this chain:
 A. Open the cited file at the cited line. Establish what the code really does.
-B. Walk outward: find callers, follow the data backward until you reach an external/lower-privileged entry point or run out of callers. No external entry point → not exploitable.
-C. Try to kill it. Look for: input validation or allow-lists upstream; framework-level encoding/parameterisation; type or length constraints; auth/authz gates in front; config/feature flags that disable the path; the code being test-only or never invoked.
-D. If you found a defence in C, probe it: does it cover every route into the sink, or only the one you read? Can edge-case input (encoding, nulls, oversized values) slip past?
+B. Find the trigger. For a security finding: walk outward through the callers and follow the data backward until you reach an external/lower-privileged entry point or run out of callers — no external entry point → not exploitable. For any other finding (correctness, concurrency, lost or corrupted data, resource leaks, error handling): the trigger is what really happens in production — two callers at once (two consumer threads, a scheduled job beside a listener), a failure or timeout, a retry, a restart, an empty or unexpected value. No attacker is needed; find the callers that make the trigger real.
+C. Try to kill it. Look for: input validation or allow-lists upstream; framework-level encoding/parameterisation; type or length constraints; auth/authz gates in front; a lock, an atomic or a single-threaded caller that rules out the interleaving; a guard or handler that covers the failure; config/feature flags that disable the path; the code being test-only or never invoked.
+D. If you found a defence in C, probe it: does it cover every route into the code, or only the one you read? Can edge-case input or timing slip past?
+
+Introduced or pre-existing — decide this from the diff, never from a guess. Before refuting a finding as pre-existing, read the removed lines (-) the diff shows for that code: name the guarantee the old code gave (an atomic per-element update, a lock, a validation, a retry, an ordering) and check whether the new code still gives it. The finding is pre-existing only if the old code had the same defect for the same trigger. A guarantee the change took away is a regression this change introduced — even if some other, different problem existed before. If you cannot see the old code (no diff), do not call it pre-existing: say UNCERTAIN and that you need the diff.
 
 Verdict rules:
-- CONFIRMED — only when B reached a real external entry point AND C/D found no defence that fully closes the path AND the impact is concrete, not hypothetical.
-- REFUTED — any one of: no external caller; an upstream control fully neutralises the input; the first pass mis-read the code (wrong sink, wrong class, wrong file); it's test/dead code.
-- UNCERTAIN — you could not reach a confident verdict (missing context, tool limits). Say what you'd need.
+- CONFIRMED — only when B found a real trigger (an external entry point for security, a production event for the rest) AND C/D found no defence that fully closes it AND the impact is concrete, not hypothetical.
+- REFUTED — any one of: no real trigger (no external caller; the interleaving or failure cannot happen); an upstream control fully neutralises it; the first pass mis-read the code (wrong sink, wrong class, wrong file); it's test/dead code; the diff shows the old code had the very same defect for the same trigger.
+- UNCERTAIN — you could not reach a confident verdict (missing context, no diff to compare, tool limits). Say what you'd need.
 
 Confidence calibration: 8-10 means you actively searched for the opposite verdict and could not support it. ≤5 means you are guessing — say so.
 
