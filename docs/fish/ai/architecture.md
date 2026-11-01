@@ -447,6 +447,7 @@ the executor, and starts it with `--interactive`. `--dry-run` prints
 | `~/.config/ai/models.json` | model metadata (label, trial) keyed by digest |
 | `~/.cache/ai-models.json` | installed-model list (from `/api/tags`; works offline) |
 | `~/.cache/ai/model-caps.json` | capabilities per digest (never stale: a digest's content doesn't change) |
+| `~/.cache/ai/model-arch.json` | architecture per digest (`MoE U/N`, `MoE`, `dense`; same never-stale rule) |
 | `~/.pi/agent/models.json`, `~/.config/opencode/config.json` | the runners' own provider config (not ours, not in dotfiles) |
 
 ## Design invariants

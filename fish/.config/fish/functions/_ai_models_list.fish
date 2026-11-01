@@ -50,6 +50,7 @@ function _ai_models_list --description "Installed ollama models (no network): on
 
         set -l label (_ai_models_meta_get $digest label)
         test -n "$label"; or set label general
+        set -l arch (_ai_model_arch $tags[1] $digest)
         set -l caps (_ai_model_caps $tags[1] $digest | string split ' ')
         set -l capstr (for c in tools thinking vision; contains -- $c $caps; and echo $c; end | string join ,)
         set -l used (for u in $uses; set -l p (string split '|' -- $u); contains -- $p[1] $tags; and echo $p[2]; end | string join ', ')
@@ -68,7 +69,7 @@ function _ai_models_list --description "Installed ollama models (no network): on
             end
         end
 
-        set -a rows (string join \t -- $label $name (math -s1 "$size / 1073741824")" GB" "$capstr" "$used" "$trialstr")
+        set -a rows (string join \t -- $label $name (math -s1 "$size / 1073741824")" GB" "$arch" "$capstr" "$used" "$trialstr")
     end
 
     if test $n_models -eq 0
@@ -82,7 +83,7 @@ function _ai_models_list --description "Installed ollama models (no network): on
     set -l groups (for r in $rows; string split -f1 \t -- $r; end | sort -u | string match -v general)
     contains -- general (for r in $rows; string split -f1 \t -- $r; end); and set -a groups general
     begin
-        printf '%s\t%s\t%s\t%s\t%s\n' '' Model Size Capabilities "Used for"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' '' Model Size Type Capabilities "Used for"
         # Colours as "$(set_color …)" inside quotes: without a colour terminal set_color
         # prints nothing, and a bare (set_color …) would be an empty list that makes the
         # whole concatenated word vanish
@@ -91,12 +92,12 @@ function _ai_models_list --description "Installed ollama models (no network): on
             for r in (printf '%s\n' $rows | string match -- (printf '%s\t*' $g) | sort -t \t -k2)
                 set -l f (string split \t -- $r)
                 set -l mark ''
-                contains -- default (string split ', ' -- $f[5]); and set mark "$(set_color yellow)>$(set_color normal)"
+                contains -- default (string split ', ' -- $f[6]); and set mark "$(set_color yellow)>$(set_color normal)"
                 set -l used ''
-                test -n "$f[5]"; and set used "$(set_color yellow)$f[5]$(set_color normal)"
+                test -n "$f[6]"; and set used "$(set_color yellow)$f[6]$(set_color normal)"
                 set -l trial ''
-                test -n "$f[6]"; and set trial "$(set_color magenta)$f[6]$(set_color normal)"
-                printf '%s\t%s\t%s\t%s\t%s\t%s\n' $mark $f[2] $f[3] $f[4] $used $trial
+                test -n "$f[7]"; and set trial "$(set_color magenta)$f[7]$(set_color normal)"
+                printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' $mark $f[2] $f[3] $f[4] $f[5] $used $trial
             end
         end
     end | table --header --rule --right 3 --max 2:46 --indent 1

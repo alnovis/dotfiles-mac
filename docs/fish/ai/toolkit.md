@@ -488,23 +488,30 @@ A name without a tag means `:latest` everywhere (`_ai_model_norm`).
 Excerpt of a real `ai models`:
 
 ```
-   Model                                              Size  Capabilities          Used for
+    Model                                          Size  Type       Capabilities           Used for
  Coding:
-   devstral-small-2:24b                            14.1 GB  tools,vision          code
-   laguna-xs-2.1:latest, :q4_K_M                   18.9 GB  tools,thinking
-   qwen2.5-coder:7b                                 4.4 GB  tools                 commit
+    devstral-small-2:24b                        14.1 GB  dense      tools,vision           code
+    laguna-xs-2.1:latest, :q4_K_M               18.9 GB  MoE 8/256  tools,thinking
+ >  north-mini-code-1.0:latest                  17.3 GB  MoE 8/128  tools,thinking         review
+    qwen2.5-coder:7b                             4.4 GB  dense      tools                  commit
  General:
-   gemma4:e4b                                       8.9 GB  tools,thinking,vision
-   qwen3.5:9b                                       7.1 GB  tools,thinking,vision
+    qwen3.6:latest                              21.5 GB  MoE        tools,thinking,vision  chat
+    qwen3.8:27b                                 16.9 GB  dense      tools,thinking,vision  default, summary
    …
 
- 15 models (16 tags), 184.7 GB on disk
+ 12 models (13 tags), 164.2 GB on disk
  Details: ai models info NAME · try one: ai models try NAME:TAG · find: ai models search QUERY
  Per-task models: ai config status
 ```
 
 - The list comes from the server (`/api/tags`) and is cached; with the server unreachable it
   shows the cache under `[ollama not reachable — showing the cached list]`.
+- **Type** is `MoE USED/TOTAL` (experts per token / all experts), `MoE` or `dense`, from
+  `/api/show`, cached per digest. A MoE model reads only its active experts per token, so it
+  generates several times faster than a dense model of the same size on disk. Pick MoE for
+  large inputs and interactive tasks, dense for small careful ones. GGUF models report the
+  expert counts. For safetensors models (the MLX runner) only the tensor names tell, so they
+  show plain `MoE` or `dense`. Blank: the server never answered for that model.
 - **Capabilities** (`tools`, `thinking`, `vision`) come from `/api/show`, cached per digest.
 - **Used for** shows `default` and every task whose provider is ollama and that sets an explicit
   `<task>_model`. Full per-task resolution: `ai config status`.
@@ -708,6 +715,7 @@ back to a short inline prompt.
 | `~/.config/ai/models.json` | Model metadata keyed by digest: `name`, `label`, `trial` |
 | `~/.cache/ai-models.json` | Installed tags (from `/api/tags`), used offline by `ai models` and completion |
 | `~/.cache/ai/model-caps.json` | Capabilities per digest |
+| `~/.cache/ai/model-arch.json` | Architecture per digest (`MoE 8/128`, `MoE`, `dense`) |
 | `~/.agents/skills/{ai-review,ai-verify}/` | Installed skills (pi, opencode; our runs read `SKILL.md` from here) |
 | `~/.claude/skills/{ai-review,ai-verify}` | The same skills for claude |
 | `~/.config/opencode/agents/ai-{none,read,edit}.md` | opencode profiles for the runner |

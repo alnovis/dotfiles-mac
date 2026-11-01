@@ -1,12 +1,12 @@
 [ollama not reachable — showing the cached list]
 
-   Model                     Size  Capabilities  Used for
- ----------------------------------------------------------
+   Model                     Size  Type      Capabilities  Used for
+ --------------------------------------------------------------------
  Coding:
-   other:7b                  2 GB
+   other:7b                  2 GB  MoE 8/64
  General:
-   review-model:latest, :q4  5 GB                review
- ----------------------------------------------------------
+   review-model:latest, :q4  5 GB  dense                   review
+ --------------------------------------------------------------------
 
  2 models (3 tags), 7 GB on disk
  Details: ai models info NAME · try one: ai models try NAME:TAG · find: ai models search QUERY

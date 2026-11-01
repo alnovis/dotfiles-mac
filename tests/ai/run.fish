@@ -49,6 +49,9 @@ echo '{"models": [
   {"name": "other:7b", "digest": "bbbb", "size": 2147483648}
 ]}' >$sb/home/.cache/ai-models.json
 echo '{"bbbb": {"name": "other:7b", "label": "coding"}}' >$sb/home/.config/ai/models.json
+# Architecture per digest (the server is dead, so the cache is the only source)
+mkdir -p $sb/home/.cache/ai
+echo '{"aaaa": "dense", "bbbb": "MoE 8/64"}' >$sb/home/.cache/ai/model-arch.json
 cp $root/tests/ai/fixtures/review.md $sb/review.md
 
 # pi config for the runner paths: ollama, plus a cloud provider on a dead address so the
