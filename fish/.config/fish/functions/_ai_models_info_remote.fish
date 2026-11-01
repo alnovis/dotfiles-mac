@@ -29,6 +29,8 @@ function _ai_models_info_remote --description "Details of a not-installed model 
     set -l family (echo $config | jq -r '.model_family // "unknown"')
     set -l requires (echo $config | jq -r '.requires // empty')
     set -l parser (echo $config | jq -r '.parser // empty')
+    set -l arch (_ai_models_info_remote_arch $base "$manifest")
+    test -n "$arch"; or set arch unknown
 
     # tools / thinking: only old-style Go templates say it; parser-based models decide in ollama
     set -l abilities
@@ -76,6 +78,7 @@ function _ai_models_info_remote --description "Details of a not-installed model 
     printf "  %-16s %s\n" "Download:" "$size_gb GB · RAM $ram_gb GB → $fit"
     printf "  %-16s %s\n" "Family:" $family
     printf "  %-16s %s\n" "Parameters:" $params
+    printf "  %-16s %s\n" "Type:" $arch
     printf "  %-16s %s\n" "Quantization:" $quant
     printf "  %-16s %s\n" "Vision:" $vision
     printf "  %-16s %s\n" "Tools/thinking:" $abilities_str
@@ -83,4 +86,62 @@ function _ai_models_info_remote --description "Details of a not-installed model 
     printf "  %-16s %s\n" "Needs ollama:" $req_str
     echo
     echo "  Try it: ai models try $model"
+end
+
+function _ai_models_info_remote_gguf_uint --description "Integer value of the GGUF key *.KEY in a header file, or nothing" --argument-names file key
+    # The key name is stored as plain bytes; right after it come the value type and the value
+    set -l hit (LC_ALL=C grep -a -b -o "[a-z0-9_]*\.$key" $file | head -1)
+    test -n "$hit"; or return 1
+    set -l parts (string split -m1 : -- $hit)
+    set -l off (math $parts[1] + (string length -- $parts[2]))
+    # macOS od ends with an empty line after the number — keep only the number
+    set -l type (od -An -tu4 -j $off -N4 $file | string trim | string match -r '\d+')
+    switch "$type"
+        case 4 # uint32
+            od -An -tu4 -j (math $off + 4) -N4 $file | string trim | string match -r '\d+'
+        case 10 # uint64
+            od -An -tu8 -j (math $off + 4) -N8 $file | string trim | string match -r '\d+'
+    end
+end
+
+function _ai_models_info_remote_arch --description "MoE or dense from the registry, without downloading the model" --argument-names base manifest
+    set -l get curl -sfL --retry 2 --retry-delay 1 --connect-timeout 5 -m 20
+
+    # GGUF: the architecture keys sit at the start of the file, before the tokenizer, so the
+    # first 256 KB are enough. Each key is followed by a uint32 value type and the value.
+    set -l model_digest (echo $manifest | jq -r '[.layers[] | select(.mediaType == "application/vnd.ollama.image.model")][0].digest // empty')
+    if test -n "$model_digest"
+        set -l hdr (mktemp)
+        # A short read (the CDN drops slow transfers) would cut the header before the expert
+        # keys and pass for dense — accept only the full range
+        if not $get -r 0-262143 $base/blobs/$model_digest -o $hdr 2>/dev/null
+            or test (wc -c <$hdr | string trim) -ne 262144
+            rm -f $hdr
+            return 1
+        end
+        set -l total (_ai_models_info_remote_gguf_uint $hdr expert_count)
+        set -l used (_ai_models_info_remote_gguf_uint $hdr expert_used_count)
+        test -n "$used"; or set used "?"
+        set -l ffn (LC_ALL=C grep -a -c '\.feed_forward_length' $hdr)
+        rm -f $hdr
+        if test -n "$total"; and test "$total" -gt 0
+            echo "MoE $used/$total"
+        else if test "$ffn" -gt 0
+            echo dense
+        end
+        return 0
+    end
+
+    # safetensors (MLX): the original config.json is one of the small json layers
+    for d in (echo $manifest | jq -r '.layers[] | select(.mediaType == "application/vnd.ollama.image.json" and .size < 200000) | .digest')
+        set -l arch ($get $base/blobs/$d 2>/dev/null | jq -r 'select(.architectures)
+            | (.text_config // .) as $c
+            | if ($c.num_experts // 0) > 0 then "MoE \($c.num_experts_per_tok // "?")/\($c.num_experts)"
+              elif $c.intermediate_size then "dense"
+              else empty end' 2>/dev/null)
+        if test -n "$arch"
+            echo $arch
+            return 0
+        end
+    end
 end

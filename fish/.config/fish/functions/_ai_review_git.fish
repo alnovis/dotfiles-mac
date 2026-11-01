@@ -374,7 +374,9 @@ $context_block"
         set -q _flag_dry_run; and set -a provider_args --dry-run
         set -q _flag_agentic; and set -a provider_args --agentic --skill ai-review
         set -q _flag_no_think; and set -a provider_args --no-think
+        set -l t0 (date +%s)
         echo "$prompt" | _ai_run $provider_args
+        set -q _flag_dry_run; or printf '\n  done | %ds\n' (math (date +%s) - $t0) >&2
     end
 
     # Verify mode reports its own two files (review + verify) inside the flow; only

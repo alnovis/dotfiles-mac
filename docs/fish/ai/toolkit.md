@@ -382,6 +382,19 @@ for non-thinking models, terminal output, or runner/claude paths.
 passed to the review pass, the verify pass and `--verify-only`. It only affects the native
 driver.
 
+### Run cost in the report
+
+Every report written with `-o` (and the verify file) ends with one HTML comment: the run label,
+the wall time, the prompt size estimate and the reasoning size:
+
+```
+<!-- Review - ollama - qwen3.6:latest | 78s | prompt ~15k tokens | thinking 15769 bytes -->
+```
+
+It is invisible when the markdown is rendered, and it makes comparing toolkit versions or models
+a matter of reading the files (`grep -h '^<!--' *.md`). A terminal run prints `done | 78s` on
+stderr instead.
+
 ### Deprecated: `ai gen review`
 
 Replaced by `ai review PATH`; the old name prints a notice and exits 1.
@@ -527,6 +540,7 @@ $ ai models info qwen3.5:9b
 Model: qwen3.5:9b
   Family:          qwen3_5
   Parameters:      9.7B
+  Type:            dense
   Quantization:    nvfp4
   Format:          safetensors
   Context:         262144
@@ -538,6 +552,7 @@ Model: gemma4:e2b (not installed — from the ollama registry)
   Download:        4.3 GB · RAM 36 GB → fits
   Family:          gemma4
   Parameters:      4.6B
+  Type:            dense
   Quantization:    Q4_K_M
   Vision:          yes
   Tools/thinking:  decided by ollama after install (parser gemma4)
@@ -551,6 +566,12 @@ RAM fit: `fits` up to 70 % of RAM, `tight — little room for context` above tha
 above 100 %. Tools/thinking are known remotely only for models with an old-style template;
 parser-based models decide after install. A model the registry doesn't have is an error pointing
 at `https://ollama.com/library`.
+
+Type (MoE or dense) is known before the download too. For a GGUF tag, the first 256 KB of the
+model file are read with a range request: its header holds `<arch>.expert_count` and
+`expert_used_count` before the tokenizer. For an MLX tag, the original `config.json` from the
+manifest gives `num_experts` and `num_experts_per_tok`. A short read (the CDN drops slow
+transfers) shows `unknown`, never a guess.
 
 ### Trials
 

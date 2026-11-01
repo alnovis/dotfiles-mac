@@ -43,6 +43,8 @@ function _ai_models_info --description "Model details: installed → from the lo
     test (count $tags) -gt 1; and printf "  %-16s %s\n" "Tags:" (string join ", " $tags)
     printf "  %-16s %s\n" "Family:" $family
     printf "  %-16s %s\n" "Parameters:" $params
+    set -l arch (_ai_model_arch $model $digest)
+    printf "  %-16s %s\n" "Type:" (test -n "$arch"; and echo $arch; or echo unknown)
     printf "  %-16s %s\n" "Quantization:" $quant
     printf "  %-16s %s\n" "Format:" $format
     printf "  %-16s %s\n" "Context:" $context

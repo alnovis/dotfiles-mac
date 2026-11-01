@@ -38,6 +38,9 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     set -l tty 0
     isatty stderr; and set tty 1
 
+    set -l chars (wc -c <$pfile | string trim)
+    set -l tokens (math "round($chars / 3.5)")
+
     set -l rc
     if contains -- --agentic $run_args
         # Agentic: the runner (pi / opencode / claude) may print its own progress on
@@ -49,8 +52,6 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     else
         # Non-agentic single call: `read` has no timeout, so update only as lines
         # arrive; print an honest prefill estimate, then a live line count.
-        set -l chars (wc -c <$pfile | string trim)
-        set -l tokens (math "round($chars / 3.5)")
         set -l esec (math "round($tokens / 120)")
         set -l etime "~"$esec"s"
         test $esec -ge 90; and set etime "~"(math "round($esec / 60)")"m"
@@ -81,12 +82,21 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     end
     # A non-empty sidecar means the model reasoned — point at it; an empty one means it
     # didn't (or wasn't a thinking model) — drop it so no stray files accumulate.
+    set -l thinking_bytes 0
     if test -n "$sidecar"
         if test -s "$sidecar"
+            set thinking_bytes (wc -c <$sidecar | string trim)
             printf '  ↳ reasoning -> %s\n' $sidecar >&2
         else
             rm -f "$sidecar"
         end
+    end
+    # The run's cost goes into the report itself, so comparing toolkit versions or models
+    # later needs nothing but the files. An HTML comment: invisible when the markdown is
+    # rendered, one grep away otherwise. Not for a temp that is printed to the terminal.
+    if test "$rc" -eq 0; and test -s $outfile; and test "$dest" != "(terminal)"
+        printf '\n<!-- %s | %ds | prompt ~%dk tokens | thinking %d bytes -->\n' \
+            $label $total (math "round($tokens / 1000)") $thinking_bytes >>$outfile
     end
     rm -f $errlog $pfile
     return $rc
