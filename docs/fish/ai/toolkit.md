@@ -262,7 +262,7 @@ The working directory is the file's parent, or the directory itself.
 
 A lens injects a specialist checklist after the base review prompt. It says *where to look*; the
 finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
-(`--lens crypto,logic-bug`) and work in both modes. 20 ship today:
+(`--lens crypto,logic-bug`) and work in both modes. 21 ship today:
 
 | Group | Lens | Hunts for |
 |---|---|---|
@@ -286,6 +286,7 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | Data / query | `sql-postgres` | Unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics |
 | | `sql-clickhouse` | `ORDER BY`/partition design, mutations, `FINAL` dedup, memory-blowing joins |
 | | `hbase` | Row-key hotspotting, unbounded scans, column-family / version growth |
+| | `redis` | Races between commands, non-atomic collection swaps, lost TTLs, cross-slot ops, Sentinel failover; Jedis / Lettuce / Spring Data Redis / Redisson / redis-rs specifics |
 
 Each lens ends with a **HARD GATE** — the evidence a finding must carry, and when to drop it.
 Lens files live in `~/.config/fish/prompts/lenses/<name>.md`; a new file there is selectable at

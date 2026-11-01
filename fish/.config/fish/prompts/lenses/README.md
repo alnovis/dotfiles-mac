@@ -36,13 +36,16 @@ Data / query lenses (original to this repo — one engine each; the failure mode
 - `sql-postgres` — OLTP relational: unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics
 - `sql-clickhouse` — OLAP columnar: `ORDER BY`/partition design, mutations, dedup (`FINAL`), memory-blowing joins
 - `hbase` — wide-column access patterns: row-key hotspotting, unbounded scans, column-family / version growth
+- `redis` — races between commands, non-atomic collection swaps, lost TTLs, cross-slot ops, Sentinel failover, Pub/Sub vs Streams; client section for Jedis / Lettuce / Spring Data Redis / Redisson / redis-rs
 
 Add a lens by dropping a `<name>.md` file here; it becomes selectable immediately
 (in `--lens`, its completion, and validation). Keep the shape of the existing
 files: a one-line framing, a `HARD GATE:` paragraph, then a
 `Where to look first (non-exhaustive — reason beyond this list):` checklist. A
-lens for a language that models tend to misread (`fish`) adds a "Not bugs" list
-— idioms that look wrong to the model but are correct.
+lens may add a "Not bugs" list — idioms or contexts that look wrong to the model but
+are correct (`fish`: bash habits; `redis`: test and admin code). A lens whose engine
+is used from several clients (`redis`) keeps the engine's failure modes in the main
+checklist and adds a short per-client section, rather than one lens per language.
 
 ## Attribution
 
@@ -67,5 +70,5 @@ data) come from VVAH's `iac` skill.
 The **quality** lenses (`documentation`, `reactive`, `resource-leak`,
 `error-handling`, `k8s-manifest`), the **Rust** lenses (`rust-unsafe`,
 `rust-async`, `rust-ownership`), the **shell** lenses (`bash`, `fish`), and the **data / query** lenses (`sql-postgres`,
-`sql-clickhouse`, `hbase`) are original to this repository — same HARD GATE
+`sql-clickhouse`, `hbase`, `redis`) are original to this repository — same HARD GATE
 discipline, not derived from VVAH.

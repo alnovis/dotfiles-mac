@@ -204,7 +204,7 @@ ai review --lens sql-postgres                   a migration commit
 Pick by what the change touches: security (`access-control`, `crypto`, `deserialization`,
 `logic-bug`, `injection`, `ssrf`, `sensitive-data`), quality (`error-handling`, `resource-leak`, `reactive`, `documentation`,
 `k8s-manifest`), Rust (`rust-unsafe`, `rust-async`, `rust-ownership`), shell (`bash`, `fish`), data (`sql-postgres`,
-`sql-clickhouse`, `hbase` — one engine each). `--lens crypto,<Tab>` stacks. Full table:
+`sql-clickhouse`, `hbase`, `redis` — one engine each). `--lens crypto,<Tab>` stacks. Full table:
 [toolkit.md](toolkit.md#lenses---lens).
 
 ### Second-opinion verify
