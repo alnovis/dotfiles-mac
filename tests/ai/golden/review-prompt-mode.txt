@@ -1,8 +1,7 @@
-lean (auto: local model on the native ollama driver)
-full (auto: claude, a runner or --agentic)
-full (auto: claude, a runner or --agentic)
-full (auto: claude, a runner or --agentic)
+lean (auto: not claude)
+full (auto: claude)
+lean (auto: not claude)
 full (config review_prompt=full)
 Warning: review_prompt=bogus is not auto, full or lean — using auto
-lean (auto: local model on the native ollama driver)
+lean (auto: not claude)
 [exit 0]

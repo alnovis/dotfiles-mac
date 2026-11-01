@@ -170,7 +170,7 @@ function _ai_config_do_status
     set_color cyan
     echo "Review prompt:"
     set_color normal
-    echo "  "(_ai_review_prompt_mode --origin (_ai_default_provider review) 0)
+    echo "  "(_ai_review_prompt_mode --origin (_ai_default_provider review))
 end
 
 function _ai_config_do_provider --argument-names value task scope

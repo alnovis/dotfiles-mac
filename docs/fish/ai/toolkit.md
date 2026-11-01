@@ -282,21 +282,20 @@ The working directory is the file's parent, or the directory itself.
 
 `meta-review*.md` mark two rules as `<!-- full-only -->`: the ABSENCE gate ("name where you looked
 for the control") and the sibling sweep ("check the rest of the diff for the same pattern, then ask
-what else is wrong at that site"). Both come from VVAH and suit Claude. A small local model turns
-each into another round of second-guessing. On a real two-commit work change, qwen3.6 thought 2.2× longer (78 s → 139 s)
-and talked itself out of the race the lean prompt reported.
+what else is wrong at that site"). Both come from VVAH and suit Claude. Other models turn each
+into another round of second-guessing. On a real two-commit work change, qwen3.6 did worse with
+them wherever it ran:
 
-So the depth follows the executor, not a list of "strong" models:
+| qwen3.6-35b-a3b | full | lean |
+|---|---|---|
+| local (native ollama) | 139 s, 34 KB thinking, the race talked away as safe | 78 s, 16 KB, the race found |
+| cloud (litellm) | 27 s, the race over-graded to Critical, two false Important | 23 s, the race found as Important, no false findings |
 
-| Executor | Prompt |
-|---|---|
-| native ollama driver (a local model, single call) | lean: the full-only blocks are dropped |
-| claude, the runners (pi / opencode: cloud providers), `--agentic` | full |
-
-Config key `review_prompt` (`auto` by default, `full`, `lean`; project → global) overrides it, for
-example `review_prompt=full` for a local model that handles the extra rules. `ai config status`
-shows the result and why. The `ai-review` skill reads the templates as they are, so agentic runs
-always get the full rules.
+So it is the model, not where it runs: `auto` gives **full to claude only, lean to everything
+else**. Config key `review_prompt` (`auto` by default, `full`, `lean`; project → global) overrides
+it, for example `review_prompt=full` for another model that handles the extra rules. `ai config
+status` shows the result and why. The `ai-review` skill reads the templates as they are, so its
+agentic runs keep the full rules.
 
 ### Lenses (`--lens`)
 
@@ -742,7 +741,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
-| `review_prompt` | by hand | Review prompt depth: `auto` (default: lean on the native ollama driver, full elsewhere), `full`, `lean` |
+| `review_prompt` | by hand | Review prompt depth: `auto` (default: full for claude, lean for every other model), `full`, `lean` |
 | `cloud_driver` | by hand | Single calls to an OpenAI-API provider of the runner (litellm, …): `native` (default, direct HTTP) or `runner` (through pi / opencode) |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |
 

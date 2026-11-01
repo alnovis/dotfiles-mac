@@ -1,13 +1,12 @@
-function _ai_review_prompt_mode --description "Review prompt depth for PROVIDER (AGENTIC 1|0): full or lean; --origin prints why"
+function _ai_review_prompt_mode --description "Review prompt depth for PROVIDER: full or lean; --origin prints why"
     # The full prompt adds the ABSENCE gate and the sibling sweep (from VVAH, tuned for
-    # Claude). A small local model turns each of those rules into another round of
-    # second-guessing: on a real work change qwen3.6 thought 2.2× longer and dropped the finding the
-    # lean prompt caught. So the depth follows the executor, never a list of "strong"
-    # models: the native ollama driver (a local model) gets lean; claude, the runners
-    # (cloud providers) and --agentic get full. Config key review_prompt overrides.
+    # Claude). Other models turn each of those rules into another round of second-guessing.
+    # On a real work change qwen3.6 did worse with them both locally (2.2x the thinking,
+    # the race dropped) and in the cloud (the race over-graded, two false Important) — so
+    # it is the model, not where it runs: full goes to claude only. Config key
+    # review_prompt overrides.
     argparse origin -- $argv; or return 1
     set -l provider $argv[1]
-    set -l agentic $argv[2]
 
     set -l v (_ai_config_read review_prompt)
     if test -n "$v"; and not contains -- $v auto full lean
@@ -22,12 +21,12 @@ function _ai_review_prompt_mode --description "Review prompt depth for PROVIDER 
     if contains -- "$v" full lean
         set mode $v
         set origin "config review_prompt=$v"
-    else if test "$provider" = ollama; and test "$agentic" != 1
-        set mode lean
-        set origin "auto: local model on the native ollama driver"
-    else
+    else if test "$provider" = claude
         set mode full
-        set origin "auto: claude, a runner or --agentic"
+        set origin "auto: claude"
+    else
+        set mode lean
+        set origin "auto: not claude"
     end
 
     if set -q _flag_origin

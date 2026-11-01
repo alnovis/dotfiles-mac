@@ -105,7 +105,7 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
                 + (if (.completion_tokens_details.reasoning_tokens // 0) > 0
                    then " (reasoning \(.completion_tokens_details.reasoning_tokens))" else "" end),
             (if .tok_s then "\(.tok_s) tok/s" else empty end),
-            (if .cost then "cost \(.cost)" else empty end)
+            (if .cost then "cost \(.cost * 10000 | round / 10000)" else empty end)
             ] | join(" | ")' $ufile 2>/dev/null)
         test -n "$cost"; or set cost "prompt ~"(math "round($tokens / 1000)")"k tokens (estimate)"
         printf '\n<!-- %s | %ds | %s | thinking %d bytes -->\n' \

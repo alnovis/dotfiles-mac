@@ -53,9 +53,7 @@ function _ai_review_target --description "AI review of a project directory or si
         test -n "$target_file"; and set subject "file"
         set prompt "Give a brief summary of this $subject in 3-5 bullet points: what it does, how it is structured, and the main risks or problems. Be concise."
     else if test -f $template_file
-        set -l agentic 0
-        set -q _flag_agentic; and set agentic 1
-        set prompt (_ai_review_template $template_file (_ai_review_prompt_mode $provider $agentic))
+        set prompt (_ai_review_template $template_file (_ai_review_prompt_mode $provider))
     else
         set prompt "Review this project. Analyze architecture, code quality, potential issues, and suggest improvements."
     end

@@ -14,5 +14,5 @@ Resolved per task:
   summary  ollama    config-model  global+top     global
 
 Review prompt:
-  lean (auto: local model on the native ollama driver)
+  lean (auto: not claude)
 [exit 0]

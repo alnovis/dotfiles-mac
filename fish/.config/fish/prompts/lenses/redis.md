@@ -15,7 +15,8 @@ Where to look first (non-exhaustive — reason beyond this list):
 
 Client specifics:
 - Jedis: a `Jedis` instance is not thread-safe — borrow from `JedisPool` (or `JedisSentinelPool`) per use, return it (try-with-resources).
-- Lettuce (Spring Boot's default): one connection is shared by all threads, so a blocking command (`BLPOP`, `XREAD BLOCK`) or a `MULTI` on it stalls or corrupts everyone else's — use a dedicated connection; Cluster topology refresh is off by default (stale topology after failover); `ReadFrom.REPLICA*` reads stale data; `.block()` inside a reactive chain.
+- Lettuce (Spring Boot's default): one connection is shared by all threads, so a blocking Redis COMMAND (`BLPOP`, `XREAD BLOCK`) or a `MULTI` on it stalls or corrupts everyone else's — use a dedicated connection; Cluster topology refresh is off by default (stale topology after failover); `ReadFrom.REPLICA*` reads stale data.
+- Reactor `.block()` is a different thing: it parks the CALLING thread until the reply, and other commands keep flowing on the shared connection. It is a bug only on a thread that must not wait — a Netty event loop or a Reactor non-blocking scheduler (it throws there, or stalls that loop). On a startup (`@PostConstruct`), scheduler or plain worker thread it is fine.
 - Spring Data Redis: `multi()`/`exec()` on `RedisTemplate` outside a `SessionCallback` run on different connections — not a transaction; `RedisCacheManager` entries have no TTL unless configured.
 - Redisson: `lock(leaseTime, …)` disables the watchdog — the lock expires mid-work; `RLock` is owned by a thread, so locking in one reactive/async callback and unlocking in another fails.
 - redis-rs (Rust): a blocking command on a shared `MultiplexedConnection` stalls every task using it; a plain `Connection` does not reconnect (use `ConnectionManager`); a pipeline is a transaction only with `.atomic()`.
