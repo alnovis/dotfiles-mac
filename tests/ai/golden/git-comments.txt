@@ -1,0 +1,6 @@
+--- dry-run: pass 3 (comments) ---
+comments provider=ollama model=default-model (prompt: meta-comments.md + review + verdicts; lines anchored by git in HEAD~1..HEAD)
+would write: comments -> ../review-out.comments.md ; ../review-out.comments.json
+Verify: on (ollama)
+Comments: on (MR line comments from the verdicts)
+[exit 0]

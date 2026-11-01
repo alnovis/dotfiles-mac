@@ -13,8 +13,10 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --verify-provider P      override verify provider (default: review provider)
     #   --verify-model M         override verify model (default: per-task config)
     #   --code-file FILE         code/diff context embedded for the verifier
+    #   --comments               a third stage: MR line comments from the verified findings
+    #   --range BASE..HEAD       the reviewed range, for anchoring those comments
     argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
-             'verify-provider=' 'verify-model=' 'code-file=' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' -- $argv; or return 1
 
     if test -z "$_flag_prompt_file"; or not test -f "$_flag_prompt_file"
         echo "verify-flow: missing --prompt-file" >&2
@@ -71,14 +73,27 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         end
         echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md + first-pass findings + $code_note)" >&2
         test -n "$review_out"; and echo "would write: review -> $review_out ; verify -> $verify_out" >&2
+        if set -q _flag_comments
+            set_color cyan >&2; echo "--- dry-run: pass 3 (comments) ---" >&2; set_color normal >&2
+            _ai_review_comments --dry-run --output $review_out --provider $vprovider --model "$vmodel" --range "$_flag_range"
+        end
         return 0
     end
 
+    # Comments are a third stage: the same verify model turns the verdicts into MR comments
+    set -l n_stages 2
+    set -q _flag_comments; and set n_stages 3
     set -l rev_label "Review - $provider"
     test -n "$model"; and set rev_label "$rev_label - $model"
     set -l ver_label "Verify - $vprovider"
     test -n "$vmodel"; and set ver_label "$ver_label - $vmodel"
-    _ai_stage_plan "$rev_label" "$ver_label"
+    set -l com_label "Comments - $vprovider"
+    test -n "$vmodel"; and set com_label "$com_label - $vmodel"
+    if test $n_stages -eq 3
+        _ai_stage_plan "$rev_label" "$ver_label" "$com_label"
+    else
+        _ai_stage_plan "$rev_label" "$ver_label"
+    end
 
     # Pass 1 — with --output the review is written DIRECTLY to its own file, so it is
     # durable the instant the pass completes (survives a verify crash / Ctrl-C). That
@@ -95,7 +110,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l rev_dest $review_out
     test -z "$rev_dest"; and set rev_dest "(terminal)"
 
-    printf '%s' "$pass1_prompt" | _ai_run_watched --label "[1/2] $rev_label" --output $find_src --dest $rev_dest -- $run_args
+    printf '%s' "$pass1_prompt" | _ai_run_watched --label "[1/$n_stages] $rev_label" --output $find_src --dest $rev_dest -- $run_args
     set -l rc1 $status
 
     if test $rc1 -ne 0; or not test -s $find_src
@@ -133,7 +148,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l ver_dest $verify_out
     test -z "$ver_dest"; and set ver_dest "(terminal)"
 
-    _ai_review_verify $vargs --output $ver_target --label "[2/2] $ver_label" --dest $ver_dest
+    _ai_review_verify $vargs --output $ver_target --label "[2/$n_stages] $ver_label" --dest $ver_dest
     set -l rc2 $status
 
     # Deliver. With files: report both paths (review already durable). Without:
@@ -157,7 +172,23 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         cat $ver_target
     end
 
+    # Stage 3 — comments, only over a verify pass that produced verdicts
+    set -l rc3 0
+    if set -q _flag_comments; and test -n "$review_out"
+        if test -s "$ver_target"
+            _ai_review_comments --findings $find_src --verdicts $ver_target --output $review_out \
+                --provider $vprovider --model "$vmodel" --lang "$lang" --range "$_flag_range" --root $workdir \
+                --label "[3/3] $com_label"
+            set rc3 $status
+        else
+            set_color yellow
+            echo "Comments skipped: no verdicts to build them from."
+            set_color normal
+            set rc3 1
+        end
+    end
+
     test $find_is_temp -eq 1; and rm -f $find_src
     test $ver_is_temp -eq 1; and rm -f $ver_target
-    test $rc1 -eq 0; and test $rc2 -eq 0
+    test $rc1 -eq 0; and test $rc2 -eq 0; and test $rc3 -eq 0
 end

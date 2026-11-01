@@ -1,0 +1,64 @@
+40
+40
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":8,"line_cited":3,"in_diff":true,"anchored":true,"anchored_by":"quote","status":"confirmed"}
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"old","line":39,"line_cited":99,"in_diff":true,"anchored":true,"anchored_by":"quote","status":"uncertain"}
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":115,"line_cited":115,"in_diff":false,"anchored":true,"anchored_by":"quote","status":"confirmed"}
+{"path":"nope.fish","side":null,"line":null,"line_cited":1,"in_diff":false,"anchored":false,"anchored_by":null,"status":"uncertain"}
+{"path":"fish/.config/fish/functions/gbranch.fish","side":"new","line":8,"line_cited":8,"in_diff":true,"anchored":true,"anchored_by":"line","status":"confirmed"}
+# Review comments — check before publishing
+
+5 comment(s): 3 confirmed, 2 uncertain. Range: <range>
+
+## fish/.config/fish/functions/gbranch.fish
+
+### fish/.config/fish/functions/gbranch.fish:8 (new) · nit
+
+```
+        echo "Auto-detects the nearest base among develop/main/master/release/stage"
+```
+
+An added line, cited with an abbreviated path and a wrong line number.
+
+
+### fish/.config/fish/functions/gbranch.fish:39 (old) · important · uncertain — needs a human check
+
+```
+    else if git show-ref --verify --quiet refs/heads/develop
+```
+
+A removed line: found in the old version.
+
+
+### fish/.config/fish/functions/gbranch.fish:115 (new) · nit
+
+```
+            set -l parts (string split \t $line)
+```
+
+An unchanged line far from the change: anchored, not in the diff.
+
+> Not in the diff: GitLab/GitHub take a line comment only inside the changes — post it as a general comment.
+
+### fish/.config/fish/functions/gbranch.fish:8 (new) · nit
+
+```
+        echo "Auto-detects the nearest base among develop/main/master/release/stage"
+```
+
+An invented quote with a right line number: placed by the line, flagged.
+
+> Placed by the cited line number: the quote did not match the code (model quoted: `echo "a line the model invented"`) — check this is the right line.
+
+## nope.fish
+
+### nope.fish (line 1 cited, not found) · nit · uncertain — needs a human check
+
+```
+x
+```
+
+A file that does not exist: unanchored.
+
+> Unanchored: the quoted line was not found in the code — check it by hand.
+
+[exit 0]

@@ -53,6 +53,8 @@ echo '{"bbbb": {"name": "other:7b", "label": "coding"}}' >$sb/home/.config/ai/mo
 mkdir -p $sb/home/.cache/ai
 echo '{"aaaa": "dense", "bbbb": "MoE 8/64"}' >$sb/home/.cache/ai/model-arch.json
 cp $root/tests/ai/fixtures/review.md $sb/review.md
+# Extracted comments as a model would return them, for the anchoring case
+cp $root/tests/ai/fixtures/comments.json $sb/comments.json
 
 # pi config for the runner paths: ollama, plus a cloud provider on a dead address so the
 # reachability probe fails at once (connection refused) and no model is ever called
@@ -85,6 +87,10 @@ set -g golden_cases \
     'git-commit-range|fixture|ai review --commit 8f00743~2..8f00743 --dry-run' \
     'git-commit-list|fixture|ai review --commit 8f00743,8f00743~1 --dry-run' \
     'git-commit-broken|fixture|ai review --commit 8f00743~3,8f00743 --dry-run; ai review --commit 8f00743..8f00743~2 --dry-run; ai review --commit nosuch --dry-run' \
+    'git-comments|fixture|ai review --last 1 --comments -o ../review-out.md --dry-run 2>&1 | string match -e -r "Verify: on|Comments: on|pass 3|comments provider|would write: comments"' \
+    'comments-errors|fixture|ai review --last 1 --comments --dry-run; ai review --last 1 --comments --brief -o x.md --dry-run; ai review --last 1 --comments --no-verify -o x.md --dry-run; ai review --last 1 --range a..b; ai review --verify-only ../review.md --range a..b' \
+    'git-no-verify|fixture|ai review --last 1 --no-verify --dry-run 2>&1 | string match -q -e "pass 2"; and echo "verify ran"; or echo "no verify pass"' \
+    'comments-anchor|fixture|_ai_review_comments_anchor ../comments.json HEAD~1..HEAD (pwd) >../anchored.json; jq -c "(.base_sha | length), (.head_sha | length), (.comments[] | {path, side, line, line_cited, in_diff, anchored, anchored_by, status})" ../anchored.json; functions -q _ai_review_comments; _ai_review_comments_md ../anchored.json | string replace -r "Range: \S+" "Range: <range>"' \
     'git-branch-auto|fixture|ai review --dry-run' \
     'git-branch-explicit|fixture|ai review master --dry-run' \
     'git-file|fixture|ai review --file Brewfile --dry-run' \

@@ -379,6 +379,50 @@ one, so run it from the repo when the verifier uses `--agentic`.
 | `--file FILE` | Code or diff to embed for the verifier. Without it (and without `--agentic`) a note says the verifier reasons from the findings text alone |
 | `--verify-output FILE`, `-o FILE` | Output path (`--verify-output` wins). Default: `<review>.verify.<ext>` |
 | `--agentic`, `--no-think`, `--lang`, `--dry-run` | As for a normal review |
+| `--comments` | Then the comments stage below |
+| `--range BASE..HEAD` | With `--comments`: the reviewed range, to anchor lines and check the diff |
+| `--verdicts FILE` | With `--comments`: an existing verify file — no verify pass, comments only |
+
+### Merge-request comments (`--comments`)
+
+A third stage over the verdicts: line comments for a GitLab merge request or a GitHub pull
+request. `--comments` turns `--verify` on and needs `-o`; it refuses `--brief` and
+`--no-verify`.
+
+```
+ai review --last 2 --comments -o review.md        review.md, review.verify.md,
+                                                  review.comments.md, review.comments.json
+ai review --verify-only review.md --verdicts review.verify.md --comments --range abc~1..def
+```
+
+1. **Extraction (the verify model, one short call).** Only the review and the verdicts go in, no
+   code: `meta-comments.md` asks for the `[CONFIRMED]` and `[UNCERTAIN]` findings as a JSON array
+   of `file`, `line`, `quote` (one line of code, verbatim), `severity`, `status`, `body`.
+   `[REFUTED]` ones are dropped. The bodies follow `--lang` (English by default); code stays as is.
+2. **Anchoring (no model, `_ai_review_comments_anchor`).** A model's line numbers are often off
+   (a cited `:24` was really `:36`), so each line is found again by its quote: in the new version
+   of the file, then in the old one (removed code); the cited number only breaks ties. A path
+   abbreviated with `…/` is resolved by file name. Then the hunks of `git diff -U3` tell whether
+   the line is **in the diff** — GitLab and GitHub accept a line comment only there.
+3. **Files next to the report.** Nothing is posted:
+   - `review.comments.md` — for a human to check: per file, each comment with its line and side,
+     severity, `uncertain — needs a human check` where so, the quoted line and the text. A line
+     outside the diff says to post it as a general comment; one not found says `Unanchored`.
+   - `review.comments.json` — for publishing, one shape for both platforms:
+
+     ```json
+     {"base_sha": "…", "head_sha": "…", "start_sha": "…",
+      "comments": [{"path": "src/…/WhitelistOrgCache.java", "side": "new", "line": 36,
+                    "line_cited": 24, "quote": "localCache = Stream.concat(…)", "in_diff": true,
+                    "anchored": true, "severity": "important", "status": "confirmed", "body": "…"}]}
+     ```
+
+     GitLab: `position` = `base_sha`, `start_sha`, `head_sha`, `new_path`/`old_path` and
+     `new_line` or `old_line` by `side`. GitHub: `path`, `line`, `side` `RIGHT` (new) or `LEFT`
+     (old), `commit_id` = `head_sha`.
+
+A target review (a file or directory, no range) anchors in the working tree and marks nothing as
+in the diff.
 
 ### Agentic mode (`--agentic`)
 
@@ -816,6 +860,7 @@ back to a short inline prompt.
 | `meta-review.md` | `ai review PATH` (target mode); `ai-review` skill |
 | `meta-review-diff.md` | `ai review` (git mode); `ai-review` skill |
 | `meta-verify.md` | verify pass, `--verify-only`; `ai-verify` skill |
+| `meta-comments.md` | `--comments`: verified findings → MR line comments (JSON) |
 | `lenses/<name>.md` | `ai review --lens NAME` (`lenses/README.md` is not a lens) |
 
 ## Files and paths

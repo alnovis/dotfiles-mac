@@ -1,7 +1,10 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
     argparse 'h/help' 'provider=' 'model=' 'lang=' 'o/output=' 'with-project-context' 'lens=' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
-             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'comments' -- $argv; or return 1
+    # Quoted: an empty (…) would vanish and shift the arguments
+    _ai_review_comments_check "$(set -q _flag_comments; and echo 1)" "$(set -q _flag_brief; and echo 1)" \
+        "$(set -q _flag_no_verify; and echo 1)" "$_flag_output"; or return 1
 
     # Resolve positional args: [DIR|FILE] ["custom prompt"]
     set -l target_dir
@@ -101,7 +104,7 @@ $prompt"
             echo "Lens: $_flag_lens"
         end
     end
-    if _ai_verify_wanted (set -q _flag_verify; and echo 1) (set -q _flag_no_verify; and echo 1)
+    if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
         if set -q _flag_brief
             set_color yellow
             echo "Verify: requested (ignored — --brief mode)"
@@ -110,6 +113,7 @@ $prompt"
             set -l vp $_flag_verify_provider
             test -z "$vp"; and set vp "$provider"
             echo "Verify: on ($vp)"
+            set -q _flag_comments; and echo "Comments: on (line comments from the verdicts)"
         end
     end
     if set -q _flag_output
@@ -249,11 +253,13 @@ $context"
 
     # Verify runs only for the detailed (non-brief) review.
     set -l do_verify 0
-    if not set -q _flag_brief; and _ai_verify_wanted (set -q _flag_verify; and echo 1) (set -q _flag_no_verify; and echo 1)
+    if not set -q _flag_brief; and _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
         set do_verify 1
         set -l p1file (mktemp)
         printf '%s' "$full_prompt" >$p1file
         set -l flow_args --prompt-file $p1file --provider $provider --workdir $work_dir --lang $lang_full
+        # No range here: comments are anchored in the working tree, and none is in a diff
+        set -q _flag_comments; and set -a flow_args --comments
         test -n "$model"; and set -a flow_args --model $model
         test -n "$output"; and set -a flow_args --output $output
         set -q _flag_dry_run; and set -a flow_args --dry-run

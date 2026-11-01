@@ -1,0 +1,6 @@
+Error: --comments writes files next to the report — give -o FILE
+Error: --comments works on a full review, not --brief
+Error: --comments is built from the verify verdicts — drop --no-verify
+Error: --range goes with --verify-only (a review knows its own range)
+Error: --verdicts and --range are for --comments
+[exit 1]

@@ -1,0 +1,42 @@
+[
+  {
+    "file": "fish/.../gbranch.fish",
+    "line": 3,
+    "quote": "echo \"Auto-detects the nearest base among develop/main/master/release/stage\"",
+    "severity": "nit",
+    "status": "confirmed",
+    "body": "An added line, cited with an abbreviated path and a wrong line number."
+  },
+  {
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 99,
+    "quote": "else if git show-ref --verify --quiet refs/heads/develop",
+    "severity": "important",
+    "status": "uncertain",
+    "body": "A removed line: found in the old version."
+  },
+  {
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 115,
+    "quote": "set -l parts (string split \\t $line)",
+    "severity": "nit",
+    "status": "confirmed",
+    "body": "An unchanged line far from the change: anchored, not in the diff."
+  },
+  {
+    "file": "nope.fish",
+    "line": 1,
+    "quote": "x",
+    "severity": "nit",
+    "status": "uncertain",
+    "body": "A file that does not exist: unanchored."
+  },
+  {
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 8,
+    "quote": "echo \"a line the model invented\"",
+    "severity": "nit",
+    "status": "confirmed",
+    "body": "An invented quote with a right line number: placed by the line, flagged."
+  }
+]

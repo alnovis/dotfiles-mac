@@ -1,0 +1,2 @@
+no verify pass
+[exit 0]

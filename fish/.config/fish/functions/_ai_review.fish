@@ -28,7 +28,8 @@ function _ai_review --description "AI code review — project state (path target
 
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
              'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' \
-             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' -- $argv
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' \
+             'comments' 'range=' 'verdicts=' -- $argv
     or return 1
 
     if set -q _flag_help
@@ -41,6 +42,16 @@ function _ai_review --description "AI code review — project state (path target
     if set -q _flag_verify_only
         _ai_review_verify_only $orig_argv
         return $status
+    end
+    # In a review the range is known (and anchoring takes it from there); an existing
+    # verdicts file only makes sense with --verify-only
+    for f in range verdicts
+        if set -q _flag_$f
+            set_color red
+            echo "Error: --$f goes with --verify-only (a review knows its own range)" >&2
+            set_color normal
+            return 1
+        end
     end
 
     # Mode detection: first positional that exists on disk → target mode
@@ -121,6 +132,16 @@ function _ai_review_print_help
     echo "  With --verify, -o writes the RAW review and the verify pass goes to a"
     echo "  SEPARATE file, so the review is durable even if verify is interrupted."
     echo ""
+    echo "Merge-request comments (a third stage over the verdicts; turns --verify on):"
+    echo "  --comments              Line comments from the [CONFIRMED] and [UNCERTAIN]"
+    echo "                          findings: <output>.comments.md to check by hand,"
+    echo "                          <output>.comments.json for GitLab/GitHub. Each line is"
+    echo "                          found by its quoted code, so a wrong line number is"
+    echo "                          fixed; a line outside the diff is marked. Needs -o."
+    echo "  --range BASE..HEAD      With --verify-only: the reviewed range, for anchoring"
+    echo "  --verdicts FILE         With --verify-only: an existing verify file — no"
+    echo "                          verify pass, comments only"
+    echo ""
     echo "Git-mode options:"
     echo "  --last [N]              Review last N commit(s) (default: 1)"
     echo "  --commit SPEC           A commit (SHA), a range (A..B: after A up to B) or a task's"
@@ -163,6 +184,8 @@ function _ai_review_print_help
     echo ""
     echo "Examples — verify pass:"
     echo "  ai review --verify -o review.md          review.md + review.verify.md"
+    echo "  ai review --last 2 --comments -o review.md   + review.comments.md/.json"
+    echo "  ai review --verify-only review.md --verdicts review.verify.md --comments --range A~1..B"
     echo "  ai review --provider ollama --verify --verify-provider claude"
     echo "                                           Generate locally, verify with claude"
     echo "  ai review . --lens access-control --verify   Lens + verify together"
