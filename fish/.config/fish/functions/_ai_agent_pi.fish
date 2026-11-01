@@ -1,7 +1,8 @@
 function _ai_agent_pi --description "Runner: pi (any provider in pi's own config, local or cloud)"
     # Runner contract (docs/refactoring.md §4):
     #   --provider P --model M   pi resolves P/M in ~/.pi/agent/models.json (M may already be "P/id")
-    #   --tools none|read|edit   none: no tools; read: read,grep,find,ls — interactive also keeps
+    #   --tools none|read|edit   none: no tools, no skills, and a system prompt that says so
+    #                            (_ai_no_tools_prompt); read: read,grep,find,ls — interactive also keeps
     #                            bash, since a person is watching; edit: full toolset.
     #                            Default: read (an unattended run must not touch the repo).
     #   --skill FILE             appended to the system prompt
@@ -25,7 +26,7 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
     set -l args
     switch "$_flag_tools"
         case none
-            set args --exclude-tools '*'
+            set args --exclude-tools '*' --no-skills --system-prompt (_ai_no_tools_prompt)
         case read ''
             if set -q _flag_interactive
                 set args --exclude-tools edit,write
