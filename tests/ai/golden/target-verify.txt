@@ -167,5 +167,5 @@ object LC:
     case tn: TreeNode           => fromTreeNode(tn)
     case other                  => other.toString
 ```--- dry-run: pass 2 (verify) ---
-verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings)
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 115 lines)
 [exit 0]

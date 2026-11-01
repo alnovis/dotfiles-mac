@@ -52,7 +52,7 @@ function _ai_review --description "AI code review — project state (path target
 
     # Validate flag/mode compatibility
     if test "$mode" = target
-        for f in last commit file max-lines context-lines
+        for f in last commit file max-lines
             if set -q _flag_(string replace -a - _ $f)
                 set_color red
                 echo "Error: --$f is git-mode only and cannot combine with a path target" >&2
@@ -98,8 +98,10 @@ function _ai_review_print_help
     echo "                          providers via the runner, config key: agent)."
     echo "                          Default: everything embedded, no tools."
     echo "  --no-think              Fast pass: disable a thinking model's reasoning"
-    echo "  --context-lines N       Budget for embedding full changed files (git mode,"
-    echo "                          default 2000). 0 = diff-only. Over budget → prompt/notice."
+    echo "  --context-lines N       Line budget for embedding whole files: the changed files"
+    echo "                          in git mode (config key context_lines, default 2000), a"
+    echo "                          directory's files in target mode (dir_context_lines,"
+    echo "                          default 10000). 0 = none. Over budget → prompt/notice."
     echo "  --dry-run               Print the assembled prompt without invoking the model"
     echo "  -h, --help              Show this help"
     echo ""

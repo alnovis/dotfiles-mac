@@ -65,7 +65,11 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         set_color cyan >&2; echo "--- dry-run: pass 1 (review) ---" >&2; set_color normal >&2
         printf '%s' "$pass1_prompt" | _ai_run $run_args --dry-run
         set_color cyan >&2; echo "--- dry-run: pass 2 (verify) ---" >&2; set_color normal >&2
-        echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md + first-pass findings)" >&2
+        set -l code_note "no code"
+        if test -n "$_flag_code_file"; and test -f "$_flag_code_file"
+            set code_note "code: "(count (cat $_flag_code_file))" lines"
+        end
+        echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md + first-pass findings + $code_note)" >&2
         test -n "$review_out"; and echo "would write: review -> $review_out ; verify -> $verify_out" >&2
         return 0
     end

@@ -203,7 +203,7 @@ ai review .                          target: current project
 | `--lens NAME[,NAME...]` | Add specialist checklist(s) — see [Lenses](#lenses---lens) |
 | `--agentic` | Embed only the diff / target file and let the model explore the repo read-only (claude via its CLI, other providers via the runner). Default: everything embedded, no tools |
 | `--no-think` | Fast pass: disable a thinking model's reasoning (native ollama) |
-| `--context-lines N` | Budget for embedding full changed files (git mode, default 2000). `0` = diff-only |
+| `--context-lines N` | Line budget for embedding whole files: the changed files in git mode (config key `context_lines`, default 2000), a directory's files in target mode (`dir_context_lines`, default 10000). `0` = none. Precedence: flag > config key (project → global) > default |
 | `--dry-run` | Print the assembled prompt without invoking the model |
 | `-h`, `--help` | Show help |
 
@@ -238,13 +238,21 @@ What is embedded, for every executor alike:
 | Target | Default | `--agentic` |
 |---|---|---|
 | file | scope note + file content (+ tree + README with `--with-project-context`) | scope note + file content |
-| directory | `tree -L 4` (build/VCS dirs excluded) + README (first 100 lines) | the directory path only |
+| directory | `tree -L 4` (build/VCS dirs excluded) + README (first 100 lines) + every file's content within the `--context-lines` budget | the directory path only |
+
+- **A directory's files.** The files are `git ls-files` of the directory (a `find` that prunes
+  build dirs outside a repo); binary and empty files skipped. Reported as
+  `Files: N lines across M files (budget B)`. Over budget: on a terminal you are asked
+  `[1] tree only (default) [2] embed all`; otherwise tree only with a note naming the flag and
+  the config key. Skipped with `--brief` and `--agentic`.
+- The same files block is the verify pass's code, so verify checks a directory review against
+  the code it saw.
 
 The working directory is the file's parent, or the directory itself.
 
 ### Mode-incompatible flags
 
-- `--last`, `--commit`, `--file`, `--max-lines`, `--context-lines` with a path target →
+- `--last`, `--commit`, `--file`, `--max-lines` with a path target →
   `Error: --<flag> is git-mode only and cannot combine with a path target`.
 - `--with-project-context` without a path → `Error: --with-project-context is target-mode only (needs a file path)`.
 - `--verify-only FILE` short-circuits both modes.
@@ -657,6 +665,8 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `model` | `ai models use MODEL` | Default ollama model. No fallback if unset |
 | `agent` | by hand | Runner for non-claude providers: `pi` (default) or `opencode` |
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
+| `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
+| `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |
 
 Tasks: `chat`, `code`, `review`, `verify`, `commit`, `summary`. `verify_provider` / `verify_model`

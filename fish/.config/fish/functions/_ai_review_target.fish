@@ -1,6 +1,6 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'brief' 'dry-run' 'agentic' 'no-think' \
+    argparse 'h/help' 'provider=' 'model=' 'l/lang=' 'o/output=' 'with-project-context' 'lens=' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
 
     # Resolve positional args: [DIR|FILE] ["custom prompt"]
@@ -190,6 +190,47 @@ $readme_content
         end
     end
 
+    # A directory target embeds its files, within a line budget — without them a single-shot
+    # model sees only the tree. The same block is the verify pass's code (files_block).
+    set -l files_block ""
+    if test -n "$target_dir"; and not set -q _flag_agentic; and not set -q _flag_brief
+        set -l budget (_ai_review_context_budget dir $_flag_context_lines); or return 1
+        if test $budget -gt 0
+            set -l files
+            set -l window 0
+            for row in (_ai_review_dir_files $target_dir)
+                set -l parts (string split \t -- $row)
+                set window (math $window + $parts[1])
+                set -a files $parts[2]
+            end
+            if test (count $files) -gt 0
+                set_color cyan >&2
+                echo "Files: $window lines across "(count $files)" files (budget $budget)" >&2
+                set_color normal >&2
+                set -l embed 0
+                if test $window -le $budget
+                    set embed 1
+                else if isatty stdin; and isatty stderr
+                    set_color yellow >&2
+                    echo "The directory's files ($window lines) exceed the budget ($budget)." >&2
+                    echo "  [1] tree only (default)    [2] embed all $window lines" >&2
+                    set_color normal >&2
+                    read -l -P "Choose [1/2]: " choice
+                    test "$choice" = 2; and set embed 1
+                else
+                    set_color yellow >&2
+                    echo "Note: the directory's files ($window lines) exceed the budget ($budget) — tree only. Pass --context-lines $window (or set config key dir_context_lines) to embed all." >&2
+                    set_color normal >&2
+                end
+                if test $embed -eq 1
+                    set files_block (_ai_review_files_block $target_dir $files | string collect)
+                    set context "$context
+$files_block"
+                end
+            end
+        end
+    end
+
     set -l full_prompt
     if test -n "$target_file"
         set full_prompt "$prompt
@@ -220,10 +261,17 @@ $context"
         set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
         set -q _flag_agentic; and set -a flow_args --agentic
         set -q _flag_no_think; and set -a flow_args --no-think
-        # A single-file target is the code context embedded for the verifier.
-        test -n "$target_file"; and set -a flow_args --code-file $target_file
+        # The verifier gets the code pass 1 saw: the target file, or the directory's files.
+        set -l code_tmp
+        if test -n "$target_file"
+            set -a flow_args --code-file $target_file
+        else if test -n "$files_block"
+            set code_tmp (mktemp)
+            printf '%s' "$files_block" >$code_tmp
+            set -a flow_args --code-file $code_tmp
+        end
         _ai_review_verify_flow $flow_args
-        rm -f $p1file
+        rm -f $p1file $code_tmp
     else if test -n "$output"; and not set -q _flag_dry_run
         # Output captured to a file → terminal is quiet, so show a live watched run.
         set -l lbl "Review - $provider"

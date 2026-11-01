@@ -198,7 +198,8 @@ All functions support `-h/--help`.
 - `--agentic` — the executor reads the repo itself (read-only tools + the `ai-review` skill)
 - `--no-think` — fast pass: disable a thinking model's reasoning
 - `--verify` / `--verify-provider P` / `--verify-model M` — adversarial second pass that tries to refute each finding; with `-o` it goes to `<output>.verify.<ext>`; `--verify-only FILE` re-verifies a saved review
-- Git only: `--lang-all LANG`, `--max-lines N` (diff cap, default 500), `--context-lines N` (budget for embedding whole changed files, default 2000)
+- `--context-lines N` — line budget for embedding whole files: the changed files in git mode (default 2000), a directory target's files (default 10000); config keys `context_lines` / `dir_context_lines`
+- Git only: `--lang-all LANG`, `--max-lines N` (diff cap, default 500)
 
 **Generation:**
 - `ai gen commit` — commit message from the staged (else unstaged) diff

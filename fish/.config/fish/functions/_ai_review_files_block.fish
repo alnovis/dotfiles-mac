@@ -1,0 +1,18 @@
+function _ai_review_files_block --description "Emit the full content of a directory's files as a prompt block"
+    # Args: DIR PATH...   (paths relative to DIR, from _ai_review_dir_files)
+    # The target-mode counterpart of _ai_review_context_block: files come from the working
+    # tree, not from a commit. The same block is handed to the verify pass as its code.
+    set -l dir $argv[1]
+    set -l paths $argv[2..-1]
+    test (count $paths) -eq 0; and return 0
+
+    echo "# Files"
+    echo "The complete content of every file under review, as it is on disk now. Cite findings as path:line using the paths below."
+    for path in $paths
+        set -l content (cat $dir/$path 2>/dev/null | string collect)
+        test -z "$content"; and continue
+        set -l ext ""
+        string match -q '*.*' -- $path; and set ext (string match -r '[^.]+$' -- $path)
+        printf '\n## %s\n```%s\n%s\n```\n' $path $ext "$content"
+    end
+end

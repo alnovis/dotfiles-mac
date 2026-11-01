@@ -92,6 +92,8 @@ set -g golden_cases \
     'target-file-claude|fixture|ai review leetcode/LeetCode.scala --provider claude --dry-run' \
     'target-dir-ollama|fixture|ai review leetcode --dry-run' \
     'target-dir-claude|fixture|ai review leetcode --provider claude --dry-run' \
+    'target-dir-tree-only|fixture|ai review leetcode --context-lines 0 --dry-run' \
+    'target-dir-verify|fixture|ai review leetcode --verify --dry-run' \
     'target-context-ollama|fixture|ai review leetcode/LeetCode.scala --with-project-context --dry-run' \
     'target-context-claude|fixture|ai review leetcode/LeetCode.scala --with-project-context --provider claude --dry-run' \
     'target-brief|fixture|ai review leetcode/LeetCode.scala --brief --dry-run' \

@@ -218,17 +218,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     # whole files (the class, the pom/toml), not just diff hunks. Skipped for
     # --agentic (the model explores the repo itself) and --brief.
     set -l context_block ""
-    set -l ctx_budget 2000
-    if set -q _flag_context_lines
-        if string match -qr '^[0-9]+$' -- $_flag_context_lines
-            set ctx_budget $_flag_context_lines
-        else
-            set_color red >&2
-            echo "Error: --context-lines must be a non-negative integer" >&2
-            set_color normal >&2
-            return 1
-        end
-    end
+    set -l ctx_budget (_ai_review_context_budget git $_flag_context_lines); or return 1
 
     if not set -q _flag_brief; and not set -q _flag_agentic; and test $ctx_budget -gt 0
         set -l files
@@ -256,7 +246,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
                 test "$choice" = 2; and set embed 1
             else
                 set_color yellow >&2
-                echo "Note: changed files ($window lines) exceed budget ($ctx_budget) — using diff-only. Pass --context-lines $window to embed all." >&2
+                echo "Note: changed files ($window lines) exceed budget ($ctx_budget) — using diff-only. Pass --context-lines $window (or set config key context_lines) to embed all." >&2
                 set_color normal >&2
             end
 

@@ -220,10 +220,10 @@ same prompt for the same command; only the `Provider:` / `Model:` header and the
 |---|---|---|---|
 | git review | diff (capped by `--max-lines`) + full changed files within `--context-lines` (default 2000) | diff only | diff only, short prompt |
 | target review, file | scope note + the file (+ tree + README with `--with-project-context`) | scope note + the file | as default, short prompt |
-| target review, directory | tree (`tree -L 4`) + README (first 100 lines) | the directory path only | as default, short prompt |
+| target review, directory | tree (`tree -L 4`) + README (first 100 lines) + the files within `--context-lines` (default 10000) | the directory path only | as default, short prompt |
 | `ai gen summary` | tree + README | — (no flag) | — |
 | `ai gen commit` | staged diff (else unstaged) | — | — |
-| verify pass | findings + the code the review saw: the diff (git), the file (target file); nothing for a directory target | same, plus read tools | skipped |
+| verify pass | findings + the code the review saw: the diff (git), the file (target file), the embedded files (directory target; none if over budget) | same, plus read tools | skipped |
 | `--verify-only` | findings (+ `--file` if given) | same, plus read tools | — |
 
 - Embedded content is a **floor, not a ceiling**: an executor with tools (profile `read`) may read
