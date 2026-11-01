@@ -144,6 +144,8 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         if test -s "$ver_target"
             echo "Verify saved to: $verify_out"
         else
+            # An empty file next to the review would read as a result — remove it
+            rm -f "$ver_target"
             set_color yellow
             echo "Verify produced no output ($verify_out not written)."
         end

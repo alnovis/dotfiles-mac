@@ -76,7 +76,14 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     set -l total (math (date +%s) - $t0)
     set -l lines (wc -l <$outfile 2>/dev/null | string trim)
     test $tty -eq 1; and printf '\r\033[K' >&2
-    if test "$rc" -eq 0
+    # Success with nothing written is a failure: a reasoning model can spend the whole
+    # max_tokens thinking and end without an answer, and the runner still exits 0
+    if test "$rc" -eq 0; and not test -s $outfile
+        set rc 1
+        printf '  %s FAILED: the model returned no answer | %ds -> %s\n' $label $total $dest >&2
+        printf '    A reasoning model may have used up max_tokens thinking: raise maxTokens for the model in the runner config, rerun, or pick another model.\n' >&2
+        test -s $errlog; and cat $errlog >&2
+    else if test "$rc" -eq 0
         printf '  %s done | %ds | %s lines -> %s\n' $label $total "$lines" $dest >&2
     else
         printf '  %s FAILED (rc %s) | %ds -> %s\n' $label "$rc" $total $dest >&2
