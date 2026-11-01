@@ -195,7 +195,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
             end
         end
         if test -s "$ver_target"
-            echo "Verify saved to:   $verify_out"
+            echo "Verify saved to:   $verify_out ("(_ai_verdict_counts $ver_target)")"
         else
             # An empty file next to the review would read as a result — remove it
             rm -f "$ver_target"

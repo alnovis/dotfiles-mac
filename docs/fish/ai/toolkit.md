@@ -396,6 +396,9 @@ review ×N  →  joined under "## Run K/N"  →  one verify over all of it  → 
 
 - Several runs turn `--verify` on (they exist to be judged together) and refuse `--brief` and
   `--no-verify`.
+- The final summary counts the verdicts from their tags (`Verify saved to: … (5 confirmed,
+  7 refuted)`), not from the model's own "Verify: X confirmed…" line — on a three-run review
+  qwen3.8 summed 12 verdicts as 4 + 6.
 - The joined review is `<output>`; each run is kept as `<base>.runK.<ext>` with its own footer.
   A run that fails is skipped; the join fails only if none answered (`2/3 runs answered`).
 - With `--comments`, the extraction merges the same problem reported by several runs into one
@@ -447,8 +450,11 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
      outside the diff says to post it as a general comment; one not found says `Unanchored`.
      A finding about a whole file (a missing test, a stale document) has no line: it is
      `Whole file` (`"file_level": true`), also posted as a general comment. A quote that did
-     not match but whose cited line exists is placed by that number and flagged
-     (`"anchored_by": "line"`); the markdown always shows the real line from the code.
+     not match (models put prose there) falls back to the cited number, which is often a few
+     lines off — landing on `try {` or a blank. If the cited line names none of the code the
+     comment is about (`quoted` names, camelCase and CONSTANT words, case-insensitive) and a
+     line within ten does, that one is taken (`"anchored_by": "nearby"`); else the cited line
+     (`"anchored_by": "line"`). Both are flagged; the markdown always shows the real line.
    - `review.comments.json` — for publishing, one shape for both platforms:
 
      ```json

@@ -59,6 +59,16 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
                 set side new
                 set by line
                 set code $new_lines[$line]
+                # A cited number is often a few lines off, landing on "try {" or a blank. When
+                # the cited line names none of the code the comment talks about and a line
+                # nearby does, the nearby one is meant.
+                set -l tokens (_ai_review_comments_tokens (printf '%s' $c | jq -r '(.quote // "") + "\n" + (.body // "")'))
+                set -l near (_ai_review_comments_nearby $want $tokens -- $new_lines)
+                if test -n "$near"; and test $near -ne $want
+                    set line $near
+                    set by nearby
+                    set code $new_lines[$line]
+                end
             end
         end
 
@@ -103,6 +113,44 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
         '{base_sha: (if $base == "" then null else $base end), head_sha: (if $head == "" then null else $head end),
           start_sha: (if $base == "" then null else $base end), runs: $runs, comments: .}' $out
     rm -f $out
+end
+
+function _ai_review_comments_tokens --description "Code names a comment talks about: `quoted` spans first, then camelCase / CONSTANT words (4+ characters)"
+    set -l text (string collect -- $argv)
+    set -l tokens
+    # `loadFromRedis()` → loadFromRedis; `RENAME` → RENAME
+    for span in (string match -r -a -g '`([^`]+)`' -- $text)
+        set -a tokens (string match -r -g '^([A-Za-z_][A-Za-z0-9_.]*)' -- $span)
+    end
+    set -a tokens (string match -r -a -- '\b[a-z]+[A-Z][A-Za-z0-9_]*\b|\b[A-Z][A-Z0-9_]{3,}\b' -- $text)
+    for t in $tokens
+        test (string length -- $t) -ge 4; and echo $t
+    end | awk '!seen[$0]++'
+end
+
+function _ai_review_comments_nearby --description "Line within 10 of WANT that contains one of TOKENS (nearest; 0 if the WANT line already does or none does): args WANT TOKENS… -- LINES…"
+    set -l want $argv[1]
+    set -l sep (contains -i -- -- $argv)
+    # No tokens (sep right after WANT): fish's $argv[2..1] would count backwards, not be empty
+    test -n "$sep"; and test $sep -gt 2; or return
+    set -l tokens $argv[2..(math $sep - 1)]
+    set -l lines $argv[(math $sep + 1)..]
+    test (count $tokens) -gt 0; or return
+    # Case-insensitive: prose says RENAME, the Java says .rename(
+    set -l has '(?i)'(string escape --style=regex -- $tokens | string join '|')
+    # The cited line already names it: keep it
+    string match -q -r -- $has $lines[$want]; and return
+    set -l best 0
+    set -l from (math "max(1, $want - 10)")
+    set -l to (math "min("(count $lines)", $want + 10)")
+    for i in (seq $from $to)
+        if string match -q -r -- $has $lines[$i]
+            if test $best -eq 0; or test (math "abs($i - $want)") -lt (math "abs($best - $want)")
+                set best $i
+            end
+        end
+    end
+    test $best -gt 0; and echo $best
 end
 
 function _ai_review_comments_content --description "Lines of PATH at REV (empty REV: the file in ROOT)" --argument-names root rev path

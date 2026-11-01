@@ -82,9 +82,15 @@ function _ai_review_comments_saved --description "The 'saved to' lines of the co
     # None is a result, not a failure: verify confirmed nothing. Say so instead of "(0; …)".
     # The empty JSON is still written — a publishing tool reads an empty array fine.
     if test $n -eq 0
+        set -l counts (_ai_verdict_counts $verdicts 2>/dev/null)
+        set -l confirmed (string match -r -g '^(\d+) confirmed' -- $counts)
+        set -l uncertain (string match -r -g '(\d+) uncertain' -- $counts)
         set -l why "the verify pass confirmed no finding"
-        set -l refuted (string match -r -g '(\d+) refuted' <$verdicts 2>/dev/null | tail -1)
-        test -n "$refuted"; and set why "$why ($refuted refuted)"
+        # Verdicts to work from but no comments: the extraction dropped them, not verify
+        if test "$confirmed" -gt 0 2>/dev/null; or test "$uncertain" -gt 0 2>/dev/null
+            set why "the extraction made none from the verdicts — check the verify file"
+        end
+        test -n "$counts"; and set why "$why ($counts)"
         echo "Comments:          none — $why"
         return 0
     end
@@ -116,6 +122,7 @@ function _ai_review_comments_md --description "The comments JSON as markdown for
             (if .file_level then "> File-level: no line to attach it to — post it as a general comment."
              elif (.anchored | not) then "> Unanchored: the quoted line was not found in the code — check it by hand."
              elif .anchored_by == "line" then "> Placed by the cited line number: the quote did not match the code (model quoted: `\(.quote)`) — check this is the right line."
+             elif .anchored_by == "nearby" then "> Placed on a nearby line: the quote did not match, and the cited line \(.line_cited) names none of the code the comment is about — this one does. Check it."
              else empty end),
             (if .anchored and (.in_diff | not) then "> Not in the diff: GitLab/GitHub take a line comment only inside the changes — post it as a general comment." else empty end);
         "# Review comments — check before publishing",

@@ -48,5 +48,13 @@
     "status": "confirmed",
     "seen": 2,
     "body": "A file-level finding (a missing test): no line, posted as a general comment; found by 2 runs."
+  },
+  {
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 11,
+    "quote": "the help text names GBRANCH_BASES",
+    "severity": "nit",
+    "status": "confirmed",
+    "body": "A prose quote cited two lines off (11, an empty echo): placed on the nearby line that names `GBRANCH_BASES`."
   }
 ]
