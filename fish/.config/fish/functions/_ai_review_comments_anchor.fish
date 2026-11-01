@@ -109,9 +109,15 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
               severity: (.severity // "important"), status: (.status // "confirmed"), body: (.body // "")}' >>$out
     end
 
+    # In line order within a file — neighbouring comments are often about one thing:
+    # whole-file first, then new lines, then old (removed) lines — each side numbers its
+    # own file — then the unanchored ones. "order" carries that for the markdown too.
     jq -s --arg base "$base" --arg head "$head" --argjson runs $runs \
-        '{base_sha: (if $base == "" then null else $base end), head_sha: (if $head == "" then null else $head end),
-          start_sha: (if $base == "" then null else $base end), runs: $runs, comments: .}' $out
+        'map(. + {order: [(if .file_level then 0 elif .side == "new" then 1 elif .side == "old" then 2 else 3 end),
+                          (.line // .line_cited // 0)]})
+         | sort_by(.path, .order)
+         | {base_sha: (if $base == "" then null else $base end), head_sha: (if $head == "" then null else $head end),
+            start_sha: (if $base == "" then null else $base end), runs: $runs, comments: .}' $out
     rm -f $out
 end
 

@@ -163,7 +163,7 @@ function _ai_review_comments_md_comments --description "The comment sections of 
             + (if .base_sha then " Range: \(.base_sha[0:7])..\(.head_sha[0:7])." else "" end)
             + (if (.runs // 1) > 1 then " From \(.runs) review runs." else "" end),
         "",
-        (.comments | group_by(.path)[] |
+        (.comments | group_by(.path)[] | sort_by(.order) |
             "## \(.[0].path)", "",
             (.[] |
                 "### \(where) · \(.severity)" + (if .status == "confirmed" then "" else " · uncertain — needs a human check" end) + found_by,
