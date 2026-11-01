@@ -84,21 +84,46 @@ function _ai_models_list --description "Installed ollama models (no network): on
     end
     test $name_col -gt 46; and set name_col 46
 
-    set -l fmt "   %-"$name_col"s %8s  %-21s %-16s %s\n"
-    printf $fmt Model Size Capabilities "Used for" ""
+    # Colours as in the pre-redesign list: cyan header, separators and group titles; a
+    # yellow ">" on the default model; "Used for" in yellow; a model on trial in magenta.
+    # Columns are printed one by one so the colour codes never count towards the padding.
+    set -l sep (string repeat -n (math $name_col + 52) -- -)
+    set_color cyan
+    printf "   %-"$name_col"s %8s  %-21s %s\n" Model Size Capabilities "Used for"
+    set_color normal
+    echo " $sep"
     set -l groups (for r in $rows; string split -f1 \t -- $r; end | sort -u | string match -v general)
     contains -- general (for r in $rows; string split -f1 \t -- $r; end); and set -a groups general
     for g in $groups
+        set_color cyan
         echo " "(string sub -l 1 -- $g | string upper)(string sub -s 2 -- $g)":"
+        set_color normal
         for r in (printf '%s\n' $rows | string match -- (printf '%s\t*' $g) | sort -t \t -k2)
             set -l f (string split \t -- $r)
             set -l name $f[2]
             if test (string length -- $name) -gt $name_col
                 set name (string sub -l (math $name_col - 1) -- $name)"~"
             end
-            printf $fmt $name $f[3] $f[4] $f[5] $f[6]
+            if contains -- default (string split ', ' -- $f[5])
+                set_color yellow
+                printf " > "
+                set_color normal
+            else
+                printf "   "
+            end
+            printf "%-"$name_col"s %8s  %-21s " $name $f[3] $f[4]
+            set_color yellow
+            printf "%-16s" $f[5]
+            set_color normal
+            if test -n "$f[6]"
+                set_color magenta
+                printf " %s" $f[6]
+                set_color normal
+            end
+            echo
         end
     end
+    echo " $sep"
 
     echo
     set -l models_word models
