@@ -1,4 +1,4 @@
-function _ai_provider_prices --description "Prices of PROVIDER's models per 1M tokens, as model<TAB>input<TAB>output lines (a litellm gateway's /model/info, cached for a day)" --argument-names provider
+function _ai_provider_prices --description "PROVIDER's models on its gateway with prices per 1M tokens, as model<TAB>input<TAB>output lines (empty when unpriced; a litellm gateway's /model/info, cached for a day)" --argument-names provider
     # Only a litellm gateway answers /model/info; anything else (or off the VPN) gives
     # nothing, and a stale cache is better than no prices. The gateway knows prices only —
     # no context, no capabilities — so this is all a listing can take from it.
@@ -34,9 +34,11 @@ function _ai_provider_prices --description "Prices of PROVIDER's models per 1M t
     end
 
     test -f $cache; or return 1
-    jq -r '.data[] | select(.litellm_params.input_cost_per_token != null)
-        | [.model_name,
-           (.litellm_params.input_cost_per_token * 1e6 | . * 100 | round / 100 | tostring),
-           ((.litellm_params.output_cost_per_token // 0) * 1e6 | . * 100 | round / 100 | tostring)]
+    # Every model the gateway serves, priced or not: the listing also shows which of them
+    # the runner's config has not registered
+    jq -r 'def per1m: if . == null then "" else . * 1e6 | . * 100 | round / 100 | tostring end;
+        .data[] | [.model_name,
+           (.litellm_params.input_cost_per_token | per1m),
+           (.litellm_params.output_cost_per_token | per1m)]
         | @tsv' $cache 2>/dev/null
 end

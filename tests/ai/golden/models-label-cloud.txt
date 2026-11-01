@@ -1,11 +1,11 @@
 cloud-model → coding
 Error: testcloud has no model nosuch (ai models --provider testcloud)
  testcloud (native, endpoint from pi)
-    Model        Context  Type  Capabilities  Price in/out per 1M  Used for
- --------------------------------------------------------------------------
+    Model        Context  Type  Capabilities  pi  Price in/out per 1M  Used for
+ ------------------------------------------------------------------------------
  Coding:
-    cloud-model     1000
- --------------------------------------------------------------------------
+    cloud-model     1000                      ✓
+ ------------------------------------------------------------------------------
 cloud-model → General
 {
   "bbbb": {

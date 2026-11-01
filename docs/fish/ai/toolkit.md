@@ -590,13 +590,13 @@ claude. Two levels everywhere: the table is where the model runs, the groups ins
 
 ```
  litellm (native, endpoint from pi)
-    Model                              Context  Type      Capabilities  Price in/out per 1M  Used for
- ----------------------------------------------------------------------------------------------------
+    Model                              Context  Type      Capabilities  pi  Price in/out per 1M  Used for
+ --------------------------------------------------------------------------------------------------------
  General:
-    selectel/qwen/qwen3.8-27b           131072            thinking      35 / 307
-    ycloud/qwen3-235b-a22b-fp8/latest           MoE A22B  thinking      500 / 500
-    ycloud/qwen3.6-35b-a3b/latest               MoE A3B   thinking      200 / 300
- ----------------------------------------------------------------------------------------------------
+    selectel/qwen/qwen3.8-27b           131072            thinking      ✓   35 / 307
+    ycloud/qwen3-235b-a22b-fp8/latest           MoE A22B  thinking      ✓   500 / 500
+    ycloud/qwen3.6-35b-a3b/latest               MoE A3B   thinking      ✓   200 / 300
+ --------------------------------------------------------------------------------------------------------
 
  claude (claude CLI)
     Model          Used for
@@ -612,6 +612,7 @@ claude. Two levels everywhere: the table is where the model runs, the groups ins
 | Context | `contextWindow` of the model in the runner's config — blank until you fill it there (the native OpenAI driver uses it too) |
 | Type | the name only: `35b-a3b` is the usual total/active notation, so `MoE A3B`. No API reports the architecture, so a name without it stays blank rather than guessed |
 | Capabilities | `thinking` when the runner's config says `reasoning: true` |
+| pi (the runner's name) | ✓ when the runner's config lists the model. The rows are the runner's models plus whatever the gateway's `/model/info` serves, so a model on the gateway but not in the config shows without ✓: a single call still works (the endpoint is per provider), but `--agentic` and `ai code` would give it the runner's tiny default context |
 | Price in/out per 1M | a litellm gateway's `/model/info`, cached for a day in `~/.cache/ai/prices-<provider>.json`; a gateway out of reach gives the stale cache or nothing. The gateway sets the currency |
 | Used for | the default and the tasks on this provider; a claude task with no model shows as `(CLI default)` |
 

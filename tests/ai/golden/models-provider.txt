@@ -1,9 +1,9 @@
  testcloud (native, endpoint from pi)
-    Model        Context  Type  Capabilities  Price in/out per 1M  Used for
- --------------------------------------------------------------------------
+    Model        Context  Type  Capabilities  pi  Price in/out per 1M  Used for
+ ------------------------------------------------------------------------------
  General:
-    cloud-model     1000
- --------------------------------------------------------------------------
+    cloud-model     1000                      ✓
+ ------------------------------------------------------------------------------
 
  claude (claude CLI)
     Model   Used for

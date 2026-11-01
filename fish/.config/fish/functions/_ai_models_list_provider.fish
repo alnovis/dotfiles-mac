@@ -58,8 +58,19 @@ function _ai_models_table_remote --description "One table: the models of a runne
         set -a models $cli_default
     end
 
+    # The gateway's own list too: a model it serves but the runner's config lacks still works
+    # for a single call (the endpoint is per provider), but under --agentic / ai code the
+    # runner gives it a tiny default context — the pi column shows which is which
     set -l prices
-    test $provider != claude; and set prices (_ai_provider_prices $provider)
+    set -l registered $models
+    if test $provider != claude
+        set prices (_ai_provider_prices $provider)
+        # Over the list itself: printf with an empty list would still print one empty line
+        for p in $prices
+            set -l m (string split -f1 \t -- $p)
+            contains -- $m $models; or set -a models $m
+        end
+    end
 
     set -l rows
     for m in $models
@@ -77,9 +88,13 @@ function _ai_models_table_remote --description "One table: the models of a runne
         set -l type
         set -l active (string match -r -i -g '\d+(?:\.\d+)?b-a(\d+(?:\.\d+)?)b' -- $m)
         test -n "$active"; and set type "MoE A"$active"B"
-        set -l price (printf '%s\n' $prices | string match -r -g (printf '^%s\t(.+)$' (string escape --style=regex -- $m)) | string replace \t ' / ')
+        set -l price
+        set -l pf (printf '%s\n' $prices | string match -r -g (printf '^%s\t(.*)$' (string escape --style=regex -- $m)) | string split \t)
+        test -n "$pf[1]$pf[2]"; and set price "$pf[1] / $pf[2]"
+        set -l reg
+        contains -- $m $registered; and set reg ✓
         set -l used (for u in $uses; set -l p (string split '|' -- $u); test "$p[1]" = $m; and echo $p[2]; end | string join ', ')
-        set -a rows (string join \t -- $label $m "$ctx" "$type" "$caps" "$price" "$used")
+        set -a rows (string join \t -- $label $m "$ctx" "$type" "$caps" "$price" "$used" "$reg")
     end
 
     set_color --bold
@@ -94,7 +109,7 @@ function _ai_models_table_remote --description "One table: the models of a runne
         if test $provider = claude
             printf '%s\t%s\t%s\n' ' ' Model "Used for"
         else
-            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' ' ' Model Context Type Capabilities "Price in/out per 1M" "Used for"
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' ' ' Model Context Type Capabilities $runner "Price in/out per 1M" "Used for"
         end
         for g in $groups
             echo "$(set_color cyan)"(string sub -l 1 -- $g | string upper)(string sub -s 2 -- $g)":$(set_color normal)"
@@ -105,7 +120,7 @@ function _ai_models_table_remote --description "One table: the models of a runne
                 if test $provider = claude
                     printf '%s\t%s\t%s\n' ' ' $f[2] $used
                 else
-                    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' ' ' $f[2] $f[3] $f[4] $f[5] $f[6] $used
+                    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' ' ' $f[2] $f[3] $f[4] $f[5] $f[8] $f[6] $used
                 end
             end
         end
