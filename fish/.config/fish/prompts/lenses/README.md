@@ -32,11 +32,12 @@ Shell lenses (original to this repo — two shells, two execution models):
 - `bash` — bash / POSIX sh: unquoted expansions, empty variables in destructive paths, `set -e` that does not fire, bashisms under `/bin/sh`
 - `fish` — fish footguns (line-split command substitution, vanishing empty lists, block scope, `"\t"`) plus a "Not bugs" list of bash habits models misapply to fish
 
-Data / query lenses (original to this repo — one engine each; the failure modes don't transfer):
+Data / messaging lenses (original to this repo — one engine each; the failure modes don't transfer):
 - `sql-postgres` — OLTP relational: unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics
 - `sql-clickhouse` — OLAP columnar: `ORDER BY`/partition design, mutations, dedup (`FINAL`), memory-blowing joins
 - `hbase` — wide-column access patterns: row-key hotspotting, unbounded scans, column-family / version growth
 - `redis` — races between commands, non-atomic collection swaps, lost TTLs, cross-slot ops, Sentinel failover, Pub/Sub vs Streams; client section for Jedis / Lettuce / Spring Data Redis / Redisson / redis-rs
+- `kafka` — delivery guarantees the code assumes: commit vs processing, idempotency, rebalances, producer acks, ordering, poison records, exactly-once claims; client section for Java (kafka-clients, Spring Kafka, Reactor Kafka), Rust (rdkafka), Go (confluent-kafka-go, kafka-go, sarama, franz-go)
 
 Add a lens by dropping a `<name>.md` file here; it becomes selectable immediately
 (in `--lens`, its completion, and validation). Keep the shape of the existing
@@ -44,7 +45,7 @@ files: a one-line framing, a `HARD GATE:` paragraph, then a
 `Where to look first (non-exhaustive — reason beyond this list):` checklist. A
 lens may add a "Not bugs" list — idioms or contexts that look wrong to the model but
 are correct (`fish`: bash habits; `redis`: test and admin code). A lens whose engine
-is used from several clients (`redis`) keeps the engine's failure modes in the main
+is used from several clients (`redis`, `kafka`) keeps the engine's failure modes in the main
 checklist and adds a short per-client section, rather than one lens per language.
 
 ## Attribution
@@ -69,6 +70,6 @@ data) come from VVAH's `iac` skill.
 
 The **quality** lenses (`documentation`, `reactive`, `resource-leak`,
 `error-handling`, `k8s-manifest`), the **Rust** lenses (`rust-unsafe`,
-`rust-async`, `rust-ownership`), the **shell** lenses (`bash`, `fish`), and the **data / query** lenses (`sql-postgres`,
-`sql-clickhouse`, `hbase`, `redis`) are original to this repository — same HARD GATE
+`rust-async`, `rust-ownership`), the **shell** lenses (`bash`, `fish`), and the **data / messaging** lenses (`sql-postgres`,
+`sql-clickhouse`, `hbase`, `redis`, `kafka`) are original to this repository — same HARD GATE
 discipline, not derived from VVAH.

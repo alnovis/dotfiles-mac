@@ -262,7 +262,7 @@ The working directory is the file's parent, or the directory itself.
 
 A lens injects a specialist checklist after the base review prompt. It says *where to look*; the
 finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
-(`--lens crypto,logic-bug`) and work in both modes. 21 ship today:
+(`--lens crypto,logic-bug`) and work in both modes. 22 ship today:
 
 | Group | Lens | Hunts for |
 |---|---|---|
@@ -283,10 +283,11 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | | `rust-ownership` | `Rc` cycles, runtime borrow panics, Drop order, needless allocations |
 | Shell | `bash` | Unquoted expansions, empty vars in `rm -rf`, `set -e` that does not fire, lost subshell state, bashisms under `/bin/sh` |
 | | `fish` | `set x (cmd)` line splitting, vanishing empty lists, block scope, `"\t"`; plus "Not bugs" (`; or`, no word splitting) |
-| Data / query | `sql-postgres` | Unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics |
+| Data / messaging | `sql-postgres` | Unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics |
 | | `sql-clickhouse` | `ORDER BY`/partition design, mutations, `FINAL` dedup, memory-blowing joins |
 | | `hbase` | Row-key hotspotting, unbounded scans, column-family / version growth |
 | | `redis` | Races between commands, non-atomic collection swaps, lost TTLs, cross-slot ops, Sentinel failover; Jedis / Lettuce / Spring Data Redis / Redisson / redis-rs specifics |
+| | `kafka` | Commit vs processing, idempotency, rebalances, producer acks, ordering, poison records, exactly-once claims; Java (Spring Kafka, Reactor Kafka), Rust (rdkafka), Go (confluent-kafka-go, kafka-go, sarama, franz-go) specifics |
 
 Each lens ends with a **HARD GATE** — the evidence a finding must carry, and when to drop it.
 Lens files live in `~/.config/fish/prompts/lenses/<name>.md`; a new file there is selectable at

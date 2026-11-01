@@ -92,7 +92,7 @@ function _ai_review_print_help
     echo "  --brief                 Short 3-5 bullet summary instead of detailed review"
     echo "                          (--lens and --verify are ignored)"
     echo "  --lens NAME[,NAME...]   Add specialist checklist(s): security, quality, Rust,"
-    echo "                          SQL/HBase (see prompts/lenses/README.md)"
+    echo "                          shell, data/messaging (see prompts/lenses/README.md)"
     echo "  --agentic               Embed only the diff / target file and let the model"
     echo "                          explore the repo read-only (claude via its CLI, other"
     echo "                          providers via the runner, config key: agent)."

@@ -92,7 +92,7 @@ complete -c ai -n "__fish_seen_subcommand_from review" -l brief -d "Short summar
 complete -c ai -n "__fish_seen_subcommand_from review" -l agentic -d "Embed only the diff/file; the model explores the repo read-only"
 complete -c ai -n "__fish_seen_subcommand_from review" -l no-think -d "Fast pass: disable a thinking model's reasoning (think:false) — trades depth for speed"
 complete -c ai -n "__fish_seen_subcommand_from review" -l context-lines -d "Line budget for embedding whole files (git 2000, dir 10000; 0=none)" -x
-complete -c ai -n "__fish_seen_subcommand_from review" -l lens -d "Specialist checklist(s): security, quality, Rust, SQL/HBase" -x -a "(_ai_complete_lens)"
+complete -c ai -n "__fish_seen_subcommand_from review" -l lens -d "Specialist checklist(s): security, quality, Rust, shell, data/messaging" -x -a "(_ai_complete_lens)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify -d "Second-opinion verify pass"
 complete -c ai -n "__fish_seen_subcommand_from review" -l no-verify -d "Disable verify (override config default)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-provider -d "Provider for the verify pass" -x -a "(_ai_providers)"

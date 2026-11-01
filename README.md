@@ -194,7 +194,7 @@ All functions support `-h/--help`.
 - `ai review --last [N]` / `--commit SHA` / `--file FILE` — last N commits / one commit / one file of the diff
 - `ai review PATH` — target mode: a directory or a single file; `--with-project-context` adds the project tree/README to a file review
 - Common: `--provider`, `--model`, `--brief`, `--lang LANG`, `-o/--output FILE`, `--dry-run`
-- `--lens NAME[,NAME…]` — specialist checklists (security, quality, Rust, SQL/HBase; see `prompts/lenses/`)
+- `--lens NAME[,NAME…]` — specialist checklists (security, quality, Rust, shell, data/messaging; see `prompts/lenses/`)
 - `--agentic` — the executor reads the repo itself (read-only tools + the `ai-review` skill)
 - `--no-think` — fast pass: disable a thinking model's reasoning
 - `--verify` / `--verify-provider P` / `--verify-model M` — adversarial second pass that tries to refute each finding; with `-o` it goes to `<output>.verify.<ext>`; `--verify-only FILE` re-verifies a saved review
