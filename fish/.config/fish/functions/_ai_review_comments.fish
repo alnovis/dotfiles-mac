@@ -67,15 +67,24 @@ VERDICTS ON THEM:
 
     set -q _flag_quiet; and return 0
     set_color green
-    _ai_review_comments_saved $_flag_output
+    _ai_review_comments_saved $_flag_output $_flag_verdicts
     set_color normal
 end
 
-function _ai_review_comments_saved --description "The 'saved to' lines of the comments of REVIEW_OUT, with their counts" --argument-names out
+function _ai_review_comments_saved --description "The 'saved to' lines of the comments of REVIEW_OUT, with their counts; VERDICTS explains an empty set" --argument-names out verdicts
     set -l md (_ai_comments_output_path $out md)
     set -l json (_ai_comments_output_path $out json)
     test -s $json; or return 1
     set -l n (jq '.comments | length' $json)
+    # None is a result, not a failure: verify confirmed nothing. Say so instead of "(0; …)".
+    # The empty JSON is still written — a publishing tool reads an empty array fine.
+    if test $n -eq 0
+        set -l why "the verify pass confirmed no finding"
+        set -l refuted (string match -r -g '(\d+) refuted' <$verdicts 2>/dev/null | tail -1)
+        test -n "$refuted"; and set why "$why ($refuted refuted)"
+        echo "Comments:          none — $why"
+        return 0
+    end
     set -l off (jq '[.comments[] | select(.anchored and (.in_diff | not))] | length' $json)
     set -l lost (jq '[.comments[] | select(.anchored | not)] | length' $json)
     echo "Comments saved to: $md ($n; not in the diff: $off, unanchored: $lost)"

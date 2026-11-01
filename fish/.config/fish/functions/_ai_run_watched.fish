@@ -54,11 +54,22 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     else
         # Non-agentic single call: `read` has no timeout, so update only as lines
         # arrive; print an honest prefill estimate, then a live line count.
-        set -l esec (math "round($tokens / 120)")
-        set -l etime "~"$esec"s"
-        test $esec -ge 90; and set etime "~"(math "round($esec / 60)")"m"
-        test $tty -eq 1; and printf '  %s | working… (~%dk-token context, est %s prefill — local models are slow on big context, output appears at the end; Ctrl-C stops the model)' \
-            $label (math "round($tokens / 1000)") $etime >&2
+        # The prefill estimate is about a local model; a cloud one starts in seconds. Kept to
+        # one line: a wrapped line can't be cleared with \r, and "done" would stick to it.
+        set -l provider
+        set -l pi (contains -i -- --provider $run_args)
+        test -n "$pi"; and set provider $run_args[(math $pi + 1)]
+        if test $tty -eq 1
+            if test "$provider" = ollama
+                set -l esec (math "round($tokens / 120)")
+                set -l etime "~"$esec"s"
+                test $esec -ge 90; and set etime "~"(math "round($esec / 60)")"m"
+                printf '  %s | working… ~%dk tokens, est %s prefill (Ctrl-C stops it)' \
+                    $label (math "round($tokens / 1000)") $etime >&2
+            else
+                printf '  %s | working… ~%dk tokens (Ctrl-C stops it)' $label (math "round($tokens / 1000)") >&2
+            end
+        end
 
         set -l n 0
         set -l na_args $run_args --usage-output $ufile

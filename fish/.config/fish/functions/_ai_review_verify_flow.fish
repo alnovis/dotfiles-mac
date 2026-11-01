@@ -180,7 +180,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
             echo "Verify produced no output ($verify_out not written)."
         end
         set_color green
-        set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_out
+        set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_out $ver_target
         set_color yellow
         test -n "$com_note"; and echo $com_note
         set -q _flag_comments; and test -z "$com_note"; and test $rc3 -ne 0

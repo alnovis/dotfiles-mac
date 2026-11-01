@@ -138,7 +138,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     # Every file of the run together, after the last stage
     set_color green
     echo "Verify saved to:   $verify_out"
-    set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_file
+    set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_file $verify_out
     set_color normal
     test $rc3 -eq 0; or set rc 1
     return $rc
