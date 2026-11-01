@@ -253,7 +253,7 @@ The working directory is the file's parent, or the directory itself.
 
 A lens injects a specialist checklist after the base review prompt. It says *where to look*; the
 finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
-(`--lens crypto,logic-bug`) and work in both modes. 18 ship today:
+(`--lens crypto,logic-bug`) and work in both modes. 20 ship today:
 
 | Group | Lens | Hunts for |
 |---|---|---|
@@ -272,6 +272,8 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | Rust | `rust-unsafe` | UB and broken safety invariants behind `unsafe`, unsound safe APIs |
 | | `rust-async` | Lock across `.await`, blocking the executor, dropped tasks |
 | | `rust-ownership` | `Rc` cycles, runtime borrow panics, Drop order, needless allocations |
+| Shell | `bash` | Unquoted expansions, empty vars in `rm -rf`, `set -e` that does not fire, lost subshell state, bashisms under `/bin/sh` |
+| | `fish` | `set x (cmd)` line splitting, vanishing empty lists, block scope, `"\t"`; plus "Not bugs" (`; or`, no word splitting) |
 | Data / query | `sql-postgres` | Unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics |
 | | `sql-clickhouse` | `ORDER BY`/partition design, mutations, `FINAL` dedup, memory-blowing joins |
 | | `hbase` | Row-key hotspotting, unbounded scans, column-family / version growth |

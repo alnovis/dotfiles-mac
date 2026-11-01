@@ -28,6 +28,10 @@ Rust lenses (original to this repo — Rust-specific classes not covered above):
 - `rust-async` — tokio / async-runtime footguns (lock across `.await`, blocking the executor, dropped tasks)
 - `rust-ownership` — leaks (`Rc` cycles), runtime borrow panics, Drop-order and needless-allocation costs
 
+Shell lenses (original to this repo — two shells, two execution models):
+- `bash` — bash / POSIX sh: unquoted expansions, empty variables in destructive paths, `set -e` that does not fire, bashisms under `/bin/sh`
+- `fish` — fish footguns (line-split command substitution, vanishing empty lists, block scope, `"\t"`) plus a "Not bugs" list of bash habits models misapply to fish
+
 Data / query lenses (original to this repo — one engine each; the failure modes don't transfer):
 - `sql-postgres` — OLTP relational: unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics
 - `sql-clickhouse` — OLAP columnar: `ORDER BY`/partition design, mutations, dedup (`FINAL`), memory-blowing joins
@@ -36,7 +40,9 @@ Data / query lenses (original to this repo — one engine each; the failure mode
 Add a lens by dropping a `<name>.md` file here; it becomes selectable immediately
 (in `--lens`, its completion, and validation). Keep the shape of the existing
 files: a one-line framing, a `HARD GATE:` paragraph, then a
-`Where to look first (non-exhaustive — reason beyond this list):` checklist.
+`Where to look first (non-exhaustive — reason beyond this list):` checklist. A
+lens for a language that models tend to misread (`fish`) adds a "Not bugs" list
+— idioms that look wrong to the model but are correct.
 
 ## Attribution
 
@@ -60,6 +66,6 @@ data) come from VVAH's `iac` skill.
 
 The **quality** lenses (`documentation`, `reactive`, `resource-leak`,
 `error-handling`, `k8s-manifest`), the **Rust** lenses (`rust-unsafe`,
-`rust-async`, `rust-ownership`), and the **data / query** lenses (`sql-postgres`,
+`rust-async`, `rust-ownership`), the **shell** lenses (`bash`, `fish`), and the **data / query** lenses (`sql-postgres`,
 `sql-clickhouse`, `hbase`) are original to this repository — same HARD GATE
 discipline, not derived from VVAH.
