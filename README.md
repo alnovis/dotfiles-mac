@@ -147,7 +147,7 @@ All functions support `-h/--help`.
 - `describe` — inspect a fish function like psql's `\d` (`describe gstat`): a header card (name, description, source `file:line`, type) followed by the syntax-highlighted body via `fish_indent --ansi`. Flags: `-d/--description` (summary only), `-p/--path` (source file only, e.g. `v (describe -p gstat)`), `-b/--body` (highlighted body only), `--plain` (no ANSI). Colors/highlighting auto-disable off a tty. Non-function names fall back to `type` output. Tab-completes your functions.
 
 *Quick commands:*
-- `q` — lightweight named commands: `q add NAME CMD` (or `q add NAME` to write it in `$EDITOR`), then `q NAME [args…]`; also `q ls / show / edit / rm`. Stored in `~/.config/quick/` (machine-local, not in this repo)
+- `q` — lightweight named commands: `q add NAME CMD` (or `q add NAME` to write it in `$EDITOR`), then `q NAME [args…]`; also `q ls / show / edit / rm`. The args are appended to the command, and Tab completes them like the saved command's own (`q rv --lens re<TAB>` → the `ai review` lenses). Stored in `~/.config/quick/` (machine-local, not in this repo)
 
 *Git:*
 - `clipcommit` — git commit using clipboard as message (`-y -a -p -d -e --no-color`)

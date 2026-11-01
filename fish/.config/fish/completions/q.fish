@@ -33,8 +33,29 @@ function __q_no_subcmd
     return 0
 end
 
-# Disable file completions by default
+# Run mode: the first argument is a saved command
+function __q_running
+    set -l cmd (commandline -opc)
+    test (count $cmd) -ge 2; and test -f ~/.config/quick/$cmd[2]
+end
+
+# A saved command's arguments complete like that command's own: q appends them to the end
+# of the body, so the body's last line plus what is typed so far goes to `complete -C` —
+# flags, their values and files, for any command, nothing special per command
+function __q_delegate
+    set -l cmd (commandline -opc)
+    set -l body (tail -n +2 ~/.config/quick/$cmd[2] | string trim | string match -v '')
+    test (count $body) -gt 0; or return
+    set -l line $body[-1]
+    for a in $cmd[3..]
+        set line "$line "(string escape -- $a)
+    end
+    complete -C "$line "(commandline -ct)
+end
+
+# Disable file completions by default (run mode gets files through the delegate)
 complete -c q -f
+complete -c q -n __q_running -a "(__q_delegate)"
 
 # Subcommands (only when no subcommand given yet)
 complete -c q -n __q_no_subcmd -a add -d "Save a quick command"
