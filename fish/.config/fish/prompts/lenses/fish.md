@@ -20,3 +20,8 @@ Not bugs in fish (bash habits that misfire here):
 - `(cmd)` and `$(cmd)` (fish ≥ 3.4) are both command substitution; `$status`, not `$?`; `end`, not `fi`/`done`; `test`, not `[[ ]]`.
 - `$argv[2..]` on a short list is an empty slice, not an error; `set -q var` tests existence, `set -q var[1]` non-emptiness.
 - A variable exported with `set -lx`/`set -x` is visible in functions the caller invokes.
+- `set x (math $x + 1)` without `-l` on an existing local updates that local — `set` with no scope flag modifies the variable in the innermost scope where it exists; it creates a global only when none does.
+- `set sel -n $ns` stores two elements, `-n` and `$ns` — `set` stops parsing options at the variable name, so later dash-words are values.
+- `argparse ... -- $argv` removes the flags it parsed from `$argv`; afterwards `$argv` holds only positionals.
+- `"$list"` joins all elements with spaces into one argument (an empty list gives one empty string) — not the first element; `test -n "$empty"` is a correct emptiness check.
+- Globs never match `.` and `..` (`dir/.*` lists only real dotfiles); a glob with no match inside `set`, `for` or `count` expands to an empty list with no error — only a command argument errors.

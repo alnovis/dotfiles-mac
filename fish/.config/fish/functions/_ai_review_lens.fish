@@ -27,7 +27,7 @@ function _ai_review_lens --description "Resolve --lens names to an injectable re
 "(cat $lens_dir/$name.md | string collect)
     end
 
-    printf '%s\n' "Apply the security lens(es) below IN ADDITION to the review above. The finding gate and severity rules still apply — a lens is where to look, not a mandate to find something. Report lens findings under the Critical/Important tiers by their real impact.
+    printf '%s\n' "Apply the lens(es) below IN ADDITION to the review above. The finding gate and severity rules still apply — a lens is where to look, not a mandate to find something. Report lens findings under the Critical/Important tiers by their real impact.
 "
     printf '%s\n\n' $blocks
 end
