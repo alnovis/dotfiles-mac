@@ -56,5 +56,21 @@
     "severity": "nit",
     "status": "confirmed",
     "body": "A prose quote cited two lines off (11, an empty echo): placed on the nearby line that names `GBRANCH_BASES`."
+  },
+  {
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 50,
+    "quote": "if set -q GBRANCH_BASES set candidates $GBRANCH_BASES",
+    "severity": "nit",
+    "status": "confirmed",
+    "body": "Two lines of code quoted as one, cited off: found by the quote without whitespace, on its first line (44)."
+  },
+  {
+    "file": "gbranch",
+    "line": 0,
+    "quote": "",
+    "severity": "nit",
+    "status": "uncertain",
+    "body": "The file named without directory or extension, as a bare class name: the one file called gbranch.*, file-level."
   }
 ]

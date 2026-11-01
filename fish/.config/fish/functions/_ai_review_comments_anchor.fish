@@ -29,7 +29,14 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
 
         # The path as cited; else the one file with that name ("src/.../X.java" is common)
         if not contains -- $path $files_at_head
-            set -l by_name (printf '%s\n' $files_at_head | string match -r --entire -- '(?:^|/)'(string escape --style=regex -- (path basename -- $path))'$')
+            set -l name (path basename -- $path)
+            set -l name_re (string escape --style=regex -- $name)
+            set -l by_name (printf '%s\n' $files_at_head | string match -r --entire -- '(?:^|/)'$name_re'$')
+            # A bare class name ("SendTicketContainerizedTest") names the file without its
+            # extension
+            if test (count $by_name) -eq 0; and test -n "$name"; and not string match -q -- '*.*' $name
+                set by_name (printf '%s\n' $files_at_head | string match -r --entire -- '(?:^|/)'$name_re'\.[^./]+$')
+            end
             test (count $by_name) -eq 1; and set path $by_name[1]
         end
 
@@ -167,7 +174,7 @@ function _ai_review_comments_content --description "Lines of PATH at REV (empty 
     end
 end
 
-function _ai_review_comments_find --description "Line of QUOTE in the lines given after WANT: exact trimmed match first, then containment; the nearest to WANT wins; 0 if absent"
+function _ai_review_comments_find --description "Line of QUOTE in the lines given after WANT: exact trimmed match first, then containment, then containment ignoring whitespace over 1-3 lines; the nearest to WANT wins; 0 if absent"
     set -l quote $argv[1]
     set -l want $argv[2]
     set -l lines $argv[3..]
@@ -187,6 +194,23 @@ function _ai_review_comments_find --description "Line of QUOTE in the lines give
     end
     set -l pool $exact
     test (count $pool) -eq 0; and set pool $partial
+    # A statement the code splits over lines and the model quotes as one line (or spaces
+    # differently): compare without whitespace over 1, then 2, then 3 consecutive lines.
+    # The first line of the window is the anchor. Short quotes would match by chance.
+    if test (count $pool) -eq 0
+        set -l q (string replace -ar '\s+' '' -- $quote)
+        if test (string length -- "$q") -ge 8
+            set -l q_re (string escape --style=regex -- $q)
+            set -l flat (string replace -ar '\s+' '' -- $lines)
+            for k in 1 2 3
+                test (count $flat) -ge $k; or break
+                for i in (seq 1 (math (count $flat) - $k + 1))
+                    string match -q -r -- $q_re (string join '' -- $flat[$i..(math $i + $k - 1)]); and set -a pool $i
+                end
+                test (count $pool) -gt 0; and break
+            end
+        end
+    end
     if test (count $pool) -eq 0
         echo 0
         return
