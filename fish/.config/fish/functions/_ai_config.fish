@@ -138,30 +138,33 @@ function _ai_config_do_status
     set_color normal
 
     set -l labels default (_ai_tasks)
-    for t in $labels
-        set -l p
-        set -l m
-        set -l p_orig
-        set -l m_orig
+    begin
+        printf '%s\t%s\t%s\t%s\t%s\n' Task Provider Model "Provider from" "Model from"
+        for t in $labels
+            set -l p
+            set -l m
+            set -l p_orig
+            set -l m_orig
 
-        if test "$t" = default
-            set p (_ai_default_provider)
-            set p_orig (_ai_origin_provider)
-            set m (_ai_default_model "" $p)
-            set m_orig (_ai_origin_model "" $p)
-        else
-            set p (_ai_default_provider $t)
-            set p_orig (_ai_origin_provider $t)
-            set m (_ai_default_model $t $p)
-            set m_orig (_ai_origin_model $t $p)
-        end
+            if test "$t" = default
+                set p (_ai_default_provider)
+                set p_orig (_ai_origin_provider)
+                set m (_ai_default_model "" $p)
+                set m_orig (_ai_origin_model "" $p)
+            else
+                set p (_ai_default_provider $t)
+                set p_orig (_ai_origin_provider $t)
+                set m (_ai_default_model $t $p)
+                set m_orig (_ai_origin_model $t $p)
+            end
 
-        if test -n "$m"
-            printf "  %-9s %s / %-30s  (provider: %s | model: %s)\n" "$t:" $p $m $p_orig $m_orig
-        else
-            printf "  %-9s %s / (not set)                      (provider: %s | model: —)\n" "$t:" $p $p_orig
+            test -n "$m"; or begin
+                set m "(not set)"
+                set m_orig —
+            end
+            printf '%s\t%s\t%s\t%s\t%s\n' $t $p $m $p_orig $m_orig
         end
-    end
+    end | table --header --indent 2
 end
 
 function _ai_config_do_provider --argument-names value task scope

@@ -4,11 +4,13 @@ Sources:
   env     = AI_DEFAULT_MODEL=default-model
 
 Resolved per task:
-  default:  ollama / default-model                   (provider: global+top | model: env)
-  chat:     ollama / default-model                   (provider: global+top | model: env)
-  code:     ollama / default-model                   (provider: global+top | model: env)
-  review:   ollama / review-model                    (provider: global+top | model: global)
-  verify:   ollama / default-model                   (provider: global+top | model: env)
-  commit:   ollama / commit-model                    (provider: global+top | model: global)
-  summary:  ollama / default-model                   (provider: global+top | model: env)
+  Task     Provider  Model          Provider from  Model from
+  -----------------------------------------------------------
+  default  ollama    default-model  global+top     env
+  chat     ollama    default-model  global+top     env
+  code     ollama    default-model  global+top     env
+  review   ollama    review-model   global+top     global
+  verify   ollama    default-model  global+top     env
+  commit   ollama    commit-model   global+top     global
+  summary  ollama    default-model  global+top     env
 [exit 0]

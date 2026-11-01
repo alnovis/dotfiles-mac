@@ -1,10 +1,10 @@
 [ollama not reachable — showing the cached list]
 
-   Model                    Size  Capabilities          Used for
- ------------------------------------------------------------------------
+   Model     Size  Capabilities  Used for
+ ------------------------------------------
  Coding:
-   other:7b                 2 GB                                        
- ------------------------------------------------------------------------
+   other:7b  2 GB
+ ------------------------------------------
 
  1 model (1 tag), 2 GB on disk
  Details: ai models info NAME · try one: ai models try NAME:TAG · find: ai models search QUERY

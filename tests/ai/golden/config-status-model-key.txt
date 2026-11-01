@@ -3,11 +3,13 @@ Sources:
   global  = ~/.config/ai/config
 
 Resolved per task:
-  default:  ollama / config-model                    (provider: global+top | model: global)
-  chat:     ollama / config-model                    (provider: global+top | model: global)
-  code:     ollama / config-model                    (provider: global+top | model: global)
-  review:   ollama / review-model                    (provider: global+top | model: global)
-  verify:   ollama / config-model                    (provider: global+top | model: global)
-  commit:   ollama / commit-model                    (provider: global+top | model: global)
-  summary:  ollama / config-model                    (provider: global+top | model: global)
+  Task     Provider  Model         Provider from  Model from
+  ----------------------------------------------------------
+  default  ollama    config-model  global+top     global
+  chat     ollama    config-model  global+top     global
+  code     ollama    config-model  global+top     global
+  review   ollama    review-model  global+top     global
+  verify   ollama    config-model  global+top     global
+  commit   ollama    commit-model  global+top     global
+  summary  ollama    config-model  global+top     global
 [exit 0]

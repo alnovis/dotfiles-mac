@@ -132,6 +132,7 @@ All functions support `-h/--help`.
 - `trim` — trim leading/trailing whitespace per line (args or stdin)
 - `clipclean` — dedent and trim clipboard (removes common leading indentation); `-f/--flat` strips all leading whitespace
 - `cheat` — cheat sheet for a command via cheat.sh (`cheat tar`, `cheat git rebase`)
+- `table` — align tab-separated lines from stdin into columns (`... | table --header --right 2`); widths are measured without colour codes, so cells may carry `set_color`; `--max COL:N` caps a column with `~`, a line without a tab prints as-is (a group title). `ai models list` and `ai config status` are built on it
 
 *Image clipboard (macOS):*
 - `clipimg` — copy an image file into the clipboard (`clipimg shot.png`)

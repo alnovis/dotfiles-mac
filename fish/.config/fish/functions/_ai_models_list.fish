@@ -76,54 +76,30 @@ function _ai_models_list --description "Installed ollama models (no network): on
         return 0
     end
 
-    # Name column: as wide as the longest name, within limits
-    set -l name_col 20
-    for r in $rows
-        set -l w (string length -- (string split \t -- $r)[2])
-        test $w -gt $name_col; and set name_col $w
-    end
-    test $name_col -gt 46; and set name_col 46
-
-    # Colours as in the pre-redesign list: cyan header, separators and group titles; a
-    # yellow ">" on the default model; "Used for" in yellow; a model on trial in magenta.
-    # Columns are printed one by one so the colour codes never count towards the padding.
-    set -l sep (string repeat -n (math $name_col + 52) -- -)
-    set_color cyan
-    printf "   %-"$name_col"s %8s  %-21s %s\n" Model Size Capabilities "Used for"
-    set_color normal
-    echo " $sep"
+    # Colours as in the pre-redesign list: cyan header and group titles; a yellow ">" on
+    # the default model; "Used for" in yellow; a model on trial in magenta. table measures
+    # widths without the colour codes and caps the name column.
     set -l groups (for r in $rows; string split -f1 \t -- $r; end | sort -u | string match -v general)
     contains -- general (for r in $rows; string split -f1 \t -- $r; end); and set -a groups general
-    for g in $groups
-        set_color cyan
-        echo " "(string sub -l 1 -- $g | string upper)(string sub -s 2 -- $g)":"
-        set_color normal
-        for r in (printf '%s\n' $rows | string match -- (printf '%s\t*' $g) | sort -t \t -k2)
-            set -l f (string split \t -- $r)
-            set -l name $f[2]
-            if test (string length -- $name) -gt $name_col
-                set name (string sub -l (math $name_col - 1) -- $name)"~"
+    begin
+        printf '%s\t%s\t%s\t%s\t%s\n' '' Model Size Capabilities "Used for"
+        # Colours as "$(set_color …)" inside quotes: without a colour terminal set_color
+        # prints nothing, and a bare (set_color …) would be an empty list that makes the
+        # whole concatenated word vanish
+        for g in $groups
+            echo "$(set_color cyan)"(string sub -l 1 -- $g | string upper)(string sub -s 2 -- $g)":$(set_color normal)"
+            for r in (printf '%s\n' $rows | string match -- (printf '%s\t*' $g) | sort -t \t -k2)
+                set -l f (string split \t -- $r)
+                set -l mark ''
+                contains -- default (string split ', ' -- $f[5]); and set mark "$(set_color yellow)>$(set_color normal)"
+                set -l used ''
+                test -n "$f[5]"; and set used "$(set_color yellow)$f[5]$(set_color normal)"
+                set -l trial ''
+                test -n "$f[6]"; and set trial "$(set_color magenta)$f[6]$(set_color normal)"
+                printf '%s\t%s\t%s\t%s\t%s\t%s\n' $mark $f[2] $f[3] $f[4] $used $trial
             end
-            if contains -- default (string split ', ' -- $f[5])
-                set_color yellow
-                printf " > "
-                set_color normal
-            else
-                printf "   "
-            end
-            printf "%-"$name_col"s %8s  %-21s " $name $f[3] $f[4]
-            set_color yellow
-            printf "%-16s" $f[5]
-            set_color normal
-            if test -n "$f[6]"
-                set_color magenta
-                printf " %s" $f[6]
-                set_color normal
-            end
-            echo
         end
-    end
-    echo " $sep"
+    end | table --header --rule --right 3 --max 2:46 --indent 1
 
     echo
     set -l models_word models
