@@ -15,8 +15,9 @@ Resolved per task:
   summary  ollama    default-model  global+top     env
 
 Review (ollama / review-model):
-  prompt    lean (auto: not claude)
-  runs      1 (default)
-  parallel  sequential (auto: a local model)
-  lens      none (set review_lens in .ai/config)
+  prompt       lean (auto: not claude)
+  runs         1 (default)
+  parallel     sequential (auto: a local model)
+  verify runs  1 (default)
+  lens         none (set review_lens in .ai/config)
 [exit 0]

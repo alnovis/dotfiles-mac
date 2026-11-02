@@ -179,6 +179,12 @@ function _ai_config_do_status
         test -n "$r[1]"; and printf '%s\t%s\n' runs "$r[1] ($r[2])"
         set -l m (_ai_review_parallel_mode $rp "$rm" "" 2>/dev/null | string split \t)
         test -n "$m[1]"; and printf '%s\t%s\n' parallel "$m[1] ($m[2])"
+        # Verify runs resolve by the verify provider/model, as the flow does
+        set -l vp (_ai_config_read verify_provider 2>/dev/null)
+        test -n "$vp"; or set vp $rp
+        set -l vmd (_ai_default_model verify $vp 2>/dev/null)
+        set -l v (_ai_verify_runs_count $vp "$vmd" "" 2>/dev/null | string split \t)
+        test -n "$v[1]"; and printf '%s\t%s\n' "verify runs" "$v[1] ($v[2])"
         set -l l (_ai_review_lens_choice "" "" | string split \t)
         if test -n "$l[1]"
             printf '%s\t%s\n' lens "$l[1] ($l[2])"

@@ -390,6 +390,18 @@ nothing. Output shape (one verdict per finding, then a tally):
 Verify: X confirmed, Y refuted, Z uncertain
 ```
 
+**Several verify runs (`--verify-runs N`, config `verify_runs`).** One verify run is a sample:
+on the same review its verdict on a finding flipped between runs, while the majority of three
+was right every time. With N > 1 the verifier runs N times — in parallel for a cloud provider,
+in turn for ollama, as review runs do — each run kept as `review.verify.runK.md`, and
+`_ai_verify_vote` joins them by finding number: a verdict needs more than half of the N runs
+(2 of 3); runs that disagree, or a finding only some runs judged, give UNCERTAIN. The joined
+file keeps one verdict per finding, the title and `why:` of the strongest winning run, and a
+`votes:` line (`C8 C7 R6`). Verdicts without a finding number cannot be matched and are left
+out, with a count. `--verify-runs` turns verify on; `verify_runs` is scoped by the verify
+provider/model like `review_runs` (`verify_runs@litellm=3`). Majority is for verify only: a
+review's runs are joined by union, because there a finding one run saw is still a finding.
+
 `--verify` is opt-in (or `review_verify=1`), skipped with a note under `--brief`. The `verify`
 task is configured like any other (`ai config provider claude --task verify`,
 `ai models use verify MODEL`).
@@ -932,6 +944,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `review_prompt` | by hand | Review prompt depth: `auto` (default: full for claude, lean for every other model), `full`, `lean` |
 | `review_runs` | by hand | How many review runs to join before verify (default 1); scoped: `review_runs@PROVIDER`, `review_runs@PROVIDER/MODEL` |
 | `review_parallel` | by hand | Those runs: `auto` (default: cloud in parallel, ollama one at a time), `on`, `off`; scoped like `review_runs` |
+| `verify_runs` | by hand | How many verify runs, joined by majority per finding (default 1); scoped by the verify provider/model like `review_runs` |
 | `review_lens` | by hand | Default lenses for reviews and their verify, comma-separated (`redis,reactive`); unscoped, best in the project's `.ai/config`; `--lens` replaces, `--no-lens` drops it |
 | `cloud_driver` | by hand | Single calls to an OpenAI-API provider of the runner (litellm, …): `native` (default, direct HTTP) or `runner` (through pi / opencode) |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |

@@ -7,7 +7,9 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     #   --code-file F       code/diff context embedded for the verifier (optional)
     #   --output F          write verdicts to a real file (avoids /dev/stdout loss)
     #   --lens A,B          the review's lenses, as knowledge to judge the findings by
-    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'lens=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
+    #   --runs N --mode M   N verify runs (parallel | sequential), joined by majority per
+    #                       finding number (_ai_verify_vote); each run kept as <dest>.runK
+    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'lens=' 'runs=' 'mode=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
 
     set -l provider $_flag_provider
     test -z "$provider"; and set provider ollama
@@ -66,6 +68,45 @@ $code"
     test -n "$model"; and set -a run_args --model $model
     set -q _flag_agentic; and set -a run_args --agentic --skill ai-verify
     set -q _flag_no_think; and set -a run_args --no-think
+
+    # Several runs: the same payload N times, then a majority vote per finding number
+    set -l runs $_flag_runs
+    test -n "$runs"; or set runs 1
+    if test $runs -gt 1; and test -n "$_flag_output"; and test -n "$_flag_label"; and not set -q _flag_dry_run
+        set -l pfile (mktemp)
+        printf '%s' "$payload" >$pfile
+        # The run files sit next to the verify file (<dest>.runK); to the terminal, next to
+        # the temporary output, removed after the vote
+        set -l dest $_flag_dest
+        set -l dest_is_temp 0
+        if test -z "$dest"; or test "$dest" = "(terminal)"
+            set dest $_flag_output
+            set dest_is_temp 1
+        end
+        set -l mode $_flag_mode
+        test -n "$mode"; or set mode sequential
+        set -l joined (mktemp)
+        set -g __ai_review_runs_ok 0
+        _ai_review_runs --runs $runs --mode $mode --prompt-file $pfile --output $joined --dest $dest --label $_flag_label -- $run_args
+        set -l rc $status
+        rm -f $pfile $joined
+        set -l dir (path dirname -- $dest)
+        set -l base (path basename -- $dest | string replace -r '\.[^.]+$' '')
+        set -l ext (path extension -- $dest)
+        set -l files (path filter -f -- $dir/$base.run(seq $runs)$ext)
+        if test $rc -ne 0; or test (count $files) -eq 0
+            set -g __ai_last_failure "no verify run answered"
+            : >$_flag_output
+            return 1
+        end
+        # A run that did not answer counts as "not judged" for every finding: the majority
+        # stays out of N, so two of three runs failing leaves everything UNCERTAIN
+        _ai_verify_vote $runs $files >$_flag_output
+        test $dest_is_temp -eq 1; and rm -f $files
+        set -g __ai_verify_run_files $files
+        test $dest_is_temp -eq 1; and set -e __ai_verify_run_files
+        return 0
+    end
 
     # Watched run when writing to a file with a label (shows live progress);
     # otherwise a plain run (streaming / dry-run).

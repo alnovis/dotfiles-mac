@@ -11,5 +11,5 @@ Error: --lens and --no-lens exclude each other
 == verify-only takes the default
 ## Review lens: scala
 == config status
-  lens      scala (config: project review_lens)
+  lens         scala (config: project review_lens)
 [exit 1]

@@ -18,8 +18,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --runs N                 run the review N times and join them (_ai_review_runs)
     #   --parallel-mode M        parallel | sequential, for those runs
     #   --lens A,B               the review's lenses, handed to verify too
+    #   --verify-runs N          verify N times, joined by majority per finding (_ai_verify_vote)
     argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
-             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' 'verify-runs=' -- $argv; or return 1
     set -l runs $_flag_runs
     test -n "$runs"; or set runs 1
 
@@ -48,6 +49,18 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l vmodel $_flag_verify_model
     if test -z "$vmodel"
         set vmodel (_ai_default_model verify $vprovider)
+    end
+
+    # Verify runs: --verify-runs > verify_runs (scoped by the verify provider/model) > 1; in
+    # parallel or in turn by the same rule as review runs (review_parallel, auto)
+    # Checked outside (…) first: stderr inside it skips the caller's redirect
+    _ai_verify_runs_count $vprovider "$vmodel" "$_flag_verify_runs" >/dev/null; or return 1
+    set -l vr (_ai_verify_runs_count $vprovider "$vmodel" "$_flag_verify_runs" | string split \t)
+    set -l vruns $vr[1]
+    set -l vmode sequential
+    if test $vruns -gt 1
+        set -l vm (_ai_review_parallel_mode $vprovider "$vmodel" "" | string split \t)
+        test -n "$vm[1]"; and set vmode $vm[1]
     end
 
     # Two output paths: review -> --output; verify -> --verify-output or derived.
@@ -80,6 +93,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         set -l lens_note ""
         test -n "$_flag_lens"; and set lens_note " + lens(es) $_flag_lens"
         echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md$lens_note + first-pass findings + $code_note)" >&2
+        test $vruns -gt 1; and echo "verify runs: $vruns ($vmode), joined by majority per finding (origin: $vr[2])" >&2
         test -n "$review_out"; and echo "would write: review -> $review_out ; verify -> $verify_out" >&2
         if set -q _flag_comments
             set_color cyan >&2; echo "--- dry-run: pass 3 (comments) ---" >&2; set_color normal >&2
@@ -95,6 +109,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     test $runs -gt 1; and set rev_label "Review ×$runs - $provider"
     test -n "$model"; and set rev_label "$rev_label - $model"
     set -l ver_label "Verify - $vprovider"
+    test $vruns -gt 1; and set ver_label "Verify ×$vruns - $vprovider"
     test -n "$vmodel"; and set ver_label "$ver_label - $vmodel"
     set -l com_label "Comments - $vprovider"
     test -n "$vmodel"; and set com_label "$com_label - $vmodel"
@@ -175,7 +190,8 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l ver_dest $verify_out
     test -z "$ver_dest"; and set ver_dest "(terminal)"
 
-    _ai_review_verify $vargs --output $ver_target --label "[2/$n_stages] $ver_label" --dest $ver_dest
+    set -e __ai_verify_run_files
+    _ai_review_verify $vargs --runs $vruns --mode $vmode --output $ver_target --label "[2/$n_stages] $ver_label" --dest $ver_dest
     set -l rc2 $status
     # Kept now: the comments stage below would overwrite it
     set -l ver_why "$__ai_last_failure"
@@ -213,6 +229,12 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         end
         if test -s "$ver_target"
             echo "Verify saved to:   $verify_out ("(_ai_verdict_counts $ver_target)")"
+            if set -q __ai_verify_run_files[1]
+                echo "Verify runs:       $__ai_verify_run_files[1] ("(count $__ai_verify_run_files)"/$vruns answered, majority above)"
+                for f in $__ai_verify_run_files[2..]
+                    echo "                   $f"
+                end
+            end
         else
             # An empty file next to the review would read as a result — remove it
             rm -f "$ver_target"

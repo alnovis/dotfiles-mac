@@ -18,7 +18,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #   --verdicts FILE      an existing verify file: skip the verify pass, build comments only
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
              'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'no-think' 'dry-run' \
-             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' -- $argv; or return 1
+             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' 'verify-runs=' -- $argv; or return 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
         echo "Error: --lens and --no-lens exclude each other" >&2
@@ -117,6 +117,18 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     echo "Output: $verify_out"
     echo "---"
 
+    # Verify runs: --verify-runs > verify_runs (scoped) > 1, joined by majority per finding
+    # Checked outside (…) first: stderr inside it skips the caller's redirect
+    _ai_verify_runs_count $vprovider "$vmodel" "$_flag_verify_runs" >/dev/null; or return 1
+    set -l vr (_ai_verify_runs_count $vprovider "$vmodel" "$_flag_verify_runs" | string split \t)
+    set -l vruns $vr[1]
+    set -l vmode sequential
+    if test $vruns -gt 1
+        set -l vm (_ai_review_parallel_mode $vprovider "$vmodel" "" | string split \t)
+        test -n "$vm[1]"; and set vmode $vm[1]
+        echo "Verify runs: $vruns ($vmode), joined by majority per finding (origin: $vr[2])"
+    end
+
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $review_file --lang $lang_full
     test -n "$vmodel"; and set -a vargs --model $vmodel
     set -q _flag_lens; and set -a vargs --lens $_flag_lens
@@ -142,6 +154,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -l ver_label "Verify - $vprovider"
     test -n "$vmodel"; and set ver_label "$ver_label - $vmodel"
     set -l com_label (string replace Verify Comments -- $ver_label)
+    test $vruns -gt 1; and set ver_label (string replace Verify "Verify ×$vruns" -- $ver_label)
     if set -q _flag_comments
         _ai_stage_plan "$ver_label" "$com_label"
         set ver_label "[1/2] $ver_label"
@@ -149,7 +162,8 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     else
         _ai_stage_plan "$ver_label"
     end
-    _ai_review_verify $vargs --output $verify_out --label "$ver_label" --dest $verify_out
+    set -e __ai_verify_run_files
+    _ai_review_verify $vargs --runs $vruns --mode $vmode --output $verify_out --label "$ver_label" --dest $verify_out
     set -l rc $status
     test -n "$diff_tmp"; and rm -f $diff_tmp
 
@@ -175,6 +189,12 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     # Every file of the run together, after the last stage
     set_color green
     echo "Verify saved to:   $verify_out ("(_ai_verdict_counts $verify_out)")"
+    if set -q __ai_verify_run_files[1]
+        echo "Verify runs:       $__ai_verify_run_files[1] ("(count $__ai_verify_run_files)"/$vruns answered, majority above)"
+        for f in $__ai_verify_run_files[2..]
+            echo "                   $f"
+        end
+    end
     set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_file $verify_out
     set_color yellow
     test $rc3 -ne 0; and echo "Comments failed:   "(test -n "$com_why"; and echo $com_why; or echo "see the error above")

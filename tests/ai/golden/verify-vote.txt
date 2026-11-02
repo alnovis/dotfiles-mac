@@ -1,0 +1,36 @@
+Majority of 3 verify runs, joined by finding number: a verdict needs 2 of 3.
+
+- [F1] `a.fish:3` — lost update between two writers — [CONFIRMED 8/10]
+  why: run 1 found the second writer in the scheduler.
+  votes: C8 C7 R6 (C confirmed, R refuted, U uncertain, - not judged)
+
+- [F2] `b.fish:7` — the list is reversed — [REFUTED 9/10]
+  why: run 1: `:+` appends at the tail.
+  votes: R9 R8 C8 (C confirmed, R refuted, U uncertain, - not judged)
+
+- [F3] missing timeout — [UNCERTAIN]
+  why: the runs disagree (votes below); one run: run 2 found the timeout in the client config.
+  votes: C6 R7 U (C confirmed, R refuted, U uncertain, - not judged)
+
+- [F4] `d.fish:1` — only this run judged it — [UNCERTAIN]
+  why: only 1 of 3 runs judged it; one run: run 1 alone.
+  votes: C7 - - (C confirmed, R refuted, U uncertain, - not judged)
+
+1 verdict(s) without a finding number were left out: they cannot be matched across runs.
+
+Verify: 1 confirmed, 1 refuted, 2 uncertain (majority of 3 runs)
+== counts: 1 confirmed, 1 refuted, 2 uncertain
+## Refuted by verify — skim before trusting
+
+Not comments. Verify threw these out; it can be wrong — check any that sound real.
+
+- [F2] `b.fish:7` — the list is reversed — refuted 9/10
+  > run 1: `:+` appends at the tail.
+
+== one run of three answered: everything uncertain
+- [F1] `a.fish:3` — lost update between two writers — [UNCERTAIN]
+- [F2] `b.fish:7` — the list is reversed — [UNCERTAIN]
+- [F3] `c.fish:9` — missing timeout — [UNCERTAIN]
+- [F4] `d.fish:1` — only this run judged it — [UNCERTAIN]
+Verify: 0 confirmed, 0 refuted, 4 uncertain (majority of 3 runs)
+[exit 0]

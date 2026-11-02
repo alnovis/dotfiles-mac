@@ -28,7 +28,7 @@ function _ai_review --description "AI code review — project state (path target
 
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
              'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' 'no-lens' \
-             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' \
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' 'verify-runs=' \
              'comments' 'range=' 'verdicts=' 'runs=' 'parallel' 'no-parallel' -- $argv
     or return 1
 
@@ -128,6 +128,10 @@ function _ai_review_print_help
     echo "                          from the embedded code)"
     echo "  --verify-output FILE    Where the verify pass is written"
     echo "                          (default: <output>.verify.<ext>, alongside the review)"
+    echo "  --verify-runs N         Verify N times and keep each finding's majority verdict"
+    echo "                          (2 of 3; otherwise UNCERTAIN), joined by finding number"
+    echo "                          [F1], [F2]… — turns --verify on. Default: config"
+    echo "                          verify_runs (scoped like review_runs), else 1"
     echo "  --verify-only FILE      Re-verify an EXISTING review file — no review pass."
     echo "                          Verify a costly claude review, or re-verify it with"
     echo "                          another model, without paying to regenerate it."
