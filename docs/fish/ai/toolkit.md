@@ -381,10 +381,14 @@ Before verify, the findings are numbered in the saved review — `[F1]`, `[F2]`�
 bullet or list item, across all runs of a joined review (no model;
 `_ai_review_number_findings`). A bullet indented right under a section heading
 (`2. **Critical issues**`, then `   - …`) is numbered too; a sub-bullet of a finding is not.
+A plain `3. Important issues` is a section heading when it is the section name alone (then
+`:` or ` — …`); `1. Tests are missing for X` stays a finding.
 Verify keys each verdict by its number, so a verdict matches its
-finding without comparing reworded titles, and several verify runs can be joined by it. A
-review saved before numbering is numbered on the way into verify; numbering twice changes
-nothing.
+finding without comparing reworded titles, and several verify runs can be joined by it.
+`--verify-only` writes the numbers into the review file it is given, so a verdict `[F3]` is
+found there by its number; numbering twice changes nothing, so a re-verify leaves them as they
+are. A `(none)` bullet is not a finding, with or without a note after it
+(`- (none) — the removed check is covered elsewhere`).
 
 Only numbered findings get a verdict, and only a finding with a verdict becomes a comment. The
 sections that hold no defects stay unnumbered: Summary, Nits, Architecture, Strengths, Verdict,

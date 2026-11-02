@@ -10,7 +10,10 @@ function _ai_review_number_findings --description "Number the findings of a revi
     # tally. A verdict on each of them only inflated the count ("unused import" CONFIRMED;
     # 12 of 30 on one review). A deny list, not an allow list: a section the model named
     # its own way ("## Bugs") is still verified. A heading is "## X", or "**X**" / "**3. X**" /
-    # "3. **X** —" when X is a section name (so "1. **Lost updates** — …" stays a finding).
+    # "3. **X** —" when X is a section name (so "1. **Lost updates** — …" stays a finding), or
+    # a plain "3. Important issues" that is the section name alone. Missed headings left a
+    # run unnumbered, and verify runs keyed its findings their own way: the vote merged
+    # different findings under one number.
     # Numbers run across the "## Run K/N" parts of a joined review. Already numbered input
     # passes through unchanged, so numbering twice (the flow, then verify) is harmless. A run
     # that wrote its findings as headings keeps no numbers: verify falls back to titles there.
@@ -33,15 +36,24 @@ function _ai_review_number_findings --description "Number the findings of a revi
         function plain(name) {
             return name ~ /^(summary|nits?|architecture|strengths?|verdict|held)$/
         }
+        # "3. Important issues" with no bold: a heading only when the item is the section
+        # name alone (then ":" or " — …"), so "1. Tests are missing for X" stays a finding
+        function plainhead(line,   s) {
+            s = line; sub(/^[0-9]+\. /, "", s); sub(/:.*$/, "", s); sub(/ +(—|–|-) .*$/, "", s)
+            s = tolower(s); sub(/ +$/, "", s)
+            return s ~ /^(summary|critical( issues)?|important( issues)?|tests?|removed( code)?|nits?|security( issues)?|findings|issues|verdict|architecture|strengths?)$/
+        }
         # top: inside a top-level bullet, so an indented bullet is its sub-bullet
         /^## Run [0-9]+\// { sec = ""; top = 0; print; next }
         /^## / { sec = section($0); top = 0; print; next }
         /^(\*\*[A-Z]|\*\*[0-9]+\. [A-Z]|[0-9]+\. \*\*[A-Z])/ && known(section($0)) { sec = section($0); top = 0; print; next }
+        /^[0-9]+\. [A-Z]/ && plainhead($0) { sec = section($0); top = 0; print; next }
         /^([-*]|[0-9]+\.) / { top = 1 }
         sec != "" && !plain(sec) && (/^([-*]|[0-9]+\.) / || (!top && /^ {1,3}[-*] /)) {
-            # "- (none)" in an empty tier is not a finding
+            # "- (none)" in an empty tier is not a finding, nor "- (none) — the removed X is
+            # fine": verify only confirmed that nothing is wrong
             t = $0; sub(/^ *([-*]|[0-9]+\.) /, "", t); t = tolower(t); gsub(/[*_.[:space:]]/, "", t)
-            if (t == "(none)" || t == "none") { print; next }
+            if (t ~ /^\(none\)/ || t ~ /^none([^a-z]|$)/) { print; next }
             match($0, /^ *([-*]|[0-9]+\.) /)
             n++; print substr($0, 1, RLENGTH) "[F" n "] " substr($0, RLENGTH + 1); next
         }

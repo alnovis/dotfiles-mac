@@ -186,7 +186,12 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     end
 
     # Header: the same blocks as the stages and the Saved list (_ai_ui_heading, _ai_ui_kv)
-    _ai_ui_heading Review "$repo_name ($branch)"
+    # A detached HEAD (a worktree at a commit) has no branch: no empty "()"
+    if test -n "$branch"
+        _ai_ui_heading Review "$repo_name ($branch)"
+    else
+        _ai_ui_heading Review $repo_name
+    end
     _ai_ui_kv $header_info[1] $header_info[2]
     for v in $header_info[3..]
         _ai_ui_kv "" $v

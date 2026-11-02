@@ -151,6 +151,18 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         return 0
     end
 
+    # The findings get their numbers in the review file itself, as in the review flow: a
+    # verdict "[F3]" is then found in the review by its number. Already numbered findings
+    # pass through unchanged, so a re-verify does not touch the file's numbers.
+    set -l numbered (mktemp)
+    _ai_review_number_findings <$review_file >$numbered
+    if cmp -s $numbered $review_file
+        rm -f $numbered
+    else
+        cat $numbered >$review_file
+        rm -f $numbered
+    end
+
     set -l ver_label "Verify - $vprovider"
     test -n "$vmodel"; and set ver_label "$ver_label - $vmodel"
     set -l com_label (string replace Verify Comments -- $ver_label)
@@ -161,6 +173,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         set com_label "[2/2] $com_label"
     else
         _ai_stage_plan "$ver_label"
+        set ver_label "[1/1] $ver_label"
     end
     set -e __ai_verify_run_files
     set -e __ai_runs_failed

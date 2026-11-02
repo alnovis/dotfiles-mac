@@ -43,4 +43,23 @@
 6. **Nits**
    - `n.fish:2` — an indented nit is still not numbered.
 
+## Run 3/3
+
+1. Summary
+- A plain numbered summary heading: its bullet is not a finding.
+
+2. Critical issues — (none)
+
+3. Important issues
+- `p.fish:5` — a finding under a plain numbered heading.
+1. Tests are missing for p.fish — a numbered item that is not a section name alone is a finding.
+
+5. Removed code
+- (none) — the removed check is covered elsewhere: a "(none)" with a note is not a finding.
+- None — the same in another spelling.
+- Nonexistent `r.fish` is still read: a word that starts with "none" is a finding.
+
+6. Nits:
+- `q.fish:1` — a nit under "6. Nits:" is not numbered.
+
 Plain text outside any bullet stays as it is.
