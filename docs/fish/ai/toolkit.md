@@ -344,6 +344,17 @@ version item a lens corrects, or on its "Not bugs" list, is a misread — refute
 Scala change, a review without lenses read `xs :+ x` as putting the newest element at the
 head, and verify confirmed it at 9/10; with the lens the review got it right.
 
+A project's lenses go in its `.ai/config`, so every review there uses them without `--lens`:
+
+```
+review_lens=redis,reactive            # a Spring / Reactor service on Redis
+review_lens=scala,akka                # a Scala service on Akka
+```
+
+They follow the code, not the model — the key is unscoped, read from the project config
+(walk-up to the git root) before the global one. `--lens` replaces it for one run, `--no-lens`
+drops it; the review header and `ai config status` say where the lenses came from.
+
 ### Verify (`--verify`)
 
 A second pass that tries to **refute** each first-pass finding and gives one verdict per finding.
@@ -914,6 +925,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `review_prompt` | by hand | Review prompt depth: `auto` (default: full for claude, lean for every other model), `full`, `lean` |
 | `review_runs` | by hand | How many review runs to join before verify (default 1); scoped: `review_runs@PROVIDER`, `review_runs@PROVIDER/MODEL` |
 | `review_parallel` | by hand | Those runs: `auto` (default: cloud in parallel, ollama one at a time), `on`, `off`; scoped like `review_runs` |
+| `review_lens` | by hand | Default lenses for reviews and their verify, comma-separated (`redis,reactive`); unscoped, best in the project's `.ai/config`; `--lens` replaces, `--no-lens` drops it |
 | `cloud_driver` | by hand | Single calls to an OpenAI-API provider of the runner (litellm, …): `native` (default, direct HTTP) or `runner` (through pi / opencode) |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |
 

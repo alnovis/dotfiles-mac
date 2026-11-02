@@ -179,6 +179,12 @@ function _ai_config_do_status
         test -n "$r[1]"; and printf '%s\t%s\n' runs "$r[1] ($r[2])"
         set -l m (_ai_review_parallel_mode $rp "$rm" "" 2>/dev/null | string split \t)
         test -n "$m[1]"; and printf '%s\t%s\n' parallel "$m[1] ($m[2])"
+        set -l l (_ai_review_lens_choice "" "" | string split \t)
+        if test -n "$l[1]"
+            printf '%s\t%s\n' lens "$l[1] ($l[2])"
+        else
+            printf '%s\t%s\n' lens "none (set review_lens in .ai/config)"
+        end
     end | table --indent 2
 end
 

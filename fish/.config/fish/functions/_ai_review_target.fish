@@ -1,7 +1,18 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'provider=' 'model=' 'lang=' 'o/output=' 'with-project-context' 'lens=' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
+    argparse 'h/help' 'provider=' 'model=' 'lang=' 'o/output=' 'with-project-context' 'lens=' 'no-lens' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'comments' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
+    # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
+    if set -q _flag_lens; and set -q _flag_no_lens
+        echo "Error: --lens and --no-lens exclude each other" >&2
+        return 1
+    end
+    set -l lens_origin --lens
+    set -l lc (_ai_review_lens_choice "$_flag_lens" "$(set -q _flag_no_lens; and echo 1)" | string split \t)
+    if test -n "$lc[1]"
+        set _flag_lens $lc[1]
+        set lens_origin $lc[2]
+    end
     # Quoted: an empty (…) would vanish and shift the arguments
     _ai_review_comments_check "$(set -q _flag_comments; and echo 1)" "$(set -q _flag_brief; and echo 1)" \
         "$(set -q _flag_no_verify; and echo 1)" "$_flag_output"; or return 1
@@ -111,7 +122,9 @@ $prompt"
             echo "Lens: $_flag_lens (ignored — --brief mode)"
             set_color normal
         else
-            echo "Lens: $_flag_lens"
+            set -l from ""
+            test "$lens_origin" != --lens; and set from " ($lens_origin)"
+            echo "Lens: $_flag_lens$from"
         end
     end
     if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; or test $runs -gt 1; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"

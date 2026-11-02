@@ -27,7 +27,7 @@ function _ai_review --description "AI code review — project state (path target
     set -l orig_argv $argv
 
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
-             'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' \
+             'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' 'no-lens' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' \
              'comments' 'range=' 'verdicts=' 'runs=' 'parallel' 'no-parallel' -- $argv
     or return 1
@@ -104,7 +104,9 @@ function _ai_review_print_help
     echo "                          (--lens and --verify are ignored)"
     echo "  --lens NAME[,NAME...]   Add specialist checklist(s): security, quality, Rust,"
     echo "                          Scala, shell, data/messaging (see prompts/lenses/README.md);"
-    echo "                          with verify, the verifier gets them too"
+    echo "                          with verify, the verifier gets them too. Default: config"
+    echo "                          review_lens (project .ai/config, then global), else none"
+    echo "  --no-lens               No lens this time, whatever review_lens says"
     echo "  --agentic               Embed only the diff / target file and let the model"
     echo "                          explore the repo read-only (claude via its CLI, other"
     echo "                          providers via the runner, config key: agent)."

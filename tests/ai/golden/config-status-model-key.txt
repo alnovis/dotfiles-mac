@@ -17,4 +17,5 @@ Review (ollama / review-model):
   prompt    lean (auto: not claude)
   runs      1 (default)
   parallel  sequential (auto: a local model)
+  lens      none (set review_lens in .ai/config)
 [exit 0]

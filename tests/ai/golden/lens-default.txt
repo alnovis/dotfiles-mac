@@ -1,0 +1,15 @@
+== from the project config
+Lens: scala (config: project review_lens)
+## Review lens: scala
+== --lens wins
+Lens: redis
+## Review lens: redis
+== --no-lens: none
+(no lens)
+== both
+Error: --lens and --no-lens exclude each other
+== verify-only takes the default
+## Review lens: scala
+== config status
+  lens      scala (config: project review_lens)
+[exit 1]

@@ -18,7 +18,14 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #   --verdicts FILE      an existing verify file: skip the verify pass, build comments only
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
              'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'no-think' 'dry-run' \
-             'comments' 'range=' 'verdicts=' 'lens=' -- $argv; or return 1
+             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' -- $argv; or return 1
+    # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
+    if set -q _flag_lens; and set -q _flag_no_lens
+        echo "Error: --lens and --no-lens exclude each other" >&2
+        return 1
+    end
+    set -l lc (_ai_review_lens_choice "$_flag_lens" "$(set -q _flag_no_lens; and echo 1)" | string split \t)
+    test -n "$lc[1]"; and set _flag_lens $lc[1]
 
     set -l review_file $_flag_verify_only
     if test -z "$review_file"; or not test -f "$review_file"
