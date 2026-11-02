@@ -36,7 +36,7 @@ function _ai_review_lens --description "Resolve --lens names to an injectable re
     end
 
     if test $for_verify -eq 1
-        printf '%s\n' "The review was run with the lens(es) below. Use them as domain knowledge while you try to kill each finding: a finding that rests on a semantics or version item the lens corrects, or on its \"Not bugs\" list, is a misread — REFUTED. Do not raise new findings from them.
+        printf '%s\n' "The review was run with the lens(es) below. Use them as domain knowledge while you try to kill each finding. A finding that rests on a misread of semantics or versions the lens corrects (what an operator does, which API a version has) is REFUTED. A \"Not bugs\" item kills a finding only when its condition is shown to hold in THIS code, for this exact kind of state: \"a single writer\" means you counted every writer — listener, scheduler, startup and request threads, and other instances of the service — and found one; an item about a Redis key says nothing about a field in memory. If the condition is not shown, judge the finding by steps A-D as usual. Do not raise new findings from the lenses.
 "
         printf '%s\n\n' $blocks
         return 0

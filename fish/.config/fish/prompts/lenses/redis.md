@@ -23,4 +23,4 @@ Client specifics:
 
 Not bugs:
 - `KEYS`, `FLUSHALL` or no TTL in tests and one-off admin scripts; no TTL on keys that are meant to persist (the code or config says so).
-- A non-atomic read-modify-write on a key with a single writer, when the code shows there is only one.
+- A non-atomic read-modify-write on a Redis key with a single writer, when the code shows there is only one — counting every writer: listener and request threads, scheduled jobs, startup, and every other instance of the service (a scheduled job runs on all of them unless a distributed lock says otherwise).
