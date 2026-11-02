@@ -596,11 +596,17 @@ driver.
 Every report written with `-o` (and the verify file) ends with one HTML comment: the run label,
 the wall time, the token counts and the reasoning size. The native drivers (ollama, OpenAI) report
 exact counts — ollama with the generation speed, a litellm gateway with the reasoning tokens and the
-cost; runners and claude get the prompt-size estimate:
+cost. An agentic run on the pi runner reads the counts from pi's session (kept in a temp dir for
+the run, then removed) and adds what the agent did: turns, tool calls by tool with their time,
+the model's time, and the requests that failed and were retried. A slow run is then either the
+provider (few turns, long model time, failed requests) or the agent's walk (many turns and tool
+calls). The prompt counts every turn: each one sends the whole context again. opencode and
+claude get the prompt-size estimate:
 
 ```
 <!-- Review - ollama - qwen3.6:latest | 78s | prompt 15234 tokens | completion 4120 tokens | 65.3 tok/s | thinking 15769 bytes -->
 <!-- Review - litellm - ycloud/qwen3.6-35b-a3b/latest | 41s | prompt 15234 tokens | completion 9012 tokens (reasoning 8000) | cost 0.0681 | thinking 31002 bytes -->
+<!-- Review - litellm - selectel/qwen/qwen3.8-27b, skill ai-review | 383s | prompt 412000 tokens over 23 turns | completion 9100 tokens | tools 31 (read 17, grep 11, ls 3) 6.2s | model 370s | failed requests 2 (last: 529 overloaded) | thinking 0 bytes -->
 <!-- Review - claude | 95s | prompt ~15k tokens (estimate) | thinking 0 bytes -->
 ```
 

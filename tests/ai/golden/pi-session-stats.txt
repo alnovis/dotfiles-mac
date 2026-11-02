@@ -1,0 +1,33 @@
+{
+  "prompt_tokens": 20500,
+  "completion_tokens": 1400,
+  "completion_tokens_details": {
+    "reasoning_tokens": 50
+  },
+  "cost": 0.006,
+  "agent": {
+    "turns": 3,
+    "tool_calls": 3,
+    "tools": [
+      {
+        "name": "read",
+        "count": 2
+      },
+      {
+        "name": "grep",
+        "count": 1
+      }
+    ],
+    "model_ms": 239530,
+    "tool_ms": 400,
+    "errors": 1,
+    "last_error": "529 overloaded | retry\n-->"
+  }
+}
+== no model answer: nothing
+rc 0
+== the footer of an agentic run
+answer
+
+<!-- [1/3] Review | Ns | prompt 20500 tokens over 3 turns | completion 1400 tokens (reasoning 50) | tools 3 (read 2, grep 1) 0.4s | model 240s | failed requests 1 (last: 529 overloaded retry ->) | cost 0.006 | thinking 0 bytes -->
+[exit 0]

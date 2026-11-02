@@ -478,7 +478,10 @@ unknown name is an error listing the available ones.
 **`_ai_run_watched`** wraps `_ai_run` for file output: one foreground pipeline
 (`_ai_run | tee FILE`), so Ctrl-C reaches `curl` and actually stops the model. It prints a
 prefill estimate, then a live line count, then `done | Ns | N lines -> FILE`. On `--agentic` it
-lets the runner's own output through and skips the sidecar.
+lets the runner's own output through and skips the sidecar. Both paths pass `--usage-output`:
+the native drivers fill it from the API's usage, the pi runner from its session file
+(`_ai_pi_session_stats`: tokens, turns, tool calls, model and tool time, failed requests) —
+pi then runs with a temp `--session-dir` instead of `--no-session` and removes it after.
 
 **`_ai_interactive`** (`ai code`, `ai chat`) — `--task`, `--profile`, `--provider`, `--model`,
 `--runner`, `--continue`, `--resume`, `--dry-run`; resolves the task's provider/model, selects

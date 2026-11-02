@@ -4,7 +4,8 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
     #
     # Flags: --provider P  --model M  --think  --no-think  --agentic  --workdir DIR
     #        --output FILE  --thinking-output FILE  --usage-output FILE  --dry-run
-    # (--usage-output: token counts as JSON, native drivers only)
+    # (--usage-output: token counts as JSON — native drivers, and the pi runner with turns,
+    # tool calls and timings too)
     # Provider resolution: --provider flag > config file > default (ollama).
     # Executor selection (claude CLI / native ollama / runner): _ai_select_executor.
 
@@ -126,6 +127,8 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
         set -a dispatch_args --provider $provider --tools $profile
         test -n "$skill_file"; and set -a dispatch_args --skill $skill_file
         test $interactive -eq 0; and set -a dispatch_args --no-session
+        set -q _flag_usage_output; and test "$dispatch" = _ai_agent_pi
+        and set -a dispatch_args --usage-output $_flag_usage_output
     end
 
     set -l rc 0

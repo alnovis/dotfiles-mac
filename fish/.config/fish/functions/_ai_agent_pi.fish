@@ -9,8 +9,12 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
     #   --interactive            pi TUI (with --continue / --resume); otherwise `pi -p` reads
     #                            the prompt from stdin and streams the answer to stdout
     #   --no-session             don't persist a pi session
+    #   --usage-output FILE      (non-interactive) the run's usage JSON: exact tokens, turns,
+    #                            tool calls, model and tool time (_ai_pi_session_stats). The
+    #                            session goes to a temp dir instead of --no-session, is read
+    #                            after the run and removed — nothing stays behind either way.
     # Any remaining argv is passed straight to pi (e.g. @files).
-    argparse 'provider=' 'model=' 'tools=' 'skill=' 'interactive' 'continue' 'resume' 'no-session' -- $argv; or return 1
+    argparse 'provider=' 'model=' 'tools=' 'skill=' 'interactive' 'continue' 'resume' 'no-session' 'usage-output=' -- $argv; or return 1
 
     if not command -q pi
         set_color red
@@ -50,7 +54,13 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
     end
 
     set -q _flag_skill; and set -a args --append-system-prompt $_flag_skill
-    set -q _flag_no_session; and set -a args --no-session
+    set -l sdir
+    if set -q _flag_usage_output; and not set -q _flag_interactive
+        set sdir (mktemp -d)
+        set -a args --session-dir $sdir
+    else if set -q _flag_no_session
+        set -a args --no-session
+    end
 
     if set -q _flag_interactive
         set -q _flag_continue; and set -a args --continue
@@ -58,5 +68,12 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
         pi $args $argv
     else
         pi -p $args $argv
+        set -l rc $status
+        if test -n "$sdir"
+            set -l session (find $sdir -name '*.jsonl' -type f | head -1)
+            test -n "$session"; and _ai_pi_session_stats $session >$_flag_usage_output
+            rm -rf $sdir
+        end
+        return $rc
     end
 end

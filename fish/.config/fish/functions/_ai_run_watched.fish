@@ -49,7 +49,7 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         # stderr — leave it visible (do NOT redirect it) and don't draw a second line
         # here. Its final answer (stdout) is redirected to the file.
         test $tty -eq 1; and printf '  %s | agentic — exploring the repo with tools (Ctrl-C stops it)\n' $label >&2
-        _ai_run $run_args <$pfile >$outfile
+        _ai_run $run_args --usage-output $ufile <$pfile >$outfile
         set rc $status
     else
         # Non-agentic single call: `read` has no timeout, so update only as lines
@@ -121,14 +121,28 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     # The run's cost goes into the report itself, so comparing toolkit versions or models
     # later needs nothing but the files. An HTML comment: invisible when the markdown is
     # rendered, one grep away otherwise. Not for a temp that is printed to the terminal.
-    # Exact counts when the driver reported them (native ollama and OpenAI drivers), the
-    # prompt-size estimate otherwise (runners, claude).
+    # Exact counts when the driver reported them (native ollama and OpenAI drivers, the pi
+    # runner), the prompt-size estimate otherwise (opencode, claude). The pi runner adds the
+    # agent's turns, tool calls, model vs tool time and failed requests: a slow run is then
+    # the provider or the agent's walk, at a glance.
     if test "$rc" -eq 0; and test -s $outfile; and test "$dest" != "(terminal)"
         set -l cost (jq -r '[
-            "prompt \(.prompt_tokens) tokens",
+            "prompt \(.prompt_tokens) tokens"
+                + (if .agent then " over \(.agent.turns) turns" else "" end),
             "completion \(.completion_tokens) tokens"
                 + (if (.completion_tokens_details.reasoning_tokens // 0) > 0
                    then " (reasoning \(.completion_tokens_details.reasoning_tokens))" else "" end),
+            (if .agent then "tools \(.agent.tool_calls)"
+                + (if .agent.tool_calls > 0
+                   then " (" + (.agent.tools | map("\(.name) \(.count)") | join(", ")) + ")" else "" end)
+                + (if .agent.tool_ms == null then ""
+                   elif .agent.tool_ms < 10000 then " \(.agent.tool_ms / 100 | round / 10)s"
+                   else " \(.agent.tool_ms / 1000 | round)s" end)
+             else empty end),
+            (if .agent.model_ms then "model \(.agent.model_ms / 1000 | round)s" else empty end),
+            (if (.agent.errors // 0) > 0
+             then "failed requests \(.agent.errors) (last: \(.agent.last_error // "?" | gsub("[|[:space:]]+"; " ") | gsub("-->"; "->") | .[0:80]))"
+             else empty end),
             (if .tok_s then "\(.tok_s) tok/s" else empty end),
             (if .cost then "cost \(.cost * 10000 | round / 10000)" else empty end)
             ] | join(" | ")' $ufile 2>/dev/null)
