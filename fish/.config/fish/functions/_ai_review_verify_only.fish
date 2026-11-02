@@ -11,13 +11,14 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #   --agentic            passed to the verifier: it reads the repo read-only (claude via
     #                        its CLI, any other provider via the runner, see _ai_default_agent)
     #   --no-think           passed to the verifier (fast pass, think:false)
+    #   --lens A,B           the review's lenses, as knowledge to judge the findings by
     #   --lang L, --dry-run
     #   --comments           then MR line comments from the verdicts (<review>.comments.md/.json)
     #   --range BASE..HEAD   the reviewed range, to anchor the comments and check the diff
     #   --verdicts FILE      an existing verify file: skip the verify pass, build comments only
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
              'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'no-think' 'dry-run' \
-             'comments' 'range=' 'verdicts=' -- $argv; or return 1
+             'comments' 'range=' 'verdicts=' 'lens=' -- $argv; or return 1
 
     set -l review_file $_flag_verify_only
     if test -z "$review_file"; or not test -f "$review_file"
@@ -111,6 +112,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
 
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $review_file --lang $lang_full
     test -n "$vmodel"; and set -a vargs --model $vmodel
+    set -q _flag_lens; and set -a vargs --lens $_flag_lens
     set -q _flag_agentic; and set -a vargs --agentic
     set -q _flag_no_think; and set -a vargs --no-think
     if set -q _flag_file; and test -f "$_flag_file"

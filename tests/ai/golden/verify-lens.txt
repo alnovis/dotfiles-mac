@@ -1,0 +1,10 @@
+== verify-only: the lens block in the verify prompt
+The review was run with the lens(es) below. Use them as domain knowledge while you try to kill each finding: a finding that rests on a semantics or version item the lens corrects, or on its "Not bugs" list, is a misread — REFUTED. Do not raise new findings from them.
+## Review lens: scala
+Scala lens. The language and its standard library, Futures included. The language changed under the same name — 2.11, 2.12, 2.13 and 3 differ in collections, implicits and syntax — and models often read Scala as Java, or one version as another. So this lens is as much about what NOT to report as what to report. Libraries have their own lenses, used on top of this one: `akka` (Akka / Pekko), `cats`, `cats-effect`, `zio`.
+FINDINGS FROM THE FIRST PASS (verify each):
+== review + verify: the flow hands the lens on
+verify provider=ollama model=default-model (prompt: meta-verify.md + lens(es) scala,akka + first-pass findings + code: 280 lines)
+== unknown lens
+Error: unknown lens 'nosuch'. Available: …
+[exit 0]

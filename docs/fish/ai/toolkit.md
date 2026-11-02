@@ -301,7 +301,7 @@ agentic runs keep the full rules.
 
 A lens injects a specialist checklist after the base review prompt. It says *where to look*; the
 finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
-(`--lens crypto,logic-bug`) and work in both modes. 22 ship today:
+(`--lens crypto,logic-bug`) and work in both modes. 27 ship today:
 
 | Group | Lens | Hunts for |
 |---|---|---|
@@ -320,6 +320,11 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | Rust | `rust-unsafe` | UB and broken safety invariants behind `unsafe`, unsound safe APIs |
 | | `rust-async` | Lock across `.await`, blocking the executor, dropped tasks |
 | | `rust-ownership` | `Rc` cycles, runtime borrow panics, Drop order, needless allocations |
+| Scala (version read from the build first) | `scala` | Collection cost (`List :+`), partial operations, Futures, per-version semantics 2.11 / 2.12 / 2.13 / 3; "Not bugs" (`:+` appends at the tail) |
+| | `akka` | Akka / Pekko, classic vs typed: `sender()` and state in callbacks, blocked dispatchers, `ask`, supervision, Streams, Akka HTTP entities |
+| | `cats` | Errors lost to `Either` where `Validated` was meant, lawless instances, stack safety |
+| | `cats-effect` | Effects run eagerly / twice, `Resource` and fiber leaks, blocking the compute pool, `Ref` atomicity (CE 2 / 3) |
+| | `zio` | Throwing code as defects, fiber supervision, scopes and layers, blocking the executor (ZIO 1 / 2) |
 | Shell | `bash` | Unquoted expansions, empty vars in `rm -rf`, `set -e` that does not fire, lost subshell state, bashisms under `/bin/sh` |
 | | `fish` | `set x (cmd)` line splitting, vanishing empty lists, block scope, `"\t"`; plus "Not bugs" (`; or`, no word splitting) |
 | Data / messaging | `sql-postgres` | Unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics |
@@ -332,6 +337,12 @@ Each lens ends with a **HARD GATE** — the evidence a finding must carry, and w
 Lens files live in `~/.config/fish/prompts/lenses/<name>.md`; a new file there is selectable at
 once (in `--lens`, its completion, validation, and the `ai-review` skill). An unknown name is an
 error listing the available ones. Attribution: `prompts/lenses/README.md`.
+
+With `--verify` (or `--verify-only … --lens`) the verifier gets the same lenses, framed for its
+job: knowledge to judge findings by, not places to hunt. A finding that rests on a semantics or
+version item a lens corrects, or on its "Not bugs" list, is a misread — refuted. On a real
+Scala change, a review without lenses read `xs :+ x` as putting the newest element at the
+head, and verify confirmed it at 9/10; with the lens the review got it right.
 
 ### Verify (`--verify`)
 

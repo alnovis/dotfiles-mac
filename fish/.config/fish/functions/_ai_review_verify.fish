@@ -6,7 +6,8 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     #   --findings-file F   first-pass output to verify (required)
     #   --code-file F       code/diff context embedded for the verifier (optional)
     #   --output F          write verdicts to a real file (avoids /dev/stdout loss)
-    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
+    #   --lens A,B          the review's lenses, as knowledge to judge the findings by
+    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'lens=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
 
     set -l provider $_flag_provider
     test -z "$provider"; and set provider ollama
@@ -33,7 +34,18 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     set -l lang_prefix ""
     test -n "$lang"; and set lang_prefix "IMPORTANT: Write your response in $lang."\n\n
 
-    set -l payload "$lang_prefix$vprompt
+    set -l payload "$lang_prefix$vprompt"
+    # The review's lenses: what a misread of the language or library looks like
+    if test -n "$_flag_lens"
+        # Validated outside a command substitution: stderr inside (…) skips the caller's
+        # redirect, so an unknown-lens error would bypass 2>file / | tee
+        _ai_review_lens --verify $_flag_lens >/dev/null; or return 1
+        set -l lens_block (_ai_review_lens --verify $_flag_lens | string collect)
+        set payload "$payload
+
+$lens_block"
+    end
+    set payload "$payload
 
 FINDINGS FROM THE FIRST PASS (verify each):
 $findings"

@@ -78,8 +78,9 @@ Additional instructions: $custom_prompt"
 
     # Security lens(es) — not applied to a brief summary
     if set -q _flag_lens; and not set -q _flag_brief
+        # Validated outside (…): stderr there skips the caller's redirect
+        _ai_review_lens $_flag_lens >/dev/null; or return 1
         set -l lens_block (_ai_review_lens $_flag_lens | string collect)
-        test $pipestatus[1] -eq 0; or return 1
         set prompt "$prompt
 
 $lens_block"
@@ -277,6 +278,7 @@ $context"
         set -q _flag_verify_provider; and set -a flow_args --verify-provider $_flag_verify_provider
         set -q _flag_verify_model; and set -a flow_args --verify-model $_flag_verify_model
         set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
+        set -q _flag_lens; and set -a flow_args --lens $_flag_lens
         set -q _flag_agentic; and set -a flow_args --agentic
         set -q _flag_no_think; and set -a flow_args --no-think
         # The verifier gets the code pass 1 saw: the target file, or the directory's files.

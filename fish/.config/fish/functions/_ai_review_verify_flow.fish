@@ -17,8 +17,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --range BASE..HEAD       the reviewed range, for anchoring those comments
     #   --runs N                 run the review N times and join them (_ai_review_runs)
     #   --parallel-mode M        parallel | sequential, for those runs
+    #   --lens A,B               the review's lenses, handed to verify too
     argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
-             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' -- $argv; or return 1
     set -l runs $_flag_runs
     test -n "$runs"; or set runs 1
 
@@ -76,7 +77,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         if test -n "$_flag_code_file"; and test -f "$_flag_code_file"
             set code_note "code: "(count (cat $_flag_code_file))" lines"
         end
-        echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md + first-pass findings + $code_note)" >&2
+        set -l lens_note ""
+        test -n "$_flag_lens"; and set lens_note " + lens(es) $_flag_lens"
+        echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md$lens_note + first-pass findings + $code_note)" >&2
         test -n "$review_out"; and echo "would write: review -> $review_out ; verify -> $verify_out" >&2
         if set -q _flag_comments
             set_color cyan >&2; echo "--- dry-run: pass 3 (comments) ---" >&2; set_color normal >&2
@@ -152,6 +155,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     test -n "$vmodel"; and set -a vargs --model $vmodel
     test -n "$lang"; and set -a vargs --lang $lang
     test -n "$_flag_code_file"; and set -a vargs --code-file $_flag_code_file
+    test -n "$_flag_lens"; and set -a vargs --lens $_flag_lens
     set -q _flag_agentic; and set -a vargs --agentic
     set -q _flag_no_think; and set -a vargs --no-think
 

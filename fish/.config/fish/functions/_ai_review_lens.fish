@@ -11,6 +11,14 @@ function _ai_review_lens --description "Resolve --lens names to an injectable re
         return 0
     end
 
+    # --verify: the same lenses for the verify pass — knowledge to judge findings by
+    # (semantics, versions, "Not bugs"), not places to hunt for new ones
+    set -l for_verify 0
+    if test "$argv[1]" = --verify
+        set for_verify 1
+        set -e argv[1]
+    end
+
     # Split comma-separated names, validate, and assemble the block
     set -l names (string split , -- $argv | string trim | string match -rv '^$')
     set -l available (_ai_review_lens)
@@ -27,6 +35,12 @@ function _ai_review_lens --description "Resolve --lens names to an injectable re
 "(cat $lens_dir/$name.md | string collect)
     end
 
+    if test $for_verify -eq 1
+        printf '%s\n' "The review was run with the lens(es) below. Use them as domain knowledge while you try to kill each finding: a finding that rests on a semantics or version item the lens corrects, or on its \"Not bugs\" list, is a misread — REFUTED. Do not raise new findings from them.
+"
+        printf '%s\n\n' $blocks
+        return 0
+    end
     printf '%s\n' "Apply the lens(es) below IN ADDITION to the review above. The finding gate and severity rules still apply — a lens is where to look, not a mandate to find something. Report lens findings under the Critical/Important tiers by their real impact.
 "
     printf '%s\n\n' $blocks

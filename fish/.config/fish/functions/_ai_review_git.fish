@@ -323,8 +323,9 @@ $diff_content"
         # Security lens(es)
         set -l lens_suffix ""
         if set -q _flag_lens
+            # Validated outside (…): stderr there skips the caller's redirect
+            _ai_review_lens $_flag_lens >/dev/null; or return 1
             set -l lens_block (_ai_review_lens $_flag_lens | string collect)
-            test $pipestatus[1] -eq 0; or return 1
             set lens_suffix "
 
 $lens_block"
@@ -363,6 +364,7 @@ $context_block"
         set -q _flag_verify_provider; and set -a flow_args --verify-provider $_flag_verify_provider
         set -q _flag_verify_model; and set -a flow_args --verify-model $_flag_verify_model
         set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
+        set -q _flag_lens; and set -a flow_args --lens $_flag_lens
         set -q _flag_agentic; and set -a flow_args --agentic
         set -q _flag_no_think; and set -a flow_args --no-think
         # The verifier gets the code pass 1 saw: the diff, plus the full changed files when
