@@ -10,8 +10,15 @@
 ## Important issues
 * [F2] `b.fish:7` — a star bullet.
 
+## Removed code
+- [F3] `old.fish` — removed code still gets a number.
+
 ## Nits
 - (none)
+- `d.fish:1` — a nit is not numbered: it gets no verdict.
+
+## Bugs
+- [F4] `e.fish:2` — a section the model named its own way is still numbered.
 
 ## Run 2/2
 
@@ -19,11 +26,15 @@
 
 2. **Critical issues**
 
-1. [F3] **Lost updates** — a numbered finding that starts in bold is a finding, not a heading.
+1. [F5] **Lost updates** — a numbered finding that starts in bold is a finding, not a heading.
 
 **3. Important issues**
 
-- [F4] `c.fish:9` — under a bold numbered heading.
+- [F6] `c.fish:9` — under a bold numbered heading.
+
+**4. Strengths**
+
+- A strength is not numbered.
 
 Plain text outside any bullet stays as it is.
 == numbering twice changes nothing

@@ -10,8 +10,15 @@
 ## Important issues
 * `b.fish:7` — a star bullet.
 
+## Removed code
+- `old.fish` — removed code still gets a number.
+
 ## Nits
 - (none)
+- `d.fish:1` — a nit is not numbered: it gets no verdict.
+
+## Bugs
+- `e.fish:2` — a section the model named its own way is still numbered.
 
 ## Run 2/2
 
@@ -24,5 +31,9 @@
 **3. Important issues**
 
 - `c.fish:9` — under a bold numbered heading.
+
+**4. Strengths**
+
+- A strength is not numbered.
 
 Plain text outside any bullet stays as it is.

@@ -1,8 +1,12 @@
-function _ai_review_number_findings --description "Number the findings of a review (stdin → stdout): every top-level bullet or list item outside the Summary gets [F1], [F2]… once"
+function _ai_review_number_findings --description "Number the findings of a review (stdin → stdout): every top-level bullet or list item outside the Summary, Nits and other non-defect sections gets [F1], [F2]… once"
     # Verify keys each verdict by the number, so several verify runs can be joined by it
     # and a verdict matched back to its finding without comparing reworded titles.
     # Deterministic, no model: a finding is a top-level "- " / "* " bullet or "1. " item under
-    # a section heading, except in the Summary. A heading is "## X", or "**X**" / "**3. X**" /
+    # a section heading. Only numbered findings get a verdict, so sections that hold no
+    # defects stay unnumbered: Summary, Nits, Architecture, Strengths, Verdict, a held-back
+    # tally. A verdict on each of them only inflated the count ("unused import" CONFIRMED;
+    # 12 of 30 on one review). A deny list, not an allow list: a section the model named
+    # its own way ("## Bugs") is still verified. A heading is "## X", or "**X**" / "**3. X**" /
     # "3. **X** —" when X is a section name (so "1. **Lost updates** — …" stays a finding).
     # Numbers run across the "## Run K/N" parts of a joined review. Already numbered input
     # passes through unchanged, so numbering twice (the flow, then verify) is harmless. A run
@@ -20,12 +24,16 @@ function _ai_review_number_findings --description "Number the findings of a revi
             s = line; sub(/^[#0-9. ]*\*?\*?[0-9. ]*/, "", s); split(s, p, /[^A-Za-z]/); return tolower(p[1])
         }
         function known(name) {
-            return name ~ /^(summary|critical|important|tests?|removed|nits?|security|findings|issues|verdict)$/
+            return name ~ /^(summary|critical|important|tests?|removed|nits?|security|findings|issues|verdict|architecture|strengths?|held)$/
+        }
+        # Sections whose bullets are not defects: no number, so no verdict and no comment
+        function plain(name) {
+            return name ~ /^(summary|nits?|architecture|strengths?|verdict|held)$/
         }
         /^## Run [0-9]+\// { sec = ""; print; next }
         /^## / { sec = section($0); print; next }
         /^(\*\*[A-Z]|\*\*[0-9]+\. [A-Z]|[0-9]+\. \*\*[A-Z])/ && known(section($0)) { sec = section($0); print; next }
-        sec != "" && sec != "summary" && /^([-*]|[0-9]+\.) / {
+        sec != "" && !plain(sec) && /^([-*]|[0-9]+\.) / {
             # "- (none)" in an empty tier is not a finding
             t = $0; sub(/^([-*]|[0-9]+\.) /, "", t); t = tolower(t); gsub(/[*_.[:space:]]/, "", t)
             if (t == "(none)" || t == "none") { print; next }

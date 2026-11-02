@@ -378,11 +378,21 @@ file target, nothing for a directory target. With `--agentic` it also reads the 
 with the `ai-verify` skill injected.
 
 Before verify, the findings are numbered in the saved review — `[F1]`, `[F2]`… on every top-level
-bullet or list item outside the Summary, across all runs of a joined review (no model;
+bullet or list item, across all runs of a joined review (no model;
 `_ai_review_number_findings`). Verify keys each verdict by its number, so a verdict matches its
 finding without comparing reworded titles, and several verify runs can be joined by it. A
 review saved before numbering is numbered on the way into verify; numbering twice changes
-nothing. Output shape (one verdict per finding, then a tally):
+nothing.
+
+Only numbered findings get a verdict, and only a finding with a verdict becomes a comment. The
+sections that hold no defects stay unnumbered: Summary, Nits, Architecture, Strengths, Verdict,
+a held-back tally. A verdict on each of them only inflated the count: on one review 12 of 30
+CONFIRMED were "unused import", "missing space", "private is safe". Every other section is
+numbered — Critical, Important, Tests, Removed code (it holds real problems: a deleted config
+section left its keys dead) and any section the model named its own way (`## Bugs`). A review
+with no numbers at all (findings written as headings) is judged by titles, as before.
+
+Output shape (one verdict per numbered finding, then a tally):
 
 ```
 - [F3] <finding title / file:line> — [REFUTED 9/10]
