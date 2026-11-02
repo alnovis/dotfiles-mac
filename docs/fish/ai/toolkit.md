@@ -379,7 +379,9 @@ with the `ai-verify` skill injected.
 
 Before verify, the findings are numbered in the saved review — `[F1]`, `[F2]`… on every top-level
 bullet or list item, across all runs of a joined review (no model;
-`_ai_review_number_findings`). Verify keys each verdict by its number, so a verdict matches its
+`_ai_review_number_findings`). A bullet indented right under a section heading
+(`2. **Critical issues**`, then `   - …`) is numbered too; a sub-bullet of a finding is not.
+Verify keys each verdict by its number, so a verdict matches its
 finding without comparing reworded titles, and several verify runs can be joined by it. A
 review saved before numbering is numbered on the way into verify; numbering twice changes
 nothing.

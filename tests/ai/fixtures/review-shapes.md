@@ -36,4 +36,11 @@
 
 - A strength is not numbered.
 
+5. **Tests**
+   - `t.fish:4` — an indented bullet right under a numbered bold heading is a finding.
+   - `t.fish:8` — and so is its sibling.
+
+6. **Nits**
+   - `n.fish:2` — an indented nit is still not numbered.
+
 Plain text outside any bullet stays as it is.

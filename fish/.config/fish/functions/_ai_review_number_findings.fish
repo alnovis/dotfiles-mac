@@ -2,7 +2,10 @@ function _ai_review_number_findings --description "Number the findings of a revi
     # Verify keys each verdict by the number, so several verify runs can be joined by it
     # and a verdict matched back to its finding without comparing reworded titles.
     # Deterministic, no model: a finding is a top-level "- " / "* " bullet or "1. " item under
-    # a section heading. Only numbered findings get a verdict, so sections that hold no
+    # a section heading — or a bullet indented by 1-3 spaces right under the heading, not under
+    # a top-level bullet ("2. **Critical issues**" then "   - …"). Left unnumbered, such a run
+    # had no verdicts, or verify runs numbered it themselves and their F1 met the real F1 of
+    # another run in the vote. Only numbered findings get a verdict, so sections that hold no
     # defects stay unnumbered: Summary, Nits, Architecture, Strengths, Verdict, a held-back
     # tally. A verdict on each of them only inflated the count ("unused import" CONFIRMED;
     # 12 of 30 on one review). A deny list, not an allow list: a section the model named
@@ -14,7 +17,7 @@ function _ai_review_number_findings --description "Number the findings of a revi
     # Via a file: a command substitution does not read the function's stdin
     set -l tmp (mktemp)
     cat >$tmp
-    if grep -q -E '^([-*]|[0-9]+\.) \[F[0-9]+\] ' $tmp
+    if grep -q -E '^ {0,3}([-*]|[0-9]+\.) \[F[0-9]+\] ' $tmp
         cat $tmp
         rm -f $tmp
         return 0
@@ -30,14 +33,16 @@ function _ai_review_number_findings --description "Number the findings of a revi
         function plain(name) {
             return name ~ /^(summary|nits?|architecture|strengths?|verdict|held)$/
         }
-        /^## Run [0-9]+\// { sec = ""; print; next }
-        /^## / { sec = section($0); print; next }
-        /^(\*\*[A-Z]|\*\*[0-9]+\. [A-Z]|[0-9]+\. \*\*[A-Z])/ && known(section($0)) { sec = section($0); print; next }
-        sec != "" && !plain(sec) && /^([-*]|[0-9]+\.) / {
+        # top: inside a top-level bullet, so an indented bullet is its sub-bullet
+        /^## Run [0-9]+\// { sec = ""; top = 0; print; next }
+        /^## / { sec = section($0); top = 0; print; next }
+        /^(\*\*[A-Z]|\*\*[0-9]+\. [A-Z]|[0-9]+\. \*\*[A-Z])/ && known(section($0)) { sec = section($0); top = 0; print; next }
+        /^([-*]|[0-9]+\.) / { top = 1 }
+        sec != "" && !plain(sec) && (/^([-*]|[0-9]+\.) / || (!top && /^ {1,3}[-*] /)) {
             # "- (none)" in an empty tier is not a finding
-            t = $0; sub(/^([-*]|[0-9]+\.) /, "", t); t = tolower(t); gsub(/[*_.[:space:]]/, "", t)
+            t = $0; sub(/^ *([-*]|[0-9]+\.) /, "", t); t = tolower(t); gsub(/[*_.[:space:]]/, "", t)
             if (t == "(none)" || t == "none") { print; next }
-            match($0, /^([-*]|[0-9]+\.) /)
+            match($0, /^ *([-*]|[0-9]+\.) /)
             n++; print substr($0, 1, RLENGTH) "[F" n "] " substr($0, RLENGTH + 1); next
         }
         { print }
