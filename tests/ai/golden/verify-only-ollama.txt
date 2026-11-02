@@ -1,10 +1,11 @@
-Verify-only: <SANDBOX>/review.md
-Verify provider: ollama
-Verify model: default-model
-Note: no code embedded — the verifier reasons from the findings text alone.
-  Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo.
-Output: <SANDBOX>/review.verify.md
----
+
+Verify  an existing review
+  review       <SANDBOX>/review.md
+  provider     ollama
+  model        default-model
+  note         no code embedded — the verifier reasons from the findings text alone.
+               Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo.
+  output       <SANDBOX>/review.verify.md
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your response in English.
 

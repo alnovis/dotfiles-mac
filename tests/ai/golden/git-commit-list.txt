@@ -1,16 +1,17 @@
-Repository: fixture (feature)
-Commits: 2 (1c4dced~1..8f00743)
-  1c4dced Refresh Brewfile after excluding /opt/homebrew from backups
-  8f00743 fix(gbranch): auto-detect the nearest base instead of preferring develop
-Provider: ollama
-Model: review-model
-Language: English
----
-Changes (1c4dced~1..8f00743):
- Brewfile                                 | 192 ++++++++++++++++++++++++-------
- fish/.config/fish/functions/gbranch.fish |  43 +++++--
- 2 files changed, 182 insertions(+), 53 deletions(-)
-Context window: 393 lines across 2 files (budget 2000)
+
+Review  fixture (feature)
+  commits      2 (1c4dced~1..8f00743)
+               1c4dced Refresh Brewfile after excluding /opt/homebrew from backups
+               8f00743 fix(gbranch): auto-detect the nearest base instead of preferring develop
+  provider     ollama
+  model        review-model
+  language     English
+
+Changes  1c4dced~1..8f00743
+  Brewfile                                 | 192 +++++++++++++++++++++++-------
+  fish/.config/fish/functions/gbranch.fish |  43 +++++--
+  2 files changed, 182 insertions(+), 53 deletions(-)
+  context      393 lines across 2 files (budget 2000)
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your final response in English. You may think in English, but the output must be in English.
 

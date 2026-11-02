@@ -1,4 +1,4 @@
-Code: the diff of HEAD~1..HEAD (65 lines)
+  code         the diff of HEAD~1..HEAD (65 lines)
 CODE UNDER REVIEW (the first pass saw this):
 diff --git a/fish/.config/fish/functions/gbranch.fish b/fish/.config/fish/functions/gbranch.fish
 [exit 0]

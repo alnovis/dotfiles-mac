@@ -5,6 +5,6 @@ failed: run 2/3: Response was truncated: the model reached its output token limi
 rc 0, answered: 2
 failed: run 2/3: Response was truncated: the model reached its output token limit.
 == summary
-Failed:            run 2/3: truncated
-                   run 3/3: 429
+  failed       run 2/3: truncated
+               run 3/3: 429
 [exit 0]

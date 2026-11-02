@@ -9,6 +9,7 @@ Not comments. Verify threw these out; it can be wrong — check any that sound r
 
 == untagged verdicts: the comments stage is not skipped
 testcloud unreachable (via pi) — off-network? Rerun with --provider ollama
-  [3/3] Comments FAILED (rc 1) | <t> -> (terminal)
+[3/3] Comments
+  FAILED <t>  exit 1
 rc: 1
 [exit 0]

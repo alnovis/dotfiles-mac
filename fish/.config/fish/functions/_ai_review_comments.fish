@@ -34,16 +34,18 @@ function _ai_review_comments --description "Third review stage: line comments fo
     # gets the verdicts as before.
     set -l counts (_ai_verdict_counts $_flag_verdicts)
     if string match -q -r -- '^0 confirmed, [1-9]' $counts; and not string match -q -- '*uncertain*' $counts
-        printf '  %s | skipped — verify confirmed nothing to comment on\n' $label >&2
+        begin
+            _ai_ui_heading (string replace -r ' - .*' '' -- $label)
+            echo "  skipped: verify confirmed nothing to comment on"
+        end >&2
         set -l arr (mktemp)
         echo '[]' >$arr
         _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
         rm -f $arr
         _ai_review_comments_md $json $_flag_verdicts >$md
         set -q _flag_quiet; and return 0
-        set_color green
+        _ai_ui_heading Saved
         _ai_review_comments_saved $_flag_output $_flag_verdicts
-        set_color normal
         return 0
     end
 
@@ -63,7 +65,7 @@ VERDICTS ON THEM:
     set -l run_args --provider $_flag_provider
     test -n "$_flag_model"; and set -a run_args --model $_flag_model
     set -l raw (mktemp)
-    printf '%s' "$prompt" | _ai_run_watched --label $label --output $raw --dest "(terminal)" -- $run_args
+    printf '%s' "$prompt" | _ai_run_watched --heading --label $label --output $raw --dest "(terminal)" -- $run_args
     or begin
         rm -f $raw
         return 1
@@ -90,9 +92,8 @@ VERDICTS ON THEM:
     _ai_review_comments_md $json $_flag_verdicts >$md
 
     set -q _flag_quiet; and return 0
-    set_color green
+    _ai_ui_heading Saved
     _ai_review_comments_saved $_flag_output $_flag_verdicts
-    set_color normal
 end
 
 function _ai_review_comments_saved --description "The 'saved to' lines of the comments of REVIEW_OUT, with their counts; VERDICTS explains an empty set" --argument-names out verdicts
@@ -114,7 +115,7 @@ function _ai_review_comments_saved --description "The 'saved to' lines of the co
             set why "no verdict recognised in the verify file — check its format"
         end
         test -n "$counts"; and set why "$why ($counts)"
-        echo "Comments:          none — $why"
+        _ai_ui_kv comments "none — $why"
         return 0
     end
     # Only the counts that are not zero: general = not in the diff or file-level
@@ -123,8 +124,8 @@ function _ai_review_comments_saved --description "The 'saved to' lines of the co
     set -l parts "$n"
     test $general -gt 0; and set -a parts "$general as general comments"
     test $lost -gt 0; and set -a parts "$lost unanchored"
-    echo "Comments saved to: $md ("(string join ', ' -- $parts)")"
-    echo "                   $json"
+    _ai_ui_kv comments $md (string join ', ' -- $parts)
+    _ai_ui_kv "" $json
 end
 
 function _ai_comments_output_path --description "review.md + EXT → review.comments.EXT" --argument-names out ext

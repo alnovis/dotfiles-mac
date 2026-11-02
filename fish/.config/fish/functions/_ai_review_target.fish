@@ -103,50 +103,43 @@ $lens_block"
 
 $prompt"
 
-    # Header
-    set_color cyan
+    # Header: the same blocks as the stages and the Saved list (_ai_ui_heading, _ai_ui_kv)
     if test -n "$target_file"
-        echo "File: $target_file"
+        _ai_ui_heading Review "file $target_file"
     else
-        echo "Project: "(basename $target_dir)
+        _ai_ui_heading Review "project "(basename $target_dir)
     end
-    set_color normal
-    echo "Provider: $provider"
-    if set -q _flag_model
-        echo "Model: $_flag_model"
-    end
-    echo "Language: $lang_full"
+    _ai_ui_kv provider $provider
+    set -q _flag_model; and _ai_ui_kv model $_flag_model
+    _ai_ui_kv language $lang_full
     if set -q _flag_lens
         if set -q _flag_brief
             set_color yellow
-            echo "Lens: $_flag_lens (ignored — --brief mode)"
+            _ai_ui_kv lens "$_flag_lens (ignored — --brief mode)"
             set_color normal
         else
             set -l from ""
             test "$lens_origin" != --lens; and set from " ($lens_origin)"
-            echo "Lens: $_flag_lens$from"
+            _ai_ui_kv lens "$_flag_lens$from"
         end
     end
     if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; or set -q _flag_verify_runs; or test $runs -gt 1; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
         if set -q _flag_brief
             set_color yellow
-            echo "Verify: requested (ignored — --brief mode)"
+            _ai_ui_kv verify "requested (ignored — --brief mode)"
             set_color normal
         else
             set -l vp $_flag_verify_provider
             test -z "$vp"; and set vp "$provider"
-            echo "Verify: on ($vp)"
-            set -q _flag_comments; and echo "Comments: on (line comments from the verdicts)"
-            test $runs -gt 1; and echo "Runs: $runs ($plan[3])"
+            _ai_ui_kv verify "on ($vp)"
+            set -q _flag_comments; and _ai_ui_kv comments "on (line comments from the verdicts)"
+            test $runs -gt 1; and _ai_ui_kv runs "$runs ($plan[3])"
         end
     end
-    if set -q _flag_output
-        echo "Output: $_flag_output"
-    end
+    set -q _flag_output; and _ai_ui_kv output $_flag_output
     if test -n "$target_file"; and set -q _flag_with_project_context
-        echo "Project context: yes"
+        _ai_ui_kv context "the project too"
     end
-    echo "---"
 
     set -l model $_flag_model
     if test -z "$model"
@@ -233,9 +226,7 @@ $readme_content
                 set -a files $parts[2]
             end
             if test (count $files) -gt 0
-                set_color cyan >&2
-                echo "Files: $window lines across "(count $files)" files (budget $budget)" >&2
-                set_color normal >&2
+                _ai_ui_kv files "$window lines across "(count $files)" files (budget $budget)" >&2
                 set -l embed 0
                 if test $window -le $budget
                     set embed 1
@@ -248,7 +239,7 @@ $readme_content
                     test "$choice" = 2; and set embed 1
                 else
                     set_color yellow >&2
-                    echo "Note: the directory's files ($window lines) exceed the budget ($budget) — tree only. Pass --context-lines $window (or set config key dir_context_lines) to embed all." >&2
+                    _ai_ui_kv note "the directory's files ($window lines) exceed the budget ($budget) — tree only. Pass --context-lines $window (or set config key dir_context_lines) to embed all." >&2
                     set_color normal >&2
                 end
                 if test $embed -eq 1
@@ -314,7 +305,7 @@ $context"
         set -l runner_args --provider $provider --workdir $work_dir $model_flag
         set -q _flag_agentic; and set -a runner_args --agentic --skill ai-review
         set -q _flag_no_think; and set -a runner_args --no-think
-        echo "$full_prompt" | _ai_run_watched --label "$lbl" --output $output --dest $output -- $runner_args
+        echo "$full_prompt" | _ai_run_watched --heading --label "[1/1] $lbl" --output $output --dest $output -- $runner_args
     else
         # Streaming to terminal (or dry-run): output is visible, no spinner needed.
         set -l runner_args --provider $provider --workdir $work_dir $model_flag
@@ -330,9 +321,8 @@ $context"
     # the single-file (non-verify) path reports here.
     if test $do_verify -eq 0; and test -n "$output"; and not set -q _flag_dry_run
         if test -s "$output"
-            set_color green
-            echo "Saved to: $output"
-            set_color normal
+            _ai_ui_heading Saved
+            _ai_ui_kv review $output
         else
             set_color red
             echo "No output written — $output is empty. The model returned nothing (interrupted stream, or context/size issue). Try again, or --context-lines 0 for a smaller prompt." >&2

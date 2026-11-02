@@ -78,17 +78,18 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         set -l cargs --findings $review_file --verdicts $verdicts --output $review_file \
             --provider $vprovider --model "$vmodel" --lang $lang_full --range "$_flag_range" --root $workdir
         set -q _flag_dry_run; and set -a cargs --dry-run
-        echo "Comments from: $review_file + $verdicts"
-        echo "---"
+        _ai_ui_heading Comments "from existing verdicts"
+        _ai_ui_kv review $review_file
+        _ai_ui_kv verdicts $verdicts
         _ai_review_comments $cargs --label "Comments - $vprovider"(test -n "$vmodel"; and echo " - $vmodel")
         return
     end
 
-    set_color cyan
-    echo "Verify-only: $review_file"
-    set_color normal
-    echo "Verify provider: $vprovider"
-    test -n "$vmodel"; and echo "Verify model: $vmodel"
+    # Header: the same blocks as the stages and the Saved list (_ai_ui_heading, _ai_ui_kv)
+    _ai_ui_heading Verify "an existing review"
+    _ai_ui_kv review $review_file
+    _ai_ui_kv provider $vprovider
+    test -n "$vmodel"; and _ai_ui_kv model $vmodel
     # The diff of --range, when no --file: without the removed lines the verifier cannot
     # tell a regression from a pre-existing problem, and guesses "pre-existing"
     set -l diff_tmp
@@ -101,21 +102,20 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
             set_color normal
             return 1
         end
-        echo "Code: the diff of $_flag_range ("(count (cat $diff_tmp))" lines)"
+        _ai_ui_kv code "the diff of $_flag_range ("(count (cat $diff_tmp))" lines)"
     end
     if not set -q _flag_file; and test -z "$diff_tmp"
         set_color yellow
         if set -q _flag_agentic
-            echo "Note: no diff — the verifier reads the repo but cannot see the old code, so it cannot"
-            echo "  tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF)."
+            _ai_ui_kv note "no diff — the verifier reads the repo but cannot see the old code, so it cannot"
+            _ai_ui_kv "" "tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF)."
         else
-            echo "Note: no code embedded — the verifier reasons from the findings text alone."
-            echo "  Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo."
+            _ai_ui_kv note "no code embedded — the verifier reasons from the findings text alone."
+            _ai_ui_kv "" "Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo."
         end
         set_color normal
     end
-    echo "Output: $verify_out"
-    echo "---"
+    _ai_ui_kv output $verify_out
 
     # Verify runs: --verify-runs > verify_runs (scoped) > 1, joined by majority per finding
     # Checked outside (…) first: stderr inside it skips the caller's redirect
@@ -126,7 +126,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     if test $vruns -gt 1
         set -l vm (_ai_review_parallel_mode $vprovider "$vmodel" "" | string split \t)
         test -n "$vm[1]"; and set vmode $vm[1]
-        echo "Verify runs: $vruns ($vmode), joined by majority per finding (origin: $vr[2])"
+        _ai_ui_kv runs "$vruns ($vmode), joined by majority per finding (origin: $vr[2])"
     end
 
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $review_file --lang $lang_full
@@ -171,16 +171,17 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
 
     if not test -s "$verify_out"
         rm -f "$verify_out"
-        set_color red
-        if test -n "$__ai_last_failure"
-            echo "Verify failed:     $__ai_last_failure" >&2
-        else
-            echo "Verify produced no output ($verify_out not written)." >&2
-        end
-        for f in $ver_failed
-            echo "                   $f" >&2
-        end
-        set_color normal
+        begin
+            _ai_ui_heading "Nothing saved"
+            set_color red
+            if test -n "$__ai_last_failure"
+                _ai_ui_kv verify "failed: $__ai_last_failure"
+            else
+                _ai_ui_kv verify "no output ($verify_out not written)"
+            end
+            set_color normal
+            _ai_runs_failed_lines $ver_failed
+        end >&2
         return 1
     end
     set -l rc3 0
@@ -192,19 +193,21 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     end
 
     # Every file of the run together, after the last stage
-    set_color green
-    echo "Verify saved to:   $verify_out ("(_ai_verdict_counts $verify_out)")"
+    _ai_ui_heading Saved
+    _ai_ui_kv verify $verify_out (_ai_verdict_counts $verify_out)
     if set -q __ai_verify_run_files[1]
-        echo "Verify runs:       $__ai_verify_run_files[1] ("(count $__ai_verify_run_files)"/$vruns answered, majority above)"
+        _ai_ui_kv "verify runs" $__ai_verify_run_files[1] (count $__ai_verify_run_files)"/$vruns answered, majority above"
         for f in $__ai_verify_run_files[2..]
-            echo "                   $f"
+            _ai_ui_kv "" $f
         end
     end
     _ai_runs_failed_lines $ver_failed
     set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_file $verify_out
-    set_color yellow
-    test $rc3 -ne 0; and echo "Comments failed:   "(test -n "$com_why"; and echo $com_why; or echo "see the error above")
-    set_color normal
+    if test $rc3 -ne 0
+        set_color yellow
+        _ai_ui_kv comments "failed: "(test -n "$com_why"; and echo $com_why; or echo "see the error above")
+        set_color normal
+    end
     test $rc3 -eq 0; or set rc 1
     return $rc
 end

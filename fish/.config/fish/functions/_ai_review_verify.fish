@@ -111,7 +111,7 @@ $code"
     # Watched run when writing to a file with a label (shows live progress);
     # otherwise a plain run (streaming / dry-run).
     if test -n "$_flag_output"; and test -n "$_flag_label"; and not set -q _flag_dry_run
-        printf '%s' "$payload" | _ai_run_watched --label $_flag_label --output $_flag_output --dest $_flag_dest -- $run_args
+        printf '%s' "$payload" | _ai_run_watched --heading --label $_flag_label --output $_flag_output --dest $_flag_dest -- $run_args
     else
         test -n "$_flag_output"; and set -a run_args --output $_flag_output
         set -q _flag_dry_run; and set -a run_args --dry-run

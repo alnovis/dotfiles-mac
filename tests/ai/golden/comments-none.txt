@@ -1,5 +1,9 @@
-  [3/3] Comments | skipped — verify confirmed nothing to comment on
-Comments:          none — the verify pass confirmed no finding (0 confirmed, 1 refuted)
+
+[3/3] Comments
+  skipped: verify confirmed nothing to comment on
+
+Saved
+  comments     none — the verify pass confirmed no finding (0 confirmed, 1 refuted)
 rc: 0
 {"comments":0,"runs":3,"base":40}
 # Review comments — check before publishing

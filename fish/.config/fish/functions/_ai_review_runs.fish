@@ -35,15 +35,17 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
 
     set -g __ai_runs_failed
     set -l t0 (date +%s)
+    # The stage heading: the label up to " - provider…"; each run is one line under it
+    set -l title (string replace -r ' - .*' '' -- $_flag_label)
     if test "$_flag_mode" = parallel
-        printf '  %s | %d runs in parallel… (Ctrl-C stops them)\n' $_flag_label $n >&2
+        _ai_ui_heading $title "$n runs in parallel (Ctrl-C stops them)" >&2
         set -l setfp "set -g fish_function_path "(string escape -- $fish_function_path | string join ' ')
         set -l logs
         set -l pids
         for k in (seq $n)
             set -l log (mktemp)
             set -a logs $log
-            set -l cmd "$setfp; _ai_run_watched --label "(string escape -- "$_flag_label run $k/$n")" --output "(string escape -- $files[$k])" --dest "(string escape -- $files[$k])" -- "(string escape -- $run_args | string join ' ')
+            set -l cmd "$setfp; _ai_run_watched --label "(string escape -- "$_flag_label run $k/$n")" --row "(string escape -- "run $k/$n")" --output "(string escape -- $files[$k])" --dest "(string escape -- $files[$k])" -- "(string escape -- $run_args | string join ' ')
             fish --no-config -c $cmd <$_flag_prompt_file 2>$log &
             set -a pids $last_pid
         end
@@ -69,14 +71,15 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
                 set -e left[(contains -i -- $k $left)]
             end
             set -q left[1]; or break
-            test $tty -eq 1; and printf '\r\033[K  %s | %d/%d done | %ds' \
-                $_flag_label (math $n - (count $left)) $n (math (date +%s) - $t0) >&2
+            test $tty -eq 1; and printf '\r\033[K  %d/%d done, %ds' \
+                (math $n - (count $left)) $n (math (date +%s) - $t0) >&2
             sleep 1
         end
         wait
     else
+        _ai_ui_heading $title "$n runs one after another (Ctrl-C stops them)" >&2
         for k in (seq $n)
-            _ai_run_watched --label "$_flag_label run $k/$n" --output $files[$k] --dest $files[$k] -- $run_args <$_flag_prompt_file
+            _ai_run_watched --label "$_flag_label run $k/$n" --row "run $k/$n" --output $files[$k] --dest $files[$k] -- $run_args <$_flag_prompt_file
             if not test -s $files[$k]
                 set -l why "$__ai_last_failure"
                 test -n "$why"; or set why "no answer"
@@ -99,7 +102,7 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
         printf '\n\n' >>$out
     end
     test "$dest" = "(terminal)"; and rm -f $files
-    printf '  %s | %d/%d runs answered | %ds -> %s\n' $_flag_label $ok $n (math (date +%s) - $t0) $dest >&2
+    printf '  %d/%d answered, %ds\n' $ok $n (math (date +%s) - $t0) >&2
     set -g __ai_review_runs_ok $ok
     test $ok -gt 0
 end

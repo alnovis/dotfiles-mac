@@ -158,6 +158,8 @@ _ai_agent_<runner> --provider P --model M
                    [--skill FILE]               # SKILL.md injected as an instruction
                    [--interactive [--continue | --resume]]
                    [--no-session]               # don't persist the run as a session
+                   [--usage-output FILE]        # pi only: the run's usage JSON (tokens, turns,
+                                                # tools, timings) from a temp session
                    [ARGS...]                    # passed to the tool (pi, opencode)
     non-interactive: prompt on stdin → answer on stdout
 
@@ -169,7 +171,8 @@ _ai_agent_<runner>_endpoint P [M]  # optional; baseUrl, api, apiKey reference, c
 ```
 
 The dispatcher passes `--no-session` on every non-interactive run, and `cd`s into the working
-directory before calling the runner (runners take no `--workdir`).
+directory before calling the runner (runners take no `--workdir`). With `--usage-output` as well,
+pi keeps the session in a temp dir instead, reads it after the run and removes it.
 
 **Per-runner mapping:**
 
@@ -471,14 +474,25 @@ unknown name is an error listing the available ones.
 4. `--dry-run`: the label to stderr, the assembled prompt to stdout, exit 0.
 5. Probe and fallback for runner providers.
 6. Executor args: the native driver gets `--think` / `--no-think` / `--thinking-output`; runners
-   get `--provider`, `--tools`, `--skill`, and `--no-session` when non-interactive.
+   get `--provider`, `--tools`, `--skill`, and `--no-session` when non-interactive; the pi runner
+   also `--usage-output`.
 7. Pipe prompt + stdin into the executor; with `--output`, redirect stdout to the file. It never
    writes via `/dev/stdout`, which would reopen the terminal and escape an enclosing pipe.
 
 **`_ai_run_watched`** wraps `_ai_run` for file output: one foreground pipeline
 (`_ai_run | tee FILE`), so Ctrl-C reaches `curl` and actually stops the model. It prints a
-prefill estimate, then a live line count, then `done | Ns | N lines -> FILE`. On `--agentic` it
-lets the runner's own output through and skips the sidecar. Both paths pass `--usage-output`:
+prefill estimate, then a live line count, then the run's one line: `[run K/N  ]done  Ns  <stats>
+FILE` or `FAILED  Ns  <why>` (`--row` names the run; `--heading` prints a single run's stage
+heading first). On `--agentic` it lets the runner's own output through and skips the sidecar.
+
+**Console output** of a review is one style throughout, from three helpers: `_ai_ui_heading`
+(a block title at the left edge: `Review` / `Verify`, `Changes`, `Stages`, each stage, `Saved`),
+`_ai_ui_kv` (`  key          value  note` — the header and the Saved block, each path whole so
+it can be used as it is) and the run line above, all indented by 2 under their heading.
+`_ai_review_diffstat` prints the full `git diff --stat` under `Changes`, sized to the terminal. `_ai_run_stats` gives the run line its stats (`--row`, fixed
+columns) and the report its `Run: …` line.
+
+Both paths of `_ai_run_watched` pass `--usage-output`:
 the native drivers fill it from the API's usage, the pi runner from its session file
 (`_ai_pi_session_stats`: tokens, turns, tool calls, model and tool time, failed requests) —
 pi then runs with a temp `--session-dir` instead of `--no-session` and removes it after.

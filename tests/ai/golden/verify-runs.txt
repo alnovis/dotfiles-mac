@@ -1,16 +1,17 @@
 == review + verify
 verify runs: 3 (sequential), joined by majority per finding (origin: --verify-runs)
-Verify: on (ollama)
+  verify       on (ollama)
 == verify-only
-Verify runs: 3 (sequential), joined by majority per finding (origin: --verify-runs)
+  runs         3 (sequential), joined by majority per finding (origin: --verify-runs)
 == bad value
-Verify-only: <SANDBOX>/review.md
-Verify provider: ollama
-Verify model: default-model
-Note: no code embedded — the verifier reasons from the findings text alone.
-  Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo.
-Output: <SANDBOX>/review.verify.md
----
+
+Verify  an existing review
+  review       <SANDBOX>/review.md
+  provider     ollama
+  model        default-model
+  note         no code embedded — the verifier reasons from the findings text alone.
+               Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo.
+  output       <SANDBOX>/review.verify.md
 Error: verify runs must be a positive integer (got '0' from --verify-runs)
 == config
   verify runs  3 (config project verify_runs@ollama)

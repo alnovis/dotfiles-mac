@@ -1,7 +1,7 @@
-File: <SANDBOX>/fixture/leetcode/LeetCode.scala
-Provider: ollama
-Language: English
----
+
+Review  file <SANDBOX>/fixture/leetcode/LeetCode.scala
+  provider     ollama
+  language     English
 --- dry-run: prompt that would be sent to ollama via pi (profile read), skill ai-review ---
 IMPORTANT: Write your entire response in English.
 

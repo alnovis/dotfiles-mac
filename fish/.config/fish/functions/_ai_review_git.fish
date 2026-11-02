@@ -73,6 +73,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     # Get diff based on mode. $range drives --stat / --name-status; $tip is the
     # commit whose file contents we read for the "full changed files" context.
     set -l diff_content
+    # What is reviewed, for the header: a key, then its value lines
     set -l header_info
     set -l range
     set -l tip
@@ -95,9 +96,9 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
             set diff_content (git diff $range | string collect)
         end
         if test (count $commits) -eq 1
-            set header_info "Commit: $commits[1]"
+            set header_info commit $commits[1]
         else
-            set header_info "Commits: "(count $commits)" ($range)" "  "$commits
+            set header_info commits (count $commits)" ($range)" $commits
         end
 
     else if test $last_n -gt 0
@@ -108,7 +109,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         else
             set diff_content (git diff HEAD~$last_n..HEAD | string collect)
         end
-        set header_info "Last $last_n commit(s) on $branch"
+        set header_info last "$last_n commit(s) on $branch"
 
     else
         if test -z "$base"
@@ -153,7 +154,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         else
             set diff_content (git diff $merge_base..HEAD | string collect)
         end
-        set header_info "Base: $base ($commits commit(s))"
+        set header_info base "$base ($commits commit(s))"
     end
 
     if test -z "$diff_content"
@@ -184,65 +185,47 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         set diff_content (echo "$diff_content" | head -n $max_lines | string collect)
     end
 
-    # Header
-    echo "Repository: $repo_name ($branch)"
-    set_color cyan
-    printf '%s\n' $header_info
-    set_color normal
-    if test -n "$file_filter"
-        set_color yellow
-        echo "File: $file_filter"
-        set_color normal
+    # Header: the same blocks as the stages and the Saved list (_ai_ui_heading, _ai_ui_kv)
+    _ai_ui_heading Review "$repo_name ($branch)"
+    _ai_ui_kv $header_info[1] $header_info[2]
+    for v in $header_info[3..]
+        _ai_ui_kv "" $v
     end
-    echo "Provider: $provider"
-    if test -n "$model"
-        echo "Model: $model"
-    end
+    test -n "$file_filter"; and _ai_ui_kv file $file_filter
+    _ai_ui_kv provider $provider
+    test -n "$model"; and _ai_ui_kv model $model
     if set -q _flag_lens
         if set -q _flag_brief
             set_color yellow
-            echo "Lens: $_flag_lens (ignored — --brief mode)"
+            _ai_ui_kv lens "$_flag_lens (ignored — --brief mode)"
             set_color normal
         else
             set -l from ""
             test "$lens_origin" != --lens; and set from " ($lens_origin)"
-            echo "Lens: $_flag_lens$from"
+            _ai_ui_kv lens "$_flag_lens$from"
         end
     end
     if _ai_verify_wanted "$(begin; set -q _flag_verify; or set -q _flag_comments; or set -q _flag_verify_runs; or test $runs -gt 1; end; and echo 1)" "$(set -q _flag_no_verify; and echo 1)"
         if set -q _flag_brief
             set_color yellow
-            echo "Verify: requested (ignored — --brief mode)"
+            _ai_ui_kv verify "requested (ignored — --brief mode)"
             set_color normal
         else
             set -l vp $_flag_verify_provider
             test -z "$vp"; and set vp "$provider"
-            echo "Verify: on ($vp)"
-            set -q _flag_comments; and echo "Comments: on (MR line comments from the verdicts)"
-            test $runs -gt 1; and echo "Runs: $runs ($plan[3])"
+            _ai_ui_kv verify "on ($vp)"
+            set -q _flag_comments; and _ai_ui_kv comments "on (MR line comments from the verdicts)"
+            test $runs -gt 1; and _ai_ui_kv runs "$runs ($plan[3])"
         end
     end
-    if test -n "$lang"
-        echo "Language: "(_ai_lang_name $lang)
-    end
-    if test -n "$output"
-        echo "Output: $output"
-    end
-    echo "---"
+    test -n "$lang"; and _ai_ui_kv language (_ai_lang_name $lang)
+    test -n "$output"; and _ai_ui_kv output $output
 
     # Diffstat preflight — always show what's under review (to stderr, keeps the
     # report on stdout clean).
     if test -n "$range"
-        set_color cyan >&2
-        echo "Changes ($range):" >&2
-        set_color normal >&2
-        # --no-pager: the stat goes to a tty (stderr), so git would otherwise pipe
-        # it through the pager (bat/less) and block until the user quits.
-        if test -n "$file_filter"
-            git --no-pager diff $range --stat -- $file_filter >&2 2>/dev/null
-        else
-            git --no-pager diff $range --stat >&2 2>/dev/null
-        end
+        _ai_ui_heading Changes $range >&2
+        _ai_review_diffstat $range $file_filter >&2
     end
 
     # Level 2 — embed full content of changed files so a single-shot model sees
@@ -261,9 +244,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         end
 
         if test (count $files) -gt 0
-            set_color cyan >&2
-            echo "Context window: $window lines across "(count $files)" files (budget $ctx_budget)" >&2
-            set_color normal >&2
+            _ai_ui_kv context "$window lines across "(count $files)" files (budget $ctx_budget)" >&2
 
             set -l embed 0
             if test $window -le $ctx_budget
@@ -277,7 +258,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
                 test "$choice" = 2; and set embed 1
             else
                 set_color yellow >&2
-                echo "Note: changed files ($window lines) exceed budget ($ctx_budget) — using diff-only. Pass --context-lines $window (or set config key context_lines) to embed all." >&2
+                _ai_ui_kv note "changed files ($window lines) exceed budget ($ctx_budget) — using diff-only. Pass --context-lines $window (or set config key context_lines) to embed all." >&2
                 set_color normal >&2
             end
 
@@ -398,7 +379,7 @@ $context_block"
         test -n "$model"; and set -a provider_args --model $model
         set -q _flag_agentic; and set -a provider_args --agentic --skill ai-review
         set -q _flag_no_think; and set -a provider_args --no-think
-        echo "$prompt" | _ai_run_watched --label "$lbl" --output $output --dest $output -- $provider_args
+        echo "$prompt" | _ai_run_watched --heading --label "[1/1] $lbl" --output $output --dest $output -- $provider_args
     else
         # Streaming to terminal (or dry-run): output is visible, no spinner needed.
         set -l provider_args --provider $provider
@@ -417,9 +398,8 @@ $context_block"
     # the single-file (non-verify) path reports here.
     if test $do_verify -eq 0; and test -n "$output"; and not set -q _flag_dry_run
         if test -s "$output"
-            set_color green
-            echo "Saved to: $output"
-            set_color normal
+            _ai_ui_heading Saved
+            _ai_ui_kv review $output
         else
             set_color red
             echo "No output written — $output is empty. The model returned nothing (interrupted stream, or context/size issue). Try again, or --context-lines 0 for a smaller prompt." >&2

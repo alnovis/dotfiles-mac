@@ -1,8 +1,8 @@
-File: <SANDBOX>/fixture/leetcode/LeetCode.scala
-Provider: claude
-Language: English
-Project context: yes
----
+
+Review  file <SANDBOX>/fixture/leetcode/LeetCode.scala
+  provider     claude
+  language     English
+  context      the project too
 --- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 IMPORTANT: Write your entire response in English.
 

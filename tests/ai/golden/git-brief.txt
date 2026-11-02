@@ -1,12 +1,13 @@
-Repository: fixture (feature)
-Last 1 commit(s) on feature
-Provider: ollama
-Model: review-model
-Language: English
----
-Changes (HEAD~1..HEAD):
- fish/.config/fish/functions/gbranch.fish | 43 ++++++++++++++++++++++++--------
- 1 file changed, 33 insertions(+), 10 deletions(-)
+
+Review  fixture (feature)
+  last         1 commit(s) on feature
+  provider     ollama
+  model        review-model
+  language     English
+
+Changes  HEAD~1..HEAD
+  fish/.config/fish/functions/gbranch.fish | 43 ++++++++++++++++++++++++-------
+  1 file changed, 33 insertions(+), 10 deletions(-)
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your final response in English. You may think in English, but the output must be in English.
 

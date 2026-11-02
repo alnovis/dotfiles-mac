@@ -2,8 +2,10 @@ Error: --comments writes files next to the report — give -o FILE
 Error: --comments works on a full review, not --brief
 Error: --comments is built from the verify verdicts — drop --no-verify
 Error: --range goes with --verify-only (a review knows its own range)
-Verify-only: <SANDBOX>/review.md
-Verify provider: ollama
-Verify model: default-model
+
+Verify  an existing review
+  review       <SANDBOX>/review.md
+  provider     ollama
+  model        default-model
 Error: --range a..b gives no diff here (run it from the repo, check the range)
 [exit 1]

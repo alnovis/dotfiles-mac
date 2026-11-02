@@ -1,9 +1,9 @@
-Project: leetcode
-Provider: ollama
-Language: English
-Verify: on (ollama)
----
-Files: 140 lines across 2 files (budget 10000)
+
+Review  project leetcode
+  provider     ollama
+  language     English
+  verify       on (ollama)
+  files        140 lines across 2 files (budget 10000)
 --- dry-run: pass 1 (review) ---
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your entire response in English.

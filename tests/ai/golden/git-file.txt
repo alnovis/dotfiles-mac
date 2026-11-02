@@ -1,14 +1,15 @@
-Repository: fixture (feature)
-Base: master (2 commit(s))
-File: Brewfile
-Provider: ollama
-Model: review-model
-Language: English
----
-Changes (d6f255bd1edf7482bb244216cdcfd69dee4c1e9f..HEAD):
- Brewfile | 192 +++++++++++++++++++++++++++++++++++++++++++++++++--------------
- 1 file changed, 149 insertions(+), 43 deletions(-)
-Context window: 185 lines across 1 files (budget 2000)
+
+Review  fixture (feature)
+  base         master (2 commit(s))
+  file         Brewfile
+  provider     ollama
+  model        review-model
+  language     English
+
+Changes  d6f255bd1edf7482bb244216cdcfd69dee4c1e9f..HEAD
+  Brewfile | 192 ++++++++++++++++++++++++++++++++++++++++++++++++--------------
+  1 file changed, 149 insertions(+), 43 deletions(-)
+  context      185 lines across 1 files (budget 2000)
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your final response in English. You may think in English, but the output must be in English.
 

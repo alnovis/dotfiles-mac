@@ -244,7 +244,7 @@ ai review .                          target: current project
   where the agent reads the working tree.
 - **Full changed files.** Besides the diff, the complete content of every changed file (as of the
   reviewed tip; deleted and binary files skipped) is embedded when the total fits the
-  `--context-lines` budget, reported as `Context window: N lines across M files (budget B)`. Over
+  `--context-lines` budget, reported under Changes as `context  N lines across M files (budget B)`. Over
   budget: on a terminal you are asked `[1] diff-only (default) [2] embed all`; otherwise diff-only
   with a note. Skipped with `--brief` and `--agentic`.
 
@@ -449,14 +449,14 @@ review ×N  →  joined under "## Run K/N"  →  one verify over all of it  → 
 
 - Several runs turn `--verify` on (they exist to be judged together) and refuse `--brief` and
   `--no-verify`.
-- The final summary counts the verdicts from their tags (`Verify saved to: … (5 confirmed,
-  7 refuted)`), not from the model's own "Verify: X confirmed…" line — on a three-run review
+- The final summary counts the verdicts from their tags (`verify  …/review.verify.md  5 confirmed,
+  7 refuted`), not from the model's own "Verify: X confirmed…" line — on a three-run review
   qwen3.8 summed 12 verdicts as 4 + 6.
 - The joined review is `<output>`; each run is kept as `<base>.runK.<ext>` with its own footer.
-  A run that fails is skipped; the join fails only if none answered (`2/3 runs answered`).
+  A run that fails is skipped; the join fails only if none answered (`2/3 answered`).
   The final summary names each failed run with its reason, taken from the runner's last
   error line — it has scrolled away above by then:
-  `Failed: run 2/3: Response was truncated: the model reached its output token limit.`
+  `failed  run 2/3: Response was truncated: the model reached its output token limit.`
   The same holds for verify runs.
 - With `--comments`, the extraction merges the same problem reported by several runs into one
   comment and counts it: `"seen": 2, "runs": 3` in the JSON, `found by 2 of 3 runs` in the
@@ -464,8 +464,8 @@ review ×N  →  joined under "## Run K/N"  →  one verify over all of it  → 
 - **Parallel or one at a time:** parallel runs are separate fish processes (a backgrounded fish
   function runs in the same process, one after another). `auto` runs a cloud provider in
   parallel and ollama one at a time (several local runs would not fit in memory). Each run's
-  `done` line prints as soon as that run ends; on a terminal one live line
-  (`1/3 done | 95s`) stands for the stage until the last run ends.
+  line prints as soon as that run ends; on a terminal one live line (`1/3 done, 95s`) stands
+  for the stage until the last run ends.
 
 Both are config keys, scoped by provider and model — the narrowest scope wins inside a file,
 the project config beats the global one, a flag beats both:
@@ -593,26 +593,36 @@ driver.
 
 ### Run cost in the report
 
-Every report written with `-o` (and the verify file) ends with one HTML comment: the run label,
-the wall time, the token counts and the reasoning size. The native drivers (ollama, OpenAI) report
-exact counts — ollama with the generation speed, a litellm gateway with the reasoning tokens and the
-cost. An agentic run on the pi runner reads the counts from pi's session (kept in a temp dir for
-the run, then removed) and adds what the agent did: turns, tool calls by tool with their time,
-the model's time, and the requests that failed and were retried. A slow run is then either the
-provider (few turns, long model time, failed requests) or the agent's walk (many turns and tool
-calls). The prompt counts every turn: each one sends the whole context again. opencode and
-claude get the prompt-size estimate:
+Each run is one line under its stage, in fixed columns so the runs of a stage line up: the
+status, the wall time, the stats, the file. Every report written with `-o` (and the verify file)
+ends with the full stats as one line, after a `---`:
 
 ```
-<!-- Review - ollama - qwen3.6:latest | 78s | prompt 15234 tokens | completion 4120 tokens | 65.3 tok/s | thinking 15769 bytes -->
-<!-- Review - litellm - ycloud/qwen3.6-35b-a3b/latest | 41s | prompt 15234 tokens | completion 9012 tokens (reasoning 8000) | cost 0.0681 | thinking 31002 bytes -->
-<!-- Review - litellm - selectel/qwen/qwen3.8-27b, skill ai-review | 383s | prompt 412000 tokens over 23 turns | completion 9100 tokens | tools 31 (read 17, grep 11, ls 3) 6.2s | model 370s | failed requests 2 (last: 529 overloaded) | thinking 0 bytes -->
-<!-- Review - claude | 95s | prompt ~15k tokens (estimate) | thinking 0 bytes -->
+[1/1] Review  exploring the repo with tools (Ctrl-C stops it)
+  done     497s   22 turns   37 tools  model  432s    909k/13k tokens  1 failed, 62s (504 Gateway Time-out)  review.md
 ```
 
-It is invisible when the markdown is rendered, and it makes comparing toolkit versions or models
-a matter of reading the files (`grep -h '^<!--' *.md`). A terminal run prints `done | 78s` on
-stderr instead.
+```
+---
+Run: Review - ollama - qwen3.6:latest | 78s | prompt 15.2k tokens | completion 4.1k tokens | speed 65.3 tok/s | thinking 15769 bytes
+Run: Review - litellm - ycloud/qwen3.6-35b-a3b/latest | 41s | prompt 15.2k tokens | completion 9k tokens (reasoning 8k) | cost 0.0681 | thinking 31002 bytes
+Run: Review - litellm - selectel/qwen/qwen3.8-27b, skill ai-review | 497s | turns 22 | tools 37 (read 21, grep 16) 0.6s | model 432s | prompt 909k tokens | completion 13k tokens (reasoning 10.6k) | failed requests 1, 62s (504 Gateway Time-out)
+Run: Review - claude | 95s | prompt ~15k tokens (estimate)
+```
+
+The native drivers (ollama, OpenAI) report exact counts — ollama with the generation speed, a
+litellm gateway with the reasoning tokens and the cost. An agentic run on the pi runner reads
+them from pi's session (kept in a temp dir for the run, then removed) and adds what the agent
+did: turns, tool calls by tool with their time, the time of the answered requests, and the
+requests that failed and were retried, with their time and the last error (a gateway's HTML
+page is cut to its title). Model + tools + failed is about the wall time, so a slow run is
+either the provider (few turns, long model time, failed requests) or the agent's walk (many
+turns and tool calls). The prompt counts every turn: each one sends the whole context again.
+opencode and claude get the prompt-size estimate.
+
+Plain text, not an HTML comment: the reports are read in a terminal far more often than
+rendered. Comparing toolkit versions or models is a matter of reading the files
+(`grep -h '^Run: ' *.md`).
 
 ### Deprecated: `ai gen review`
 

@@ -1,8 +1,8 @@
-File: <SANDBOX>/fixture/leetcode/LeetCode.scala
-Provider: ollama
-Language: English
-Project context: yes
----
+
+Review  file <SANDBOX>/fixture/leetcode/LeetCode.scala
+  provider     ollama
+  language     English
+  context      the project too
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your entire response in English.
 

@@ -1,8 +1,8 @@
-Project: leetcode
-Provider: claude
-Language: English
----
-Files: 140 lines across 2 files (budget 10000)
+
+Review  project leetcode
+  provider     claude
+  language     English
+  files        140 lines across 2 files (budget 10000)
 --- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
 IMPORTANT: Write your entire response in English.
 

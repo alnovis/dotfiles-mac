@@ -1,8 +1,8 @@
-File: <SANDBOX>/fixture/leetcode/LeetCode.scala
-Provider: ollama
-Language: English
-Verify: on (ollama)
----
+
+Review  file <SANDBOX>/fixture/leetcode/LeetCode.scala
+  provider     ollama
+  language     English
+  verify       on (ollama)
 --- dry-run: pass 1 (review) ---
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your entire response in English.

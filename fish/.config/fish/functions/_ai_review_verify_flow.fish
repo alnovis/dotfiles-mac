@@ -137,6 +137,8 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l runs_ok 1
     set -l rc1 0
     set -l rev_failed
+    # Stage times for the Saved block's "time" line
+    set -l t0 (date +%s)
     if test $runs -gt 1
         set -g __ai_review_runs_ok 0
         _ai_review_runs --runs $runs --mode $_flag_parallel_mode --prompt-file $_flag_prompt_file \
@@ -145,7 +147,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         set runs_ok $__ai_review_runs_ok
         set rev_failed $__ai_runs_failed
     else
-        printf '%s' "$pass1_prompt" | _ai_run_watched --label "[1/$n_stages] $rev_label" --output $find_src --dest $rev_dest -- $run_args
+        printf '%s' "$pass1_prompt" | _ai_run_watched --heading --label "[1/$n_stages] $rev_label" --output $find_src --dest $rev_dest -- $run_args
         set rc1 $status
     end
 
@@ -195,10 +197,12 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -l ver_dest $verify_out
     test -z "$ver_dest"; and set ver_dest "(terminal)"
 
+    set -l t_rev (date +%s)
     set -e __ai_verify_run_files
     set -e __ai_runs_failed
     _ai_review_verify $vargs --runs $vruns --mode $vmode --output $ver_target --label "[2/$n_stages] $ver_label" --dest $ver_dest
     set -l rc2 $status
+    set -l t_ver (date +%s)
     # Kept now: the comments stage below would overwrite them
     set -l ver_why "$__ai_last_failure"
     set -l ver_failed $__ai_runs_failed
@@ -213,34 +217,35 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
                 --runs $runs_ok --label "[3/3] $com_label" --quiet
             set rc3 $status
             set -l com_why "$__ai_last_failure"
-            test $rc3 -ne 0; and set com_note "Comments failed:   "(test -n "$com_why"; and echo $com_why; or echo "see the error above")
+            test $rc3 -ne 0; and set com_note "failed: "(test -n "$com_why"; and echo $com_why; or echo "see the error above")
         else
-            set com_note "Comments skipped: no verdicts to build them from."
+            set com_note "skipped: no verdicts to build them from"
             set rc3 1
         end
     end
+    set -l t_com (date +%s)
 
-    # Deliver, after every stage: all the files of the run together. Without files: print
-    # the combined review + verification to the terminal.
+    # Deliver, after every stage: all the files of the run together, each path whole so it
+    # can be used as it is. Without files: print the combined review + verification.
     if test -n "$review_out"
-        set_color green
-        echo "Review saved to:   $review_out"
+        _ai_ui_heading Saved
+        _ai_ui_kv review $review_out
         if test $runs -gt 1
             set -l base (string replace -r '\.[^.]+$' '' -- $review_out)
             set -l ext (path extension -- $review_out)
             set -l kept (path filter -f -- $base.run(seq $runs)$ext)
-            echo "Runs saved to:     $kept[1] ($runs_ok/$runs answered)"
+            _ai_ui_kv runs $kept[1] "$runs_ok/$runs answered"
             for f in $kept[2..]
-                echo "                   $f"
+                _ai_ui_kv "" $f
             end
             _ai_runs_failed_lines $rev_failed
         end
         if test -s "$ver_target"
-            echo "Verify saved to:   $verify_out ("(_ai_verdict_counts $ver_target)")"
+            _ai_ui_kv verify $verify_out (_ai_verdict_counts $ver_target)
             if set -q __ai_verify_run_files[1]
-                echo "Verify runs:       $__ai_verify_run_files[1] ("(count $__ai_verify_run_files)"/$vruns answered, majority above)"
+                _ai_ui_kv "verify runs" $__ai_verify_run_files[1] (count $__ai_verify_run_files)"/$vruns answered, majority above"
                 for f in $__ai_verify_run_files[2..]
-                    echo "                   $f"
+                    _ai_ui_kv "" $f
                 end
             end
             _ai_runs_failed_lines $ver_failed
@@ -249,17 +254,22 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
             rm -f "$ver_target"
             set_color yellow
             if test -n "$ver_why"
-                echo "Verify failed:     $ver_why"
+                _ai_ui_kv verify "failed: $ver_why"
             else
-                echo "Verify produced no output ($verify_out not written)."
+                _ai_ui_kv verify "no output ($verify_out not written)"
             end
+            set_color normal
             _ai_runs_failed_lines $ver_failed
         end
-        set_color green
         set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_out $ver_target
-        set_color yellow
-        test -n "$com_note"; and echo $com_note
-        set_color normal
+        if test -n "$com_note"
+            set_color yellow
+            _ai_ui_kv comments $com_note
+            set_color normal
+        end
+        set -l times "review "(math $t_rev - $t0)"s, verify "(math $t_ver - $t_rev)"s"
+        set -q _flag_comments; and set times "$times, comments "(math $t_com - $t_ver)"s"
+        _ai_ui_kv time (_ai_ui_duration (math $t_com - $t0)) "($times)"
     else
         cat $find_src
         echo ""

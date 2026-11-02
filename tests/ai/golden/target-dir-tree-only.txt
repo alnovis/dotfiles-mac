@@ -1,7 +1,7 @@
-Project: leetcode
-Provider: ollama
-Language: English
----
+
+Review  project leetcode
+  provider     ollama
+  language     English
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your entire response in English.
 

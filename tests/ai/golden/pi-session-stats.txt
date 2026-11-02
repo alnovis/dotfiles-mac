@@ -18,16 +18,27 @@
         "count": 1
       }
     ],
-    "model_ms": 239530,
+    "model_ms": 119530,
     "tool_ms": 400,
     "errors": 1,
-    "last_error": "529 overloaded | retry\n-->"
+    "error_ms": 120000,
+    "last_error": "504 Gateway Time-out"
   }
 }
 == no model answer: nothing
 rc 0
 == the footer of an agentic run
+  done <t>    3 turns    3 tools  model  120s   20.5k/1.4k tokens  cost 0.006  1 failed, 120s (504 Gateway Time-out)  ../pi-footer.md
 answer
 
-<!-- [1/3] Review | Ns | prompt 20500 tokens over 3 turns | completion 1400 tokens (reasoning 50) | tools 3 (read 2, grep 1) 0.4s | model 240s | failed requests 1 (last: 529 overloaded retry ->) | cost 0.006 | thinking 0 bytes -->
+---
+Run: [1/3] Review | Ns | turns 3 | tools 3 (read 2, grep 1) 0.4s | model 120s | prompt 20.5k tokens | completion 1.4k tokens (reasoning 50) | cost 0.006 | failed requests 1, 120s (504 Gateway Time-out)
+== no usage: the estimate
+
+[1/1] Review  exploring the repo with tools (Ctrl-C stops it)
+  done <t>  ~0k prompt tokens (estimate)  ../est-footer.md
+answer
+
+---
+Run: [1/1] Review - testcloud - cloud-model | Ns | prompt ~0k tokens (estimate)
 [exit 0]
