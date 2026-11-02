@@ -20,6 +20,8 @@ Before flagging a Critical or Important issue, gate it — drop it if any check 
 Once a finding passes the gate, look for its siblings: a change that makes a mistake once tends to make it in every hunk that does the same thing. Check the rest of the diff for the same pattern and report one finding per confirmed site, each with its own file:line — not one finding listing five paths. Then ask what else is wrong at the site you already read: two defect classes on one line are two findings.
 <!-- /full-only -->
 
+For state the change reads or writes that outlives one call — a field, a cache, a Redis key, a table row — list every writer: other methods, other threads (listeners, schedulers, request threads), and other instances of the same service running the same code (a scheduled job fires on every instance unless a distributed lock says otherwise). Check what the change assumes about that state against each writer.
+
 Rate the impact, not the category. "Missing null check" is not a severity; "null deref on every request to the changed handler" is. Place a finding in a tier by blast radius and how many conditions must line up — not by the name of the bug class:
 - Downgrade triggers: test/debug-only code drops a tier; needs a second unlikely condition to bite drops a tier; torn between two tiers, pick the lower.
 - A mis-labelled Critical burns the author's trust faster than a cautious Important.

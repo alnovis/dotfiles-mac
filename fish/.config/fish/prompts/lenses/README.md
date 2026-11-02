@@ -28,6 +28,13 @@ Rust lenses (original to this repo — Rust-specific classes not covered above):
 - `rust-async` — tokio / async-runtime footguns (lock across `.await`, blocking the executor, dropped tasks)
 - `rust-ownership` — leaks (`Rc` cycles), runtime borrow panics, Drop-order and needless-allocation costs
 
+Scala lenses (original to this repo — the language, then one lens per library; each reads its version from the build first, because major versions differ in core APIs):
+- `scala` — Scala 2.11 / 2.12 / 2.13 / 3: collection cost and partial operations, Futures, per-version semantics, plus a "Not bugs" list (`:+` appends at the tail, `==` is value equality)
+- `akka` — Akka 2.5 / 2.6 / Pekko, classic and typed: actor confinement and `sender()` in callbacks, blocked dispatchers, `ask`, supervision, Streams and Akka HTTP entity handling
+- `cats` — cats core 1.x / 2.x: errors lost to `Either` short-circuiting where `Validated` was meant, lawless instances, stack safety
+- `cats-effect` — CE 2 / 3: effects run eagerly, never or twice, `Resource` and fiber leaks, blocking on the compute pool, `Ref` atomicity
+- `zio` — ZIO 1 / 2: throwing code in infallible constructors (defects), fiber supervision and interruption, scopes and layers, blocking on the default executor
+
 Shell lenses (original to this repo — two shells, two execution models):
 - `bash` — bash / POSIX sh: unquoted expansions, empty variables in destructive paths, `set -e` that does not fire, bashisms under `/bin/sh`
 - `fish` — fish footguns (line-split command substitution, vanishing empty lists, block scope, `"\t"`) plus a "Not bugs" list of bash habits models misapply to fish
@@ -70,6 +77,6 @@ data) come from VVAH's `iac` skill.
 
 The **quality** lenses (`documentation`, `reactive`, `resource-leak`,
 `error-handling`, `k8s-manifest`), the **Rust** lenses (`rust-unsafe`,
-`rust-async`, `rust-ownership`), the **shell** lenses (`bash`, `fish`), and the **data / messaging** lenses (`sql-postgres`,
+`rust-async`, `rust-ownership`), the **Scala** lenses (`scala`, `akka`, `cats`, `cats-effect`, `zio`), the **shell** lenses (`bash`, `fish`), and the **data / messaging** lenses (`sql-postgres`,
 `sql-clickhouse`, `hbase`, `redis`, `kafka`) are original to this repository — same HARD GATE
 discipline, not derived from VVAH.
