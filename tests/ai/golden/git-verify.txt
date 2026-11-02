@@ -30,8 +30,6 @@ Before flagging a Critical or Important issue, gate it — drop it if any check 
 - INTRODUCED — the diff actually causes it; don't flag pre-existing issues in unchanged context lines as if this change created them.
 - NOT-ALREADY-HANDLED — check for an existing guard, validation, or handler in the surrounding context first. If it's covered, drop it.
 
-For state the change reads or writes that outlives one call — a field, a cache, a Redis key, a table row — list every writer: other methods, other threads (listeners, schedulers, request threads), and other instances of the same service running the same code (a scheduled job fires on every instance unless a distributed lock says otherwise). Check what the change assumes about that state against each writer.
-
 Rate the impact, not the category. "Missing null check" is not a severity; "null deref on every request to the changed handler" is. Place a finding in a tier by blast radius and how many conditions must line up — not by the name of the bug class:
 - Downgrade triggers: test/debug-only code drops a tier; needs a second unlikely condition to bite drops a tier; torn between two tiers, pick the lower.
 - A mis-labelled Critical burns the author's trust faster than a cautious Important.
