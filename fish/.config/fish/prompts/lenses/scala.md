@@ -24,6 +24,7 @@ By version:
 
 Not bugs (do not report these):
 - `xs :+ x` appends at the TAIL; `x +: xs` and `x :: xs` prepend at the head. After a series of `:+`, the head is the OLDEST element and `splitAt(n)` takes the oldest n.
+- One key added to or removed from an immutable `HashMap` / `HashSet` (`+`, `-`, `updated`) is effectively constant time: a hash trie copies the path to the key, a few nodes, not the whole map — "O(n), rebuilds the map" is wrong. A loop over many keys costs that per key. (`ListMap` is different: its `+`, `-` and lookup are O(n).)
 - `var state: List[...]` reassigned with an immutable collection, confined to one thread (an actor's `receive`, a single-threaded loop) — an ordinary idiom, not shared mutable state.
 - `==` compares values (structural for case classes, collections and strings) — except arrays, see above.
 - No `return` keyword: the last expression is the result. Procedure syntax `def f() { … }` is valid in 2.11 / 2.12 (deprecated in 2.13, dropped in 3).

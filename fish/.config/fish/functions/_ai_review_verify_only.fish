@@ -163,8 +163,10 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         _ai_stage_plan "$ver_label"
     end
     set -e __ai_verify_run_files
+    set -e __ai_runs_failed
     _ai_review_verify $vargs --runs $vruns --mode $vmode --output $verify_out --label "$ver_label" --dest $verify_out
     set -l rc $status
+    set -l ver_failed $__ai_runs_failed
     test -n "$diff_tmp"; and rm -f $diff_tmp
 
     if not test -s "$verify_out"
@@ -174,6 +176,9 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
             echo "Verify failed:     $__ai_last_failure" >&2
         else
             echo "Verify produced no output ($verify_out not written)." >&2
+        end
+        for f in $ver_failed
+            echo "                   $f" >&2
         end
         set_color normal
         return 1
@@ -195,6 +200,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
             echo "                   $f"
         end
     end
+    _ai_runs_failed_lines $ver_failed
     set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_file $verify_out
     set_color yellow
     test $rc3 -ne 0; and echo "Comments failed:   "(test -n "$com_why"; and echo $com_why; or echo "see the error above")

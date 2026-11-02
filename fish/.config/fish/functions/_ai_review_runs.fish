@@ -1,4 +1,4 @@
-function _ai_review_runs --description "Run the review N times (parallel or sequential) and join the runs into one review; how many answered goes to \$__ai_review_runs_ok"
+function _ai_review_runs --description "Run the review N times (parallel or sequential) and join the runs into one review; how many answered goes to \$__ai_review_runs_ok, why the others failed to \$__ai_runs_failed"
     # Usage: _ai_review_runs --runs N --mode parallel|sequential --prompt-file F --output OUT
     #          --label L [--dest NAME] -- <_ai_run args>
     # The count is a global, not stdout: called as (_ai_review_runs …), fish would send the
@@ -8,6 +8,8 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
     # judges them all at once, and the comments stage merges what several runs reported.
     # Each run is kept as <base>.runK.<ext> with its own footer. A failed run does not
     # sink the rest: the join takes the runs that answered, and fails only if none did.
+    # Each failed run's reason ("run K/N: why") goes to __ai_runs_failed for the caller's
+    # final summary — the run's own lines have scrolled away by then.
     #
     # Parallel runs are separate fish processes: a backgrounded fish function runs in the
     # same process, one after another.
@@ -31,6 +33,7 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
         end
     end
 
+    set -g __ai_runs_failed
     set -l t0 (date +%s)
     if test "$_flag_mode" = parallel
         printf '  %s | %d runs in parallel… (Ctrl-C stops them)\n' $_flag_label $n >&2
@@ -56,6 +59,12 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
                 contains -- $pids[$k] $running; and continue
                 test $tty -eq 1; and printf '\r\033[K' >&2
                 cat $logs[$k] >&2
+                # A failed run leaves an empty file (the join below skips it)
+                if not test -s $files[$k]
+                    set -l why (_ai_failure_reason <$logs[$k])
+                    test -n "$why"; or set why "no answer"
+                    set -a __ai_runs_failed "run $k/$n: $why"
+                end
                 rm -f $logs[$k]
                 set -e left[(contains -i -- $k $left)]
             end
@@ -68,6 +77,11 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
     else
         for k in (seq $n)
             _ai_run_watched --label "$_flag_label run $k/$n" --output $files[$k] --dest $files[$k] -- $run_args <$_flag_prompt_file
+            if not test -s $files[$k]
+                set -l why "$__ai_last_failure"
+                test -n "$why"; or set why "no answer"
+                set -a __ai_runs_failed "run $k/$n: $why"
+            end
         end
     end
 

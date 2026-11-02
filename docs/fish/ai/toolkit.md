@@ -320,7 +320,7 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | Rust | `rust-unsafe` | UB and broken safety invariants behind `unsafe`, unsound safe APIs |
 | | `rust-async` | Lock across `.await`, blocking the executor, dropped tasks |
 | | `rust-ownership` | `Rc` cycles, runtime borrow panics, Drop order, needless allocations |
-| Scala (version read from the build first) | `scala` | Collection cost (`List :+`), partial operations, Futures, per-version semantics 2.11 / 2.12 / 2.13 / 3; "Not bugs" (`:+` appends at the tail) |
+| Scala (version read from the build first) | `scala` | Collection cost (`List :+`), partial operations, Futures, per-version semantics 2.11 / 2.12 / 2.13 / 3; "Not bugs" (`:+` appends at the tail; one key in an immutable `HashMap` is not O(n)) |
 | | `akka` | Akka / Pekko, classic vs typed: `sender()` and state in callbacks, blocked dispatchers, `ask`, supervision, Streams, Akka HTTP entities |
 | | `cats` | Errors lost to `Either` where `Validated` was meant, lawless instances, stack safety |
 | | `cats-effect` | Effects run eagerly / twice, `Resource` and fiber leaks, blocking the compute pool, `Ref` atomicity (CE 2 / 3) |
@@ -442,6 +442,10 @@ review ×N  →  joined under "## Run K/N"  →  one verify over all of it  → 
   qwen3.8 summed 12 verdicts as 4 + 6.
 - The joined review is `<output>`; each run is kept as `<base>.runK.<ext>` with its own footer.
   A run that fails is skipped; the join fails only if none answered (`2/3 runs answered`).
+  The final summary names each failed run with its reason, taken from the runner's last
+  error line — it has scrolled away above by then:
+  `Failed: run 2/3: Response was truncated: the model reached its output token limit.`
+  The same holds for verify runs.
 - With `--comments`, the extraction merges the same problem reported by several runs into one
   comment and counts it: `"seen": 2, "runs": 3` in the JSON, `found by 2 of 3 runs` in the
   markdown. Two different problems on one line stay two comments.

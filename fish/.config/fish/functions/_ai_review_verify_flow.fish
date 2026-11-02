@@ -136,12 +136,14 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
 
     set -l runs_ok 1
     set -l rc1 0
+    set -l rev_failed
     if test $runs -gt 1
         set -g __ai_review_runs_ok 0
         _ai_review_runs --runs $runs --mode $_flag_parallel_mode --prompt-file $_flag_prompt_file \
             --output $find_src --dest $rev_dest --label "[1/$n_stages] $rev_label" -- $run_args
         set rc1 $status
         set runs_ok $__ai_review_runs_ok
+        set rev_failed $__ai_runs_failed
     else
         printf '%s' "$pass1_prompt" | _ai_run_watched --label "[1/$n_stages] $rev_label" --output $find_src --dest $rev_dest -- $run_args
         set rc1 $status
@@ -149,8 +151,11 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
 
     if test $rc1 -ne 0; or not test -s $find_src
         set -l why "$__ai_last_failure"
-        test $runs -gt 1; and set why "no run answered — see each run's line above"
+        test $runs -gt 1; and set why "no run answered"
         echo "  Review pass produced no output (provider=$provider)"(test -n "$why"; and echo ": $why")". Aborting before verify." >&2
+        for f in $rev_failed
+            echo "    $f" >&2
+        end
         test $find_is_temp -eq 1; and rm -f $find_src
         return 1
     end
@@ -191,10 +196,12 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     test -z "$ver_dest"; and set ver_dest "(terminal)"
 
     set -e __ai_verify_run_files
+    set -e __ai_runs_failed
     _ai_review_verify $vargs --runs $vruns --mode $vmode --output $ver_target --label "[2/$n_stages] $ver_label" --dest $ver_dest
     set -l rc2 $status
-    # Kept now: the comments stage below would overwrite it
+    # Kept now: the comments stage below would overwrite them
     set -l ver_why "$__ai_last_failure"
+    set -l ver_failed $__ai_runs_failed
 
     # Stage 3 — comments, only over a verify pass that produced verdicts
     set -l rc3 0
@@ -226,6 +233,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
             for f in $kept[2..]
                 echo "                   $f"
             end
+            _ai_runs_failed_lines $rev_failed
         end
         if test -s "$ver_target"
             echo "Verify saved to:   $verify_out ("(_ai_verdict_counts $ver_target)")"
@@ -235,6 +243,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
                     echo "                   $f"
                 end
             end
+            _ai_runs_failed_lines $ver_failed
         else
             # An empty file next to the review would read as a result — remove it
             rm -f "$ver_target"
@@ -244,6 +253,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
             else
                 echo "Verify produced no output ($verify_out not written)."
             end
+            _ai_runs_failed_lines $ver_failed
         end
         set_color green
         set -q _flag_comments; and test $rc3 -eq 0; and _ai_review_comments_saved $review_out $ver_target

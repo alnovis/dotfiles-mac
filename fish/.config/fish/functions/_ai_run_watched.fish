@@ -103,10 +103,9 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     else
         printf '  %s FAILED (rc %s) | %ds -> %s\n' $label "$rc" $total $dest >&2
         test -s $errlog; and cat $errlog >&2
-        set -l why (string match -r -i -- '.*(?:http|error|forbidden|denied|refused|timed out|truncated|not found|\b[45][0-9][0-9]\b).*' <$errlog 2>/dev/null | tail -1)
-        test -n "$why"; or set why (string trim <$errlog 2>/dev/null | string match -v '' | tail -1)
+        set -l why (_ai_failure_reason <$errlog)
         test -n "$why"; or set why "exit $rc"
-        set -g __ai_last_failure (string trim -- $why | string shorten -m 200)
+        set -g __ai_last_failure $why
     end
     # A non-empty sidecar means the model reasoned — point at it; an empty one means it
     # didn't (or wasn't a thinking model) — drop it so no stray files accumulate.
