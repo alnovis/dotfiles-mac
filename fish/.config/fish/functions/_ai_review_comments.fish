@@ -29,9 +29,11 @@ function _ai_review_comments --description "Third review stage: line comments fo
     test -n "$label"; or set label "Comments - $_flag_provider"
 
     # Nothing confirmed or uncertain: nothing to comment on, so no model call — the same
-    # files (an empty array; the markdown still lists what verify refuted)
+    # files (an empty array; the markdown still lists what verify refuted). Only when
+    # verdicts were found at all: none found means a format we do not read, so the model
+    # gets the verdicts as before.
     set -l counts (_ai_verdict_counts $_flag_verdicts)
-    if string match -q -r -- '^0 confirmed' $counts; and not string match -q -- '*uncertain*' $counts
+    if string match -q -r -- '^0 confirmed, [1-9]' $counts; and not string match -q -- '*uncertain*' $counts
         printf '  %s | skipped — verify confirmed nothing to comment on\n' $label >&2
         set -l arr (mktemp)
         echo '[]' >$arr
@@ -108,6 +110,8 @@ function _ai_review_comments_saved --description "The 'saved to' lines of the co
         # Verdicts to work from but no comments: the extraction dropped them, not verify
         if test "$confirmed" -gt 0 2>/dev/null; or test "$uncertain" -gt 0 2>/dev/null
             set why "the extraction made none from the verdicts — check the verify file"
+        else if string match -q -- '0 confirmed, 0 refuted' "$counts"
+            set why "no verdict recognised in the verify file — check its format"
         end
         test -n "$counts"; and set why "$why ($counts)"
         echo "Comments:          none — $why"
@@ -138,11 +142,18 @@ function _ai_review_comments_md_refuted --description "What verify threw out, fr
     # Verify is a filter, not a referee: on a real work change it refuted the very race
     # that was fixed a commit later, calling a regression pre-existing. So the refuted
     # findings are listed too — not as comments, not in the JSON, only to be skimmed.
+    # "[REFUTED 8/10]", or bare "— REFUTED 8/10" at the end of a finding line (see _ai_verdict_counts)
     set -l items (awk '
-        /\[REFUTED/ {
+        /\[REFUTED/ || /^[[:space:]]*[-*].*REFUTED([[:space:]]+[0-9]+[[:space:]]*\/[[:space:]]*10)?[[:space:]*]*$/ {
             t = $0
-            conf = t; sub(/.*\[REFUTED */, "", conf); sub(/\].*/, "", conf)
-            sub(/^[[:space:]]*[-*][[:space:]]*/, "", t); sub(/[[:space:]]*[—-]*[[:space:]]*\[REFUTED.*$/, "", t)
+            if (t ~ /\[REFUTED/) {
+                conf = t; sub(/.*\[REFUTED */, "", conf); sub(/\].*/, "", conf)
+                sub(/[[:space:]]*[—-]*[[:space:]]*\[REFUTED.*$/, "", t)
+            } else {
+                conf = t; sub(/.*REFUTED[[:space:]]*/, "", conf); sub(/[[:space:]*]*$/, "", conf)
+                sub(/[[:space:]]*[—-]*[[:space:]]*\**[[:space:]]*REFUTED.*$/, "", t)
+            }
+            sub(/^[[:space:]]*[-*][[:space:]]*/, "", t)
             gsub(/\*\*/, "", t)
             why = ""
             if ((getline w) > 0 && w ~ /^[[:space:]]*why:/) { why = w; sub(/^[[:space:]]*why:[[:space:]]*/, "", why) }

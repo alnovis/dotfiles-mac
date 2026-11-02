@@ -443,7 +443,10 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
    `[REFUTED]` ones are dropped. The bodies follow `--lang` (English by default); code stays as is.
    With no `[CONFIRMED]` and no `[UNCERTAIN]` verdict there is nothing to extract: no model call,
    the stage line says `skipped`, and the same files are written — an empty array, and the
-   markdown with what verify refuted.
+   markdown with what verify refuted. Verdicts are read from their tags, also when a model
+   drops the brackets (`— REFUTED 8/10` at the end of a finding's line, nowhere else); a
+   verify file with no verdict found at all is not "nothing confirmed" — the model still
+   gets it, and an empty result says `no verdict recognised in the verify file`.
 2. **Anchoring (no model, `_ai_review_comments_anchor`).** A model's line numbers are often off
    (a cited `:24` was really `:36`), so each line is found again by its quote: in the new version
    of the file, then in the old one (removed code); the cited number only breaks ties. A quote
