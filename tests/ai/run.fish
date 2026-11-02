@@ -58,6 +58,7 @@ cp $root/tests/ai/fixtures/comments.json $sb/comments.json
 cp $root/tests/ai/fixtures/verify.md $sb/verify.md
 cp $root/tests/ai/fixtures/verify-refuted.md $sb/verify-refuted.md
 cp $root/tests/ai/fixtures/verify-bare.md $sb/verify-bare.md
+cp $root/tests/ai/fixtures/review-shapes.md $sb/review-shapes.md
 cp $root/tests/ai/fixtures/verify-untagged.md $sb/verify-untagged.md
 # A stub _ai_run_watched as a function FILE: parallel runs are separate fish processes and
 # see only fish_function_path, not functions defined in the parent
@@ -126,6 +127,7 @@ set -g golden_cases \
     'target-verify|fixture|ai review leetcode/LeetCode.scala --verify --dry-run' \
     'verify-only-ollama|fixture|ai review --verify-only ../review.md --provider ollama --dry-run' \
     'verify-only-range|fixture|ai review --verify-only ../review.md --range HEAD~1..HEAD --provider ollama --dry-run 2>&1 | string match -e -r "^Code: the diff|^Note:|CODE UNDER REVIEW|^diff --git"' \
+    'review-numbering|fixture|_ai_review_number_findings <../review-shapes.md >../shapes-1.md; cat ../shapes-1.md; echo "== numbering twice changes nothing"; _ai_review_number_findings <../shapes-1.md | diff -q - ../shapes-1.md; and echo same' \
     'lens-default|fixture|mkdir -p .ai; cp .ai/config ../cfg.bak 2>/dev/null; or rm -f ../cfg.bak; echo review_lens=scala >.ai/config; echo "== from the project config"; ai review --last 1 --dry-run 2>&1 | string match -e -r "^Lens:|^## Review lens: "; echo "== --lens wins"; ai review --last 1 --lens redis --dry-run 2>&1 | string match -e -r "^Lens:|^## Review lens: "; echo "== --no-lens: none"; ai review --last 1 --no-lens --dry-run 2>&1 | string match -e -r "^Lens:|^## Review lens: "; or echo "(no lens)"; echo "== both"; ai review --last 1 --lens redis --no-lens --dry-run; echo "== verify-only takes the default"; ai review --verify-only ../review.md --provider ollama --dry-run 2>&1 | string match -e -r "^## Review lens: "; echo "== config status"; ai config status 2>&1 | string match -e -r "^ +lens "; rm -f .ai/config; test -f ../cfg.bak; and mv ../cfg.bak .ai/config' \
     'verify-lens|fixture|echo "== verify-only: the lens block in the verify prompt"; ai review --verify-only ../review.md --provider ollama --lens scala --dry-run 2>&1 | string match -e -r "^The review was run with|^## Review lens: |^Scala lens\. |^FINDINGS FROM"; echo "== review + verify: the flow hands the lens on"; ai review --last 1 --verify --lens scala,akka -o ../lens-out.md --dry-run 2>&1 | string match -e -r "^verify provider="; echo "== unknown lens"; ai review --verify-only ../review.md --provider ollama --lens nosuch --dry-run 2>&1 | string match -e -r "unknown lens" | string replace -r "Available: .*" "Available: …"' \
     'verify-only-claude|fixture|ai review --verify-only ../review.md --provider claude --dry-run' \

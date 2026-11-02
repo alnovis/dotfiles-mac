@@ -375,10 +375,17 @@ Nothing is hidden: every finding is kept and tagged.
 
 The verifier sees the findings plus the code the review saw: the diff in git mode, the file for a
 file target, nothing for a directory target. With `--agentic` it also reads the repo itself,
-with the `ai-verify` skill injected. Output shape (one verdict per finding, then a tally):
+with the `ai-verify` skill injected.
+
+Before verify, the findings are numbered in the saved review — `[F1]`, `[F2]`… on every top-level
+bullet or list item outside the Summary, across all runs of a joined review (no model;
+`_ai_review_number_findings`). Verify keys each verdict by its number, so a verdict matches its
+finding without comparing reworded titles, and several verify runs can be joined by it. A
+review saved before numbering is numbered on the way into verify; numbering twice changes
+nothing. Output shape (one verdict per finding, then a tally):
 
 ```
-- <finding title / file:line> — [REFUTED 9/10]
+- [F3] <finding title / file:line> — [REFUTED 9/10]
   why: <what was found in the code>
 Verify: X confirmed, Y refuted, Z uncertain
 ```

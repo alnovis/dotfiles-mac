@@ -20,7 +20,9 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
         echo "verify: no first-pass findings to verify" >&2
         return 1
     end
-    set -l findings (cat $_flag_findings_file | string collect)
+    # Numbered here too, for a review saved before numbering (--verify-only); already
+    # numbered findings pass through unchanged
+    set -l findings (_ai_review_number_findings <$_flag_findings_file | string collect)
 
     # Verify system prompt (overridable).
     set -l vfile ~/.config/fish/prompts/meta-verify.md

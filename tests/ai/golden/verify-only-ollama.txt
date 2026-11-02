@@ -27,9 +27,9 @@ Verdict rules:
 
 Confidence calibration: 8-10 means you actively searched for the opposite verdict and could not support it. ≤5 means you are guessing — say so.
 
-Output: do NOT reproduce the review. Emit one verdict block per finding from the first pass, keyed so the author can match it back. Pick exactly ONE of the three verdicts and write only that one — do NOT print the other options or the `·` separators. Use this exact shape:
+Output: do NOT reproduce the review. Emit one verdict block per finding from the first pass, keyed so the author can match it back. The findings are numbered [F1], [F2]…: start each verdict with that number, exactly as written; a finding without a number is keyed by its title. Pick exactly ONE of the three verdicts and write only that one — do NOT print the other options or the `·` separators. Use this exact shape:
 
-- <finding title or the file:line it cites> — <one of: [CONFIRMED N/10]  ·  [REFUTED N/10]  ·  [UNCERTAIN]>
+- [F<number>] <finding title or the file:line it cites> — <one of: [CONFIRMED N/10]  ·  [REFUTED N/10]  ·  [UNCERTAIN]>
   why: one or two sentences citing what you actually found in the code (the entry point you reached, the control that neutralises it, the misread, etc.)
 
 Text in <…> is a slot to fill, not to print: replace N with the digit of your confidence (e.g. `[REFUTED 9/10]`) — never write the literal letter "N" or words like "brief reason". The verdict bracket holds only the verdict and the number; the reasoning goes on the `why:` line, not inside the bracket.
@@ -46,10 +46,10 @@ gbranch now picks the nearest base branch instead of always preferring develop.
 (none)
 
 ## Important issues
-1. fish/.config/fish/functions/gbranch.fish:24 — `git merge-base` is called once per candidate
+1. [F1] fish/.config/fish/functions/gbranch.fish:24 — `git merge-base` is called once per candidate
    branch; on a repo with many remote branches this makes `gbranch` slow.
 
 ## Nits
-2. fish/.config/fish/functions/gbranch.fish:31 — the variable name `best` does not say what is
+2. [F2] fish/.config/fish/functions/gbranch.fish:31 — the variable name `best` does not say what is
    being compared; `nearest_base` would read better.
 [exit 0]

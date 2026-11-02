@@ -150,6 +150,11 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         return 1
     end
 
+    # Findings get numbers [F1], [F2]… in the saved review: verify keys its verdicts by them
+    set -l numbered (mktemp)
+    _ai_review_number_findings <$find_src >$numbered; and mv $numbered $find_src
+    rm -f $numbered
+
     # Pass 2 — verify.
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $find_src
     test -n "$vmodel"; and set -a vargs --model $vmodel
