@@ -74,6 +74,11 @@ cp $root/tests/ai/fixtures/runner-colored.txt $sb/runner-colored.txt
 # Three verify runs over one review, for the majority vote
 cp -R $root/tests/ai/fixtures/vote $sb/vote
 cp $root/tests/ai/fixtures/verify-untagged.md $sb/verify-untagged.md
+# Agentic answers: a leak of control tokens, a tool call as text (two shapes), a plain one;
+# a verify run whose verdicts carry no finding numbers; the empty-answer cases
+cp -R $root/tests/ai/fixtures/answers $sb/answers
+cp $root/tests/ai/fixtures/verify-unkeyed.md $sb/verify-unkeyed.md
+cp $root/tests/ai/fixtures/empty-answer.fish $sb/empty-answer.fish
 # A stub _ai_run_watched as a function FILE: parallel runs are separate fish processes and
 # see only fish_function_path, not functions defined in the parent
 cp -R $root/tests/ai/fixtures/stubfn $sb/stubfn
@@ -145,6 +150,9 @@ set -g golden_cases \
     'verify-vote|fixture|_ai_verify_vote 3 ../vote/verify.run1.md ../vote/verify.run2.md ../vote/verify.run3.md >../voted.md; cat ../voted.md; echo "== counts: "(_ai_verdict_counts ../voted.md); functions -q _ai_review_comments; _ai_review_comments_md_refuted ../voted.md; echo "== one run of three answered: everything uncertain"; _ai_verify_vote 3 ../vote/verify.run1.md | string match -e -r "^- |^Verify:"' \
     'verify-runs|fixture|echo "== review + verify"; ai review --last 1 --verify-runs 3 -o ../vr-out.md --dry-run 2>&1 | string match -e -r "^  verify +on|^verify runs:"; echo "== verify-only"; ai review --verify-only ../review.md --provider ollama --verify-runs 3 --dry-run 2>&1 | string match -e -r "^  runs "; echo "== bad value"; ai review --verify-only ../review.md --provider ollama --verify-runs 0 --dry-run; echo "== config"; mkdir -p .ai; cp .ai/config ../cfg2.bak 2>/dev/null; or rm -f ../cfg2.bak; echo verify_runs@ollama=3 >.ai/config; ai config status 2>&1 | string match -e -r "^ +verify runs"; rm -f .ai/config; test -f ../cfg2.bak; and mv ../cfg2.bak .ai/config' \
     'review-numbering|fixture|_ai_review_number_findings <../review-shapes.md >../shapes-1.md; cat ../shapes-1.md; echo "== numbering twice changes nothing"; _ai_review_number_findings <../shapes-1.md | diff -q - ../shapes-1.md; and echo same' \
+    'answer-clean|fixture|for f in leak action json-calls plain; cp ../answers/$f.md ../ac-$f.md; _ai_answer_clean ../ac-$f.md; echo "== $f: status $status"; cat ../ac-$f.md; end; cmp -s ../ac-plain.md ../answers/plain.md; and echo "plain: byte for byte"' \
+    'verify-keyed|fixture|echo "keyed run: "(_ai_verify_keyed ../vote/verify.run1.md); echo "unkeyed run: "(_ai_verify_keyed ../verify-unkeyed.md); _ai_verify_runs_note 3 ../vote/verify.run1.md ../verify-unkeyed.md; _ai_verify_runs_note 3 ../vote/verify.run1.md ../vote/verify.run2.md' \
+    'empty-answer|fixture|source ../empty-answer.fish' \
     'pi-guard|fixture|node ../pi-guard.test.mjs ~/.config/fish/pi/ai-guard.ts ../guard-repo' \
     'runner-errors|fixture|echo "== a 503 page"; _ai_runner_errors <../runner-503.txt; echo "reason: "(_ai_failure_reason <../runner-503.txt); echo "== a coloured run line"; echo "reason: "(_ai_failure_reason <../runner-colored.txt)' \
     'verify-only-numbers|fixture|cp ../review-shapes.md ../vo.md; ai review --verify-only ../vo.md --provider testcloud >/dev/null 2>&1; echo "numbered in the review file: "(grep -c "\[F[0-9]" ../vo.md); cp ../vo.md ../vo-1.md; ai review --verify-only ../vo.md --provider testcloud >/dev/null 2>&1; cmp -s ../vo.md ../vo-1.md; and echo "a re-verify leaves the numbers as they are"; echo "== dry-run writes nothing"; cp ../review-shapes.md ../vo-dry.md; ai review --verify-only ../vo-dry.md --provider ollama --dry-run >/dev/null 2>&1; cmp -s ../vo-dry.md ../review-shapes.md; and echo unchanged' \

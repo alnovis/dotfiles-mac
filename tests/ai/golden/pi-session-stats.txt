@@ -20,6 +20,9 @@
     ],
     "model_ms": 119530,
     "tool_ms": 400,
+    "last_stop": "stop",
+    "last_output": 900,
+    "last_reasoning": 0,
     "errors": 1,
     "error_ms": 120000,
     "last_error": "504 Gateway Time-out"

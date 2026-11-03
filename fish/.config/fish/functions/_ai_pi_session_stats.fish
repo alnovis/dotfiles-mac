@@ -32,6 +32,11 @@ function _ai_pi_session_stats --description "Usage JSON of one pi session file (
                 tools: ($calls | group_by(.) | map({name: .[0], count: length}) | sort_by(-.count, .name)),
                 model_ms: ms($ok[]),
                 tool_ms: ms($res[]),
+                # How the last answered turn ended: "length" is max_tokens reached — the
+                # cause of an empty answer only then, not whenever the answer is empty
+                last_stop: ($ok | last | .stopReason),
+                last_output: ($ok | last | .usage.output // 0),
+                last_reasoning: ($ok | last | .usage.reasoning // 0),
                 errors: ($err | length),
                 error_ms: ms($err[]),
                 last_error: (if $e == null then null

@@ -646,6 +646,23 @@ either the provider (few turns, long model time, failed requests) or the agent's
 turns and tool calls). The prompt counts every turn: each one sends the whole context again.
 opencode and claude get the prompt-size estimate.
 
+What else the run line says about an agentic run:
+- `no tool calls: answered from the prompt alone, the repository was not read` — a done run
+  that read nothing. On the eval such runs answered from the diff and missed what only the
+  code around it shows; without the note they looked like any other.
+- An empty answer is a failure, and its cause is named only when the session shows it:
+  `no answer: max_tokens reached` (the last turn stopped on the limit — the hint gives its
+  output and reasoning tokens), `no answer: the model wrote a tool call as text` (the runner
+  could not parse the model's calls), else `the model ended its turn empty (stop: …)`. The
+  run's stats are printed under the line either way.
+- The answer is cleaned of a model's leaked control tokens: after north-mini's
+  `<|END_THINKING|><|START_TEXT|>` only the text after the last `<|START_TEXT|>` is kept (one
+  run held three drafts and its reasoning before it, numbered into 179 "findings").
+
+In the Saved block, `verify runs … 3/3 answered, 1 with numbered verdicts` says when a run
+answered but gave the vote nothing: verdicts written without their `[Fn]`, which leaves every
+finding "only 1 of 3 runs judged it".
+
 Plain text, not an HTML comment: the reports are read in a terminal far more often than
 rendered. Comparing toolkit versions or models is a matter of reading the files
 (`grep -h '^Run: ' *.md`).

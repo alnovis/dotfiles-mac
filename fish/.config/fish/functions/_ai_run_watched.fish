@@ -114,16 +114,43 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         end
     end
 
-    # Success with nothing written is a failure: a reasoning model can spend the whole
-    # max_tokens thinking and end without an answer, and the runner still exits 0.
+    # An agentic answer can carry the model's control tokens, or be a tool call the runner did
+    # not parse, written as text: cleaned, or taken for no answer (_ai_answer_clean)
+    set -l textual_call 0
+    if test "$rc" -eq 0; and test $agentic -eq 1
+        _ai_answer_clean $outfile
+        if test $status -eq 3
+            set textual_call 1
+            : >$outfile
+        end
+    end
+
+    # Success with nothing written is a failure, and the runner still exits 0. Its cause is
+    # named only when the session shows it: max_tokens reached ("length") — a reasoning model
+    # can think the whole budget away — or a tool call written as text. Otherwise the stats
+    # of the run (turns, tokens, reasoning) are under the line to tell the cases apart.
     # The reason of a failure, one line, for the caller's final summary — it scrolls away
     # above otherwise: the last error-looking line of the log, else its last line
     set -g __ai_last_failure ""
     if test "$rc" -eq 0; and not test -s $outfile
         set rc 1
-        set -g __ai_last_failure "the model returned no answer (max_tokens spent thinking?)"
+        set -l stop (jq -r '.agent.last_stop // empty' $ufile 2>/dev/null)
+        set -l hint
+        if test $textual_call -eq 1
+            set -g __ai_last_failure "no answer: the model wrote a tool call as text"
+            set hint "The runner could not parse this model's tool calls (seen with ollama's /v1 parser for some models): pick another model, or run it without --agentic."
+        else if test "$stop" = length
+            set -g __ai_last_failure "no answer: max_tokens reached"
+            set hint "The last turn hit max_tokens"(jq -r '" (\(.agent.last_output) output tokens, reasoning \(.agent.last_reasoning))"' $ufile 2>/dev/null)": raise maxTokens for the model in the runner config, or turn its thinking down."
+        else if test -n "$stop"
+            set -g __ai_last_failure "no answer: the model ended its turn empty (stop: $stop)"
+        else
+            set -g __ai_last_failure "the model returned no answer"
+            test $agentic -eq 0; and set hint "A reasoning model may have used up max_tokens thinking: raise maxTokens for the model, rerun, or pick another model."
+        end
         _ai_run_watched_row "$name" FAILED $total $__ai_last_failure >&2
-        printf '    A reasoning model may have used up max_tokens thinking: raise maxTokens for the model in the runner config, rerun, or pick another model.\n' >&2
+        test -s $ufile; and printf '    %s\n' (_ai_run_stats --row $ufile $tokens $thinking_bytes) >&2
+        test -n "$hint"; and printf '    %s\n' $hint >&2
         test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
     else if test "$rc" -ne 0
         set -l why (_ai_failure_reason <$errlog)
@@ -135,6 +162,14 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         set -l file $dest
         test "$dest" = "(terminal)"; and set file ""
         _ai_run_watched_row "$name" done $total (_ai_run_stats --row $ufile $tokens $thinking_bytes) $file >&2
+        # An agentic run that read nothing looks like any other done: on the eval such runs
+        # answered from the diff alone and missed what only the code around it shows
+        set -l calls (jq -r '.agent.tool_calls // empty' $ufile 2>/dev/null)
+        if test $agentic -eq 1; and test "$calls" = 0
+            set_color yellow >&2
+            printf '    no tool calls: answered from the prompt alone, the repository was not read\n' >&2
+            set_color normal >&2
+        end
         # What the agentic runner printed besides its answer (a warning), under its line
         test $agentic -eq 1; and test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
         test -n "$sidecar"; and test -s "$sidecar"; and printf '    reasoning  %s\n' $sidecar >&2

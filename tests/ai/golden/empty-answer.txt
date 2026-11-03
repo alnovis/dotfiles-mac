@@ -1,0 +1,30 @@
+== max_tokens reached
+  run 1/1  FAILED     Ns  no answer: max_tokens reached
+      2 turns    1 tools  model    Ns     9k/32.8k tokens
+    The last turn hit max_tokens (32768 output tokens, reasoning 32000): raise maxTokens for the model in the runner config, or turn its thinking down.
+status 1; why: no answer: max_tokens reached
+== an empty last turn
+  run 1/1  FAILED     Ns  no answer: the model ended its turn empty (stop: stop)
+      1 turns    0 tools  model    Ns        9k/10 tokens
+status 1; why: no answer: the model ended its turn empty (stop: stop)
+== a tool call as text
+  run 1/1  FAILED     Ns  no answer: the model wrote a tool call as text
+     12 turns   11 tools  model    Ns        9k/90 tokens
+    The runner could not parse this model's tool calls (seen with ollama's /v1 parser for some models): pick another model, or run it without --agentic.
+status 1; why: no answer: the model wrote a tool call as text
+== an answer with no tool calls
+  run 1/1  done       Ns    1 turns    0 tools  model    0s    8.1k/1.7k tokens  ../ea.md
+    no tool calls: answered from the prompt alone, the repository was not read
+status 0; why: 
+== a leaked answer, cleaned
+  run 1/1  done       Ns    3 turns    2 tools  model    0s       9k/900 tokens  ../ea.md
+status 0; why: 
+== the saved answer
+## Summary
+The answer.
+
+## Critical issues
+- `a.scala:3` — a finding.
+
+---
+[exit 0]

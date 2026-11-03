@@ -1,0 +1,22 @@
+== leak: status 0
+## Summary
+The answer.
+
+## Critical issues
+- `a.scala:3` — a finding.
+== action: status 3
+I do not see a server directory. Let me look.<|END_THINKING|><|START_ACTION|>[
+    {"tool_call_id": "11", "tool_name": "find", "parameters": {"pattern": "**/MainGraphTest.scala"}}
+]<|END_ACTION|>
+== json-calls: status 3
+{"name": "read", "arguments": {"path": "/etc/hosts"}}
+
+{"name": "read", "arguments": {"path": "a.txt"}}
+== plain: status 0
+## Summary
+Plain answer with a <tag> and `{"name": "x"}` in code.
+
+## Critical issues
+- `b.scala:1` — a finding.
+plain: byte for byte
+[exit 0]

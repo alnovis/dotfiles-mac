@@ -243,7 +243,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         if test -s "$ver_target"
             _ai_ui_kv verify $verify_out (_ai_verdict_counts $ver_target)
             if set -q __ai_verify_run_files[1]
-                _ai_ui_kv "verify runs" $__ai_verify_run_files[1] (count $__ai_verify_run_files)"/$vruns answered, majority above"
+                _ai_ui_kv "verify runs" $__ai_verify_run_files[1] (_ai_verify_runs_note $vruns $__ai_verify_run_files)
                 for f in $__ai_verify_run_files[2..]
                     _ai_ui_kv "" $f
                 end

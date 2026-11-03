@@ -209,7 +209,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     _ai_ui_heading Saved
     _ai_ui_kv verify $verify_out (_ai_verdict_counts $verify_out)
     if set -q __ai_verify_run_files[1]
-        _ai_ui_kv "verify runs" $__ai_verify_run_files[1] (count $__ai_verify_run_files)"/$vruns answered, majority above"
+        _ai_ui_kv "verify runs" $__ai_verify_run_files[1] (_ai_verify_runs_note $vruns $__ai_verify_run_files)
         for f in $__ai_verify_run_files[2..]
             _ai_ui_kv "" $f
         end
