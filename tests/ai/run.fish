@@ -35,6 +35,13 @@ mkdir -p $sb/home/.config/fish $sb/home/.config/ai $sb/out
 ln -s $root/fish/.config/fish/prompts $sb/home/.config/fish/prompts
 mkdir -p $sb/home/.agents
 ln -s $root/agents/.agents/skills $sb/home/.agents/skills
+# The pi extension of unattended runs, and a repository for its path checks: a file inside,
+# a symlink that leads out
+ln -s $root/fish/.config/fish/pi $sb/home/.config/fish/pi
+cp $root/tests/ai/pi-guard.test.mjs $sb/pi-guard.test.mjs
+mkdir -p $sb/guard-repo/src $sb/guard-elsewhere
+touch $sb/guard-repo/src/a.scala
+ln -s $sb/guard-elsewhere $sb/guard-repo/link-out
 # model= is shadowed by AI_DEFAULT_MODEL in every case except those that unset it
 printf '%s\n' provider=ollama model=config-model review_model=review-model commit_model=commit-model >$sb/home/.config/ai/config
 # A HOME with no ai config at all, for "nothing configured" cases
@@ -138,6 +145,7 @@ set -g golden_cases \
     'verify-vote|fixture|_ai_verify_vote 3 ../vote/verify.run1.md ../vote/verify.run2.md ../vote/verify.run3.md >../voted.md; cat ../voted.md; echo "== counts: "(_ai_verdict_counts ../voted.md); functions -q _ai_review_comments; _ai_review_comments_md_refuted ../voted.md; echo "== one run of three answered: everything uncertain"; _ai_verify_vote 3 ../vote/verify.run1.md | string match -e -r "^- |^Verify:"' \
     'verify-runs|fixture|echo "== review + verify"; ai review --last 1 --verify-runs 3 -o ../vr-out.md --dry-run 2>&1 | string match -e -r "^  verify +on|^verify runs:"; echo "== verify-only"; ai review --verify-only ../review.md --provider ollama --verify-runs 3 --dry-run 2>&1 | string match -e -r "^  runs "; echo "== bad value"; ai review --verify-only ../review.md --provider ollama --verify-runs 0 --dry-run; echo "== config"; mkdir -p .ai; cp .ai/config ../cfg2.bak 2>/dev/null; or rm -f ../cfg2.bak; echo verify_runs@ollama=3 >.ai/config; ai config status 2>&1 | string match -e -r "^ +verify runs"; rm -f .ai/config; test -f ../cfg2.bak; and mv ../cfg2.bak .ai/config' \
     'review-numbering|fixture|_ai_review_number_findings <../review-shapes.md >../shapes-1.md; cat ../shapes-1.md; echo "== numbering twice changes nothing"; _ai_review_number_findings <../shapes-1.md | diff -q - ../shapes-1.md; and echo same' \
+    'pi-guard|fixture|node ../pi-guard.test.mjs ~/.config/fish/pi/ai-guard.ts ../guard-repo' \
     'runner-errors|fixture|echo "== a 503 page"; _ai_runner_errors <../runner-503.txt; echo "reason: "(_ai_failure_reason <../runner-503.txt); echo "== a coloured run line"; echo "reason: "(_ai_failure_reason <../runner-colored.txt)' \
     'verify-only-numbers|fixture|cp ../review-shapes.md ../vo.md; ai review --verify-only ../vo.md --provider testcloud >/dev/null 2>&1; echo "numbered in the review file: "(grep -c "\[F[0-9]" ../vo.md); cp ../vo.md ../vo-1.md; ai review --verify-only ../vo.md --provider testcloud >/dev/null 2>&1; cmp -s ../vo.md ../vo-1.md; and echo "a re-verify leaves the numbers as they are"; echo "== dry-run writes nothing"; cp ../review-shapes.md ../vo-dry.md; ai review --verify-only ../vo-dry.md --provider ollama --dry-run >/dev/null 2>&1; cmp -s ../vo-dry.md ../review-shapes.md; and echo unchanged' \
     'pi-session-stats|fixture|_ai_pi_session_stats ../pi-session.jsonl; echo "== no model answer: nothing"; head -3 ../pi-session.jsonl >../pi-empty.jsonl; _ai_pi_session_stats ../pi-empty.jsonl; echo "rc $status"; echo "== the footer of an agentic run"; function _ai_run; argparse -i "usage-output=" -- $argv; _ai_pi_session_stats ../pi-session.jsonl >$_flag_usage_output; echo answer; end; echo prompt | _ai_run_watched --label "[1/3] Review" --output ../pi-footer.md -- --agentic --provider x 2>../pi-footer.err; string replace -r "done +[0-9]+s" "done <t>" <../pi-footer.err; string replace -r " \\| [0-9]+s \\| " " | Ns | " <../pi-footer.md; echo "== no usage: the estimate"; function _ai_run; echo answer; end; echo prompt | _ai_run_watched --heading --label "[1/1] Review - testcloud - cloud-model" --output ../est-footer.md -- --agentic --provider x 2>&1 | string replace -r "done +[0-9]+s" "done <t>"; string replace -r " \\| [0-9]+s \\| " " | Ns | " <../est-footer.md' \

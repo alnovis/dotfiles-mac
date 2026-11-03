@@ -54,6 +54,22 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
     end
 
     set -q _flag_skill; and set -a args --append-system-prompt $_flag_skill
+    # An unattended read-only run (ai review --agentic, verify) gets the ai-guard extension:
+    # reads only inside the working directory, a turn and a time budget that end in an answer
+    # (pi/ai-guard.ts). Config: agent_max_turns (default 30), agent_timeout seconds (900); 0
+    # turns a limit off. Not in a session a person watches.
+    set -l guard_env
+    if not set -q _flag_interactive; and contains -- "$_flag_tools" read ''
+        set -l guard $__fish_config_dir/pi/ai-guard.ts
+        if test -f $guard
+            set -a args --extension $guard
+            # Only a value that is set: an empty one would read as 0, the limit off
+            set -l v (_ai_config_read agent_max_turns)
+            test -n "$v"; and set -a guard_env AI_GUARD_MAX_TURNS=$v
+            set v (_ai_config_read agent_timeout)
+            test -n "$v"; and set -a guard_env AI_GUARD_TIMEOUT=$v
+        end
+    end
     set -l sdir
     if set -q _flag_usage_output; and not set -q _flag_interactive
         set sdir (mktemp -d)
@@ -67,7 +83,7 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
         set -q _flag_resume; and set -a args --resume
         pi $args $argv
     else
-        pi -p $args $argv
+        env $guard_env pi -p $args $argv
         set -l rc $status
         if test -n "$sdir"
             set -l session (find $sdir -name '*.jsonl' -type f | head -1)

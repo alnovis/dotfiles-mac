@@ -568,8 +568,19 @@ a run has and has not: the rules and the findings are already in the request (no
 for), the tools are the read-only file tools (no shell, no git; the old code is the diff's `-`
 lines), and nothing outside the repository is read. Without it, models spent turns on `shell`
 calls that do not exist and grepped the whole disk for `meta-verify.md` — one read another
-eval's results on the way. The tools themselves take any path; the skill is an instruction,
-not a sandbox.
+eval's results on the way.
+
+On pi the instruction is also enforced: an unattended read-only run loads the extension
+`~/.config/fish/pi/ai-guard.ts` (`_ai_agent_pi`, not in `ai code` / `ai chat`):
+- `read`, `grep`, `find`, `ls` reach only the working directory (symlinks and `..` resolved);
+  a path outside is refused with the reason, and the model goes on;
+- after `agent_max_turns` turns (default 30) or `agent_timeout` seconds (default 900) the tools
+  are switched off and the model is told to answer from what it has read. A bare cap (the old
+  native loop) ended a wandering run with no answer at all. Still no answer three turns later,
+  or 180 s after the timeout (a provider that hangs), the run is aborted.
+
+claude (`Read`, `Grep`, `Glob`) and opencode have no such guard; for them the skill's
+instruction is all there is.
 
 | Review provider | Runs on |
 |---|---|
@@ -985,6 +996,8 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `<task>_model` | `ai models use T MODEL` | Model for one task, used only while the provider in use is the task's provider |
 | `model` | `ai models use MODEL` | Default ollama model. No fallback if unset |
 | `agent` | by hand | Runner for non-claude providers: `pi` (default) or `opencode` |
+| `agent_max_turns` | by hand | Unattended read-only pi runs (agentic review, verify): turns before the tools are switched off and the model must answer (default 30; 0 = no limit) |
+| `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); 180 s later the run is aborted (0 = no limit) |
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |

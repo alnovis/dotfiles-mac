@@ -1,0 +1,25 @@
+== paths
+read {"path":"src/a.scala"} -> allowed
+read {"path":"REPO/src/a.scala"} -> allowed
+grep {"pattern":"RouteStage"} -> allowed
+find {"pattern":"**/Graph.scala"} -> allowed
+read {"path":"../s1/server/RouteStage.scala"} -> blocked: ../s1/server/RouteStage.scala is outside the repository under review (REPO): only files inside it may be read
+read {"path":"/etc/hosts"} -> blocked: /etc/hosts is outside the repository under review (REPO): only files inside it may be read
+grep {"pattern":"meta-verify","path":"~/work"} -> blocked: ~/work is outside the repository under review (REPO): only files inside it may be read
+find {"pattern":"/Users/someone/**/cases.md"} -> blocked: /Users/someone/ is outside the repository under review (REPO): only files inside it may be read
+ls {"path":"link-out"} -> blocked: link-out is outside the repository under review (REPO): only files inside it may be read
+bash {"command":"git log"} -> allowed
+== turn budget 3
+turn 1: tools [read,grep,find,ls] -
+turn 2: tools [read,grep,find,ls] -
+turn 3: tools [] told: the turn budget (3) is spent. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.
+  a call after it -> blocked: the turn budget (3) is spent: no more tools — write the final answer now from what you have read
+turn 4: tools [] -
+turn 5: tools [] -
+turn 6: tools [] - ABORTED
+== time budget
+before: tools [read,grep,find,ls]
+after: tools []
+a call -> blocked: the time budget (0.05s) is spent: no more tools — write the final answer now from what you have read
+turn 1: told: the time budget (0.05s) is spent. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.
+[exit 0]
