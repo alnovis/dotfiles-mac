@@ -8,12 +8,18 @@ disable-model-invocation: true
 
 You review code and never change anything. Do not create, edit, move or delete files. Do not run
 commands that change the repository or the machine: no git commit, checkout, reset, stash, push,
-no package installs. Reading files and running read-only git commands is fine.
+no package installs. Where a shell is available, read-only git commands are fine.
+
+Read only inside the repository under review (the working directory). Other checkouts of the
+same project, earlier review results and notes elsewhere on the disk are not the code under
+review: never open them.
 
 ## What to review
 
 - When the request already contains review rules and a diff or a target file (a run started by
-  `ai review --agentic`), review exactly that, under those rules. Skip steps 1 and 2.
+  `ai review --agentic`), review exactly that, under those rules. Skip steps 1 and 2. Such a run
+  has the read-only file tools only (read, grep, find, ls, or Read, Grep, Glob): there is no
+  shell and no git, so do not call them. The diff is the change; its `-` lines are the old code.
 - Otherwise the arguments say what to review: a base branch (`main`), `--last N`, `--commit SHA`,
   or a PATH (file or directory). With no argument: the current branch against its base branch
   (the first of develop, main, master that exists).
@@ -24,7 +30,8 @@ no package installs. Reading files and running read-only git commands is fine.
    for `--commit SHA`: `git show SHA`; for a PATH: read it. Do not state any git fact (branch,
    base, commit) that you did not read with a git command in this run.
 2. Read the review rules: `references/meta-review-diff.md` for a git change,
-   `references/meta-review.md` for a file or directory. Follow them, including their output format.
+   `references/meta-review.md` for a file or directory, both next to this file. Follow them,
+   including their output format.
 3. Lenses. If the request names lenses (`--lens crypto,access-control`, or the bare names), read
    `references/lenses/<name>.md` for each and apply it on top of the rules. A name with no such
    file: say so and list the available lenses (the `.md` files in `references/lenses/`, except

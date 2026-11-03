@@ -563,7 +563,13 @@ in the diff.
 
 `--agentic` switches the profile to `read`: the executor explores the repo read-only, and only the
 minimum is embedded (diff only in git mode; the file alone for a file target; nothing for a
-directory). The `ai-review` skill (verify: `ai-verify`) is injected.
+directory). The `ai-review` skill (verify: `ai-verify`) is injected. It tells the model what such
+a run has and has not: the rules and the findings are already in the request (no file to look
+for), the tools are the read-only file tools (no shell, no git; the old code is the diff's `-`
+lines), and nothing outside the repository is read. Without it, models spent turns on `shell`
+calls that do not exist and grepped the whole disk for `meta-verify.md` — one read another
+eval's results on the way. The tools themselves take any path; the skill is an instruction,
+not a sandbox.
 
 | Review provider | Runs on |
 |---|---|
