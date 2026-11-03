@@ -646,20 +646,27 @@ either the provider (few turns, long model time, failed requests) or the agent's
 turns and tool calls). The prompt counts every turn: each one sends the whole context again.
 opencode and claude get the prompt-size estimate.
 
-While an agentic pi run works, a live line takes its place on a terminal: its turn, the time,
-and its last tool call, read from pi's session as it is written —
+While an agentic pi run works, a live line takes its place on a terminal, read from pi's
+session as it is written — the fields of the old native loop's line, and the last tool call:
 
 ```
-  turn 8 · 4m 12s · read RouteStage.scala
-  turn 8 · 11m 42s · grep isWelcomeDone · no answer for 6m 50s
+  ollama · qwen3.8:27b | turn 9 | model… | ctx 57k/131k | 4m 12s | read RouteStage.scala
+  ollama · qwen3.8:27b | turn 8 | grep isWelcomeDone… | ctx 64k/131k | 11m 42s | no answer for 6m 50s
 ```
 
-After 5 minutes without a new session entry it says so in yellow: a provider that hangs no
-longer looks like a silent heading for half an hour. Parallel runs have no terminal of their
-own; their stage line carries each running run's turn (`1/3 done · 3m 10s · run 2: turn 9 ·
-run 3: turn 4`). The line is drawn by a process of its own (`_ai_run_progress`) beside the run
-— the model stays in the foreground so Ctrl-C reaches it — and it ends with the pi process,
-on Ctrl-C too. opencode and claude keep the bare heading.
+The phase is `model…` while the model answers, or the tool call while its tools run. `ctx` is
+the last turn's prompt (each turn sends the whole context again) over the model's window from
+pi's config: how close the run is to being cut. On a narrow terminal the last tool goes first,
+then the phase is cut, then the model's name; the turn, the context and the time stay. After
+5 minutes without a new session entry it says so in yellow: a provider that hangs no longer
+looks like a silent heading for half an hour. Parallel runs have no terminal of their own;
+their stage line carries each running run's turn (`1/3 done · 3m 10s · run 2: turn 9 ·
+run 3: turn 4`).
+
+The line is drawn by a process of its own (`_ai_run_progress`) beside the run — the model stays
+in the foreground so Ctrl-C reaches it — and follows pi by the pid `_ai_agent_pi` leaves next
+to the session (pi rewrites its command line, so it cannot be found by it); it ends with the
+pi process, on Ctrl-C too. opencode and claude keep the bare heading.
 
 What else the run line says about an agentic run:
 - `no tool calls: answered from the prompt alone, the repository was not read` — a done run

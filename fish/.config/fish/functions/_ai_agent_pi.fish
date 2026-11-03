@@ -91,7 +91,14 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
         set -q _flag_resume; and set -a args --resume
         pi $args $argv
     else
-        env $guard_env pi -p $args $argv
+        if test $own_sdir -eq 0
+            # pi's pid in the caller's dir, for its live line to know when the run is gone:
+            # pi rewrites its command line (ps shows "pi"), so it cannot be found by it.
+            # sh writes its own pid and execs pi, which keeps that pid.
+            env $guard_env sh -c 'echo $$ >"$0/pid"; exec pi "$@"' $sdir -p $args $argv
+        else
+            env $guard_env pi -p $args $argv
+        end
         set -l rc $status
         if test -n "$sdir"
             set -l session (find $sdir -name '*.jsonl' -type f | head -1)
