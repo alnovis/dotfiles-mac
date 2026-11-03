@@ -64,10 +64,10 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
 
     set -l rc
     if test $agentic -eq 1
-        # Agentic: the runner (pi / opencode / claude) may print its own progress on
-        # stderr — leave it visible (do NOT redirect it). Its final answer (stdout) is
-        # redirected to the file.
-        _ai_run $run_args --usage-output $ufile <$pfile >$outfile
+        # Agentic: the answer (stdout) goes to the file, the runner's stderr to the log,
+        # shown after the run line. Left on the terminal, an error came before the run
+        # line, and the line said "FAILED exit 1": the reason was not in the log it reads.
+        _ai_run $run_args --usage-output $ufile <$pfile >$outfile 2>$errlog
         set rc $status
     else
         # Non-agentic single call: `read` has no timeout, so update only as lines
@@ -124,17 +124,19 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         set -g __ai_last_failure "the model returned no answer (max_tokens spent thinking?)"
         _ai_run_watched_row "$name" FAILED $total $__ai_last_failure >&2
         printf '    A reasoning model may have used up max_tokens thinking: raise maxTokens for the model in the runner config, rerun, or pick another model.\n' >&2
-        test -s $errlog; and string replace -r '^' '    ' <$errlog >&2
+        test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
     else if test "$rc" -ne 0
         set -l why (_ai_failure_reason <$errlog)
         test -n "$why"; or set why "exit $rc"
         set -g __ai_last_failure $why
         _ai_run_watched_row "$name" FAILED $total $why >&2
-        test -s $errlog; and string replace -r '^' '    ' <$errlog >&2
+        test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
     else
         set -l file $dest
         test "$dest" = "(terminal)"; and set file ""
         _ai_run_watched_row "$name" done $total (_ai_run_stats --row $ufile $tokens $thinking_bytes) $file >&2
+        # What the agentic runner printed besides its answer (a warning), under its line
+        test $agentic -eq 1; and test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
         test -n "$sidecar"; and test -s "$sidecar"; and printf '    reasoning  %s\n' $sidecar >&2
         # The report's last line, "Run: …": comparing toolkit versions or models later needs
         # nothing but the files (grep -h '^Run: '). Plain text: the reports are read in a

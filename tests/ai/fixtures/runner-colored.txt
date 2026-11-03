@@ -1,0 +1,2 @@
+  run 3/3  [31mFAILED[0m    11s  the model returned no answer (max_tokens spent thinking?)
+    A reasoning model may have used up max_tokens thinking: raise maxTokens for the model in the runner config, rerun, or pick another model.

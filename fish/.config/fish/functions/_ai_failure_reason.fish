@@ -4,8 +4,15 @@ function _ai_failure_reason --description "Why a run failed, one line, from its 
     # its own — its <why> is the reason only when the log has no error line besides it.
     # Prints nothing for an empty log: the caller words its own fallback.
     # read, not (string trim): a command substitution does not get the function's stdin
-    set -l lines
+    set -l raw
     while read -l line
+        set -a raw $line
+    end
+    set -q raw[1]; or return 0
+    # No ANSI codes (a coloured "FAILED" escaped the run-line pattern, and the reason became
+    # the hint below it), an HTML error page as "503 Service Temporarily Unavailable"
+    set -l lines
+    for line in (printf '%s\n' $raw | _ai_runner_errors)
         set line (string trim -- $line)
         test -n "$line"; and set -a lines $line
     end

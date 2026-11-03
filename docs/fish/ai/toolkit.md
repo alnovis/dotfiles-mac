@@ -382,7 +382,10 @@ bullet or list item, across all runs of a joined review (no model;
 `_ai_review_number_findings`). A bullet indented right under a section heading
 (`2. **Critical issues**`, then `   - …`) is numbered too; a sub-bullet of a finding is not.
 A plain `3. Important issues` is a section heading when it is the section name alone (then
-`:` or ` — …`); `1. Tests are missing for X` stays a finding.
+`:`, ` — …` or a bare ` —`); `1. Tests are missing for X` stays a finding. A finding written
+as a heading under a section (`### 1. Missing handler`) gets the number, and the bullets under
+it are its details, not findings. Lines inside a ```` ``` ```` block are code and never numbered
+(a removed diff line `- def …` is not a finding).
 Verify keys each verdict by its number, so a verdict matches its
 finding without comparing reworded titles, and several verify runs can be joined by it.
 `--verify-only` writes the numbers into the review file it is given, so a verdict `[F3]` is
@@ -396,7 +399,7 @@ a held-back tally. A verdict on each of them only inflated the count: on one rev
 CONFIRMED were "unused import", "missing space", "private is safe". Every other section is
 numbered — Critical, Important, Tests, Removed code (it holds real problems: a deleted config
 section left its keys dead) and any section the model named its own way (`## Bugs`). A review
-with no numbers at all (findings written as headings) is judged by titles, as before.
+with no numbers at all is judged by titles, as before.
 
 Output shape (one verdict per numbered finding, then a tally):
 
@@ -461,7 +464,9 @@ review ×N  →  joined under "## Run K/N"  →  one verify over all of it  → 
   The final summary names each failed run with its reason, taken from the runner's last
   error line — it has scrolled away above by then:
   `failed  run 2/3: Response was truncated: the model reached its output token limit.`
-  The same holds for verify runs.
+  The same holds for verify runs. The runner's stderr is shown under the run line, without
+  colour codes, and a gateway's HTML error page is one line, its status and title
+  (`503 Service Temporarily Unavailable`), in the run line and in the summary alike.
 - With `--comments`, the extraction merges the same problem reported by several runs into one
   comment and counts it: `"seen": 2, "runs": 3` in the JSON, `found by 2 of 3 runs` in the
   markdown. Two different problems on one line stay two comments.

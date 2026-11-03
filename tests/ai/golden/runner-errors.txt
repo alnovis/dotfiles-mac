@@ -1,0 +1,6 @@
+== a 503 page
+503 Service Temporarily Unavailable
+reason: 503 Service Temporarily Unavailable
+== a coloured run line
+reason: the model returned no answer (max_tokens spent thinking?)
+[exit 0]

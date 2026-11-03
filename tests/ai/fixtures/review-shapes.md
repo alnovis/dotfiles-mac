@@ -62,4 +62,26 @@
 6. Nits:
 - `q.fish:1` — a nit under "6. Nits:" is not numbered.
 
+## Run 4/4
+
+### Critical issues
+
+### 1. Missing handler — a finding written as a heading gets the number
+- Consequence: its bullets are details of that finding, not findings.
+- Evidence: and so is this one.
+
+```diff
+- def removed(line: Int) = {
++ def added() = {
+```
+
+### 2. Second heading finding
+* `s.fish:2` — a star detail under the second heading.
+
+3. Important issues —
+- `u.fish:3` — under "3. Important issues —" with a bare dash.
+
+6. Nits —
+- `v.fish:4` — a nit under "6. Nits —" is not numbered.
+
 Plain text outside any bullet stays as it is.
