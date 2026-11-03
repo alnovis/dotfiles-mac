@@ -71,8 +71,16 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
         end
     end
     set -l sdir
+    # AI_PI_SESSION_DIR: the caller's dir for the session, read live for its progress line
+    # (_ai_run_progress) — kept for the caller to remove; otherwise a temp dir of our own
+    set -l own_sdir 1
     if set -q _flag_usage_output; and not set -q _flag_interactive
-        set sdir (mktemp -d)
+        if set -q AI_PI_SESSION_DIR; and test -d "$AI_PI_SESSION_DIR"
+            set sdir $AI_PI_SESSION_DIR
+            set own_sdir 0
+        else
+            set sdir (mktemp -d)
+        end
         set -a args --session-dir $sdir
     else if set -q _flag_no_session
         set -a args --no-session
@@ -88,7 +96,7 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
         if test -n "$sdir"
             set -l session (find $sdir -name '*.jsonl' -type f | head -1)
             test -n "$session"; and _ai_pi_session_stats $session >$_flag_usage_output
-            rm -rf $sdir
+            test $own_sdir -eq 1; and rm -rf $sdir
         end
         return $rc
     end

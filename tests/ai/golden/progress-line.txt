@@ -1,0 +1,6 @@
+session: 4	read b.scala
+  run 2/3  turn 4 · 1m 42s · read RouteStage.scala
+  turn 8 · 11m 42s · grep isWelcomeDone · no answer for 6m 50s
+  working… · 45s
+  run 1/3  turn 13 · 1m 40s · read a/very/…
+[exit 0]

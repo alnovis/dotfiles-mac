@@ -67,8 +67,29 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         # Agentic: the answer (stdout) goes to the file, the runner's stderr to the log,
         # shown after the run line. Left on the terminal, an error came before the run
         # line, and the line said "FAILED exit 1": the reason was not in the log it reads.
+        # On a terminal a live line follows the run — turn, last tool, time, a quiet
+        # provider in yellow — read from the pi session as it is written (_ai_run_progress,
+        # its own process: the model stays in the foreground for Ctrl-C). Parallel runs have
+        # no terminal; their stage line does the same from the dir their caller gives them.
+        set -l sdir ""
+        set -l poller ""
+        if test $tty -eq 1; and not set -q AI_PI_SESSION_DIR
+            set sdir (mktemp -d)
+            set -l width $COLUMNS
+            test -n "$width"; or set width 80
+            set -l setfp "set -g fish_function_path "(string escape -- $fish_function_path | string join ' ')
+            fish --no-config -c "$setfp; _ai_run_progress "(string escape -- $sdir $t0 "$name" $width | string join ' ') </dev/null &
+            set poller $last_pid
+        end
+        test -n "$sdir"; and set -lx AI_PI_SESSION_DIR $sdir
         _ai_run $run_args --usage-output $ufile <$pfile >$outfile 2>$errlog
         set rc $status
+        if test -n "$poller"
+            kill $poller 2>/dev/null
+            wait $poller 2>/dev/null
+            printf '\r\033[K' >&2
+        end
+        test -n "$sdir"; and rm -rf $sdir
     else
         # Non-agentic single call: `read` has no timeout, so update only as lines
         # arrive; print an honest prefill estimate, then a live line count.

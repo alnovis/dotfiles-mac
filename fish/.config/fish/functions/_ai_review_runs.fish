@@ -42,10 +42,13 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
         set -l setfp "set -g fish_function_path "(string escape -- $fish_function_path | string join ' ')
         set -l logs
         set -l pids
+        # Each run's pi session in a dir of ours, read for the stage's live line
+        set -l sdirs
         for k in (seq $n)
             set -l log (mktemp)
             set -a logs $log
-            set -l cmd "$setfp; _ai_run_watched --label "(string escape -- "$_flag_label run $k/$n")" --row "(string escape -- "run $k/$n")" --output "(string escape -- $files[$k])" --dest "(string escape -- $files[$k])" -- "(string escape -- $run_args | string join ' ')
+            set -a sdirs (mktemp -d)
+            set -l cmd "$setfp; set -gx AI_PI_SESSION_DIR "(string escape -- $sdirs[$k])"; _ai_run_watched --label "(string escape -- "$_flag_label run $k/$n")" --row "(string escape -- "run $k/$n")" --output "(string escape -- $files[$k])" --dest "(string escape -- $files[$k])" -- "(string escape -- $run_args | string join ' ')
             fish --no-config -c $cmd <$_flag_prompt_file 2>$log &
             set -a pids $last_pid
         end
@@ -71,11 +74,24 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
                 set -e left[(contains -i -- $k $left)]
             end
             set -q left[1]; or break
-            test $tty -eq 1; and printf '\r\033[K  %d/%d done, %ds' \
-                (math $n - (count $left)) $n (math (date +%s) - $t0) >&2
+            if test $tty -eq 1
+                # "1/3 done · 3m 10s · run 2: turn 9 · run 3: turn 4, no answer for 6m"
+                set -l parts (math $n - (count $left))"/$n done" (_ai_ui_duration (math (date +%s) - $t0))
+                for k in $left
+                    set -l p (_ai_session_progress $sdirs[$k] | string split \t)
+                    set -q p[1]; or continue
+                    set -l part "run $k: turn "(math $p[1] + 1)
+                    test "$p[3]" -ge 300; and set part "$part, no answer for "(_ai_ui_duration $p[3])
+                    set -a parts $part
+                end
+                set -l width $COLUMNS
+                test -n "$width"; or set width 80
+                printf '\r\033[K  %s' (string shorten -m (math $width - 3) -- (string join ' · ' -- $parts)) >&2
+            end
             sleep 1
         end
         wait
+        rm -rf $sdirs
     else
         _ai_ui_heading $title "$n runs one after another (Ctrl-C stops them)" >&2
         for k in (seq $n)
