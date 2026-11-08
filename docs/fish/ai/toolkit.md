@@ -600,7 +600,7 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
    - `review.comments.json` — for publishing, one shape for both platforms:
 
      ```json
-     {"base_sha": "…", "head_sha": "…", "start_sha": "…", "runs": 3,
+     {"base_sha": "…", "head_sha": "…", "start_sha": "…", "runs": 3, "repo": {"root": "…", "origin": "…"},
       "comments": [{"findings": ["F2"], "path": "src/…/WhitelistOrgCache.java", "side": "new", "line": 36,
                     "line_cited": 24, "anchored": true, "anchored_by": "quote", "file_level": false,
                     "code": "        localCache = Stream.concat(…)", "quote": "localCache = Stream.concat(…)",
@@ -860,8 +860,13 @@ log is not written twice. `--dry-run` prints what it would log.
 positives it let through and the real bugs it refuted; the last false positives with their
 reasons and the last refuted real bugs, the raw material for `lessons.md`.
 
-**Where.** Per project (the git repository of the current directory) and outside it, so nothing
-is committed by accident: `~/.local/share/ai/lessons/<origin>/` (`$XDG_DATA_HOME` if set),
+**Which project.** `mark` runs from anywhere: the comments stage records the repository it
+reviewed in `<review>.comments.json` (`"repo": {"root", "origin"}`), and `mark` logs to that
+project; when the repository is gone (a removed worktree) its origin is enough. A file without
+it (made before `ai lessons`) goes by the repository it sits in, else the current directory's.
+`stats`, `path` and `edit` take the current directory's repository.
+
+**Where.** Per project and outside its repository, so nothing is committed by accident: `~/.local/share/ai/lessons/<origin>/` (`$XDG_DATA_HOME` if set),
 the origin URL without scheme, user and `.git` (`git@host:g/p.git` and `https://host/g/p` are
 both `host/g/p`): every clone and worktree shares it. No origin: `local/<repository path>`.
 Config key `lessons_dir` (the project's `.ai/config`; relative to the repository) puts them

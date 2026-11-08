@@ -1,0 +1,11 @@
+== the JSON names the repository
+{"root":true,"origin":null}
+== from outside the repository
+lessons: logged 6 outcome(s) to <SANDBOX>/lw-data/ai/lessons/local<SANDBOX>/fixture/outcomes.jsonl: 1 missed, 3 right, 1 unsure, 1 wrong
+== the repository gone, its origin left
+lessons: logged 6 outcome(s) to <SANDBOX>/lw-data/ai/lessons/gitlab.example.com/group/proj/outcomes.jsonl: 1 missed, 3 right, 1 unsure, 1 wrong
+== nothing to go by
+lessons: cannot tell which project <SANDBOX>/lw3.comments.md is about: its comments JSON names no repository
+  (made before ai lessons existed?), and neither it nor the current directory is in one.
+  Run it from the project's repository.
+[exit 1]

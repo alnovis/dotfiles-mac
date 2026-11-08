@@ -43,30 +43,47 @@ function _ai_lessons_help
     echo "An unmarked '_' is skipped. Logged marks get '(logged)'; a comments file with marks"
     echo "not logged yet is not overwritten by a new comments stage."
     echo ""
-    echo "Per project (the git repository of the current directory), outside it:"
-    echo "~/.local/share/ai/lessons/<origin URL>/ (\$XDG_DATA_HOME if set). Config key"
-    echo "lessons_dir (in the project's .ai/config) puts them elsewhere."
+    echo "Per project, outside its repository: ~/.local/share/ai/lessons/<origin URL>/"
+    echo "(\$XDG_DATA_HOME if set); lessons_dir in the project's .ai/config puts them elsewhere."
+    echo "mark finds the project from the file, run from anywhere: the repository the comments"
+    echo "stage recorded in <review>.comments.json. stats, path and edit: the current directory's."
 end
 
-function _ai_lessons_dir --description "This project's lessons directory: lessons_dir from the config, else <data>/ai/lessons/<the origin URL, or the repository's path>"
-    set -l root (git rev-parse --show-toplevel 2>/dev/null)
-    if test -z "$root"
+function _ai_lessons_dir --description "A project's lessons directory: lessons_dir from its config, else <data>/ai/lessons/<the origin URL, or the repository's path>"
+    # The project: --root DIR (a repository), else --origin URL (its repository is gone:
+    # a removed worktree), else the repository of the current directory
+    argparse 'root=' 'origin=' -- $argv; or return 1
+    set -l root
+    set -l url $_flag_origin
+    if set -q _flag_root
+        set root (git -C $_flag_root rev-parse --show-toplevel 2>/dev/null)
+    else if not set -q _flag_origin
+        set root (git rev-parse --show-toplevel 2>/dev/null)
+    end
+    if test -z "$root"; and test -z "$url"
         echo "lessons: not in a git repository — lessons are kept per project" >&2
         return 1
     end
-    set -l dir (_ai_config_read lessons_dir 2>/dev/null)
-    if test -n "$dir"
-        # Relative to the repository's root, as the project's .ai/config is read there
-        string match -q -- '/*' $dir; or set dir $root/$dir
-        echo $dir
-        return 0
+    if test -n "$root"
+        # lessons_dir from the project's own .ai/config, relative to its root
+        set -l dir
+        if set -q _flag_root
+            test -f $root/.ai/config; and set dir (_ai_config_read_file $root/.ai/config lessons_dir 2>/dev/null)
+        else
+            set dir (_ai_config_read lessons_dir 2>/dev/null)
+        end
+        if test -n "$dir"
+            string match -q -- '/*' $dir; or set dir $root/$dir
+            echo $dir
+            return 0
+        end
+        set url (git -C $root remote get-url origin 2>/dev/null)
     end
     set -l base $XDG_DATA_HOME
     test -n "$base"; or set base ~/.local/share
     # One key for every clone and worktree of a project: its origin, without scheme, user
     # and .git (git@host:g/p.git and https://host/g/p are both host/g/p)
     set -l key
-    set -l url (git -C $root remote get-url origin 2>/dev/null)
     if test -n "$url"
         set key (string replace -r '^[a-z+]+://' '' -- $url | string replace -r '^[^@/]+@' '' \
             | string replace -r '^([^/:]+):(?!\d+/)' '$1/' | string replace -r '\.git/?$' '' \
@@ -100,12 +117,31 @@ function _ai_lessons_mark --description "Append the filled Outcome marks of a co
         return 1
     end
     set md (realpath $md)
-    set -l dir (_ai_lessons_dir); or return 1
-    set -l log $dir/outcomes.jsonl
 
     # Its siblings: review.comments.md → review.md, review.verify.md, review.comments.json
     set -l stem (string replace -r '\.comments\.md$' '' -- $md)
     set -l json $stem.comments.json
+
+    # The project, from wherever this runs: the repository the comments stage recorded in
+    # the JSON; its origin when that repository is gone (a removed worktree); the
+    # repository the file sits in; the current directory's
+    set -l where
+    set -l jroot (jq -r '.repo.root // empty' $json 2>/dev/null)
+    set -l jorigin (jq -r '.repo.origin // empty' $json 2>/dev/null)
+    if test -n "$jroot"; and git -C $jroot rev-parse --git-dir >/dev/null 2>&1
+        set where --root $jroot
+    else if test -n "$jorigin"
+        set where --origin $jorigin
+    else if git -C (path dirname -- $md) rev-parse --git-dir >/dev/null 2>&1
+        set where --root (path dirname -- $md)
+    else if not git rev-parse --git-dir >/dev/null 2>&1
+        echo "lessons: cannot tell which project $md is about: its comments JSON names no repository" >&2
+        echo "  (made before ai lessons existed?), and neither it nor the current directory is in one." >&2
+        echo "  Run it from the project's repository." >&2
+        return 1
+    end
+    set -l dir (_ai_lessons_dir $where); or return 1
+    set -l log $dir/outcomes.jsonl
     set -l review $stem.md
     set -l verify (_ai_verify_output_path $review)
     set -l range ""

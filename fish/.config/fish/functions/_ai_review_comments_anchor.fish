@@ -21,6 +21,11 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
         test (count $files_at_head) -gt 0; or set files_at_head (find $root -type f -not -path '*/.*' | string replace -- "$root/" '')
     end
 
+    # The project the comments are about, so ai lessons mark finds it from anywhere: the
+    # repository's root and its origin (null outside git)
+    set -l top (git -C $root rev-parse --show-toplevel 2>/dev/null)
+    set -l origin (git -C $root remote get-url origin 2>/dev/null)
+
     set -l out (mktemp)
     for c in (jq -c '.[]' $comments_file)
         set -l path (printf '%s' $c | jq -r '.file // ""' | string replace -r '^(\./|a/|b/)' '')
@@ -138,7 +143,7 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
     # saying the same. One with no finding numbers is kept.
     # The body only in characters typed on a keyboard (_ai_keyboard_jq): the prompt asks for
     # that, and models still wrote arrows.
-    jq -s --arg base "$base" --arg head "$head" --argjson runs $runs \
+    jq -s --arg base "$base" --arg head "$head" --argjson runs $runs --arg top "$top" --arg origin "$origin" \
         (_ai_keyboard_jq | string collect)'
         map(.body |= keyboard)
          | map(. + {order: [(if .file_level then 0 elif .side == "new" then 1 elif .side == "old" then 2 else 3 end),
@@ -149,7 +154,9 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
              else .seen += $c.findings | .out += [$c] end)
          | .out
          | {base_sha: (if $base == "" then null else $base end), head_sha: (if $head == "" then null else $head end),
-            start_sha: (if $base == "" then null else $base end), runs: $runs, comments: .}' $out
+            start_sha: (if $base == "" then null else $base end), runs: $runs,
+            repo: (if $top == "" then null else {root: $top, origin: (if $origin == "" then null else $origin end)} end),
+            comments: .}' $out
     rm -f $out
 end
 
