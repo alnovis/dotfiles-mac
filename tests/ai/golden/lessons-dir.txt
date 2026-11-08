@@ -1,0 +1,8 @@
+<SANDBOX>/home/.local/share/ai/lessons/local<SANDBOX>/fixture
+<SANDBOX>/home/.local/share/ai/lessons/gitlab.example.com/group/proj
+<SANDBOX>/home/.local/share/ai/lessons/gitlab.example.com/group/proj
+<SANDBOX>/home/.local/share/ai/lessons/gitlab.example.com:2222/group/proj
+<SANDBOX>/fixture/.lessons
+/data/ai/lessons/local<SANDBOX>/fixture
+lessons: not in a git repository — lessons are kept per project
+[exit 1]

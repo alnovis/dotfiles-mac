@@ -24,6 +24,7 @@ function _ai_review_comments --description "Third review stage: line comments fo
         echo "comments: needs the review and its verify verdicts" >&2
         return 1
     end
+    _ai_comments_md_guard $md; or return 1
 
     set -l label $_flag_label
     test -n "$label"; or set label "Comments - $_flag_provider"
@@ -128,6 +129,18 @@ function _ai_review_comments_saved --description "The 'saved to' lines of the co
     _ai_ui_kv "" $json
 end
 
+function _ai_comments_md_guard --description "Refuse to overwrite a comments file whose Outcome marks are not in the lessons log yet" --argument-names md
+    # A mark is filled when it is not "_"; ai lessons mark appends "(logged)" to the ones it took
+    test -f "$md"; or return 0
+    set -l open (string match -r -e -- '^\s*Outcome:\s*[^_\s]' <$md | string match -v -e -- '(logged)')
+    test (count $open) -eq 0; and return 0
+    set_color red >&2
+    echo "comments: $md has "(count $open)" Outcome mark(s) not logged yet; run: ai lessons mark $md" >&2
+    set_color normal >&2
+    set -g __ai_last_failure "unlogged Outcome marks in $md (ai lessons mark)"
+    return 1
+end
+
 function _ai_comments_output_path --description "review.md + EXT → review.comments.EXT" --argument-names out ext
     set -l dir (path dirname -- $out)
     set -l base (path basename -- $out | string replace -r '\.[^.]+$' '')
@@ -172,6 +185,7 @@ function _ai_review_comments_md_refuted --description "What verify threw out, fr
             set -l f (string split \t -- $it)
             echo "- $f[1]: refuted $f[2]"
             test -n "$f[3]"; and echo "  > $f[3]"
+            echo "  Outcome: _"
         end
         echo
     end | jq -Rsj (_ai_keyboard_jq | string collect)'keyboard'
@@ -196,6 +210,8 @@ function _ai_review_comments_md_comments --description "The comment sections of 
             (if .anchored and (.in_diff | not) then "> Not in the diff: GitLab/GitHub take a line comment only inside the changes; post it as a general comment." else empty end);
         "# Review comments: check before publishing",
         "",
+        "Mark each Outcome: + right, - why (a false positive, say why), ~ unsure; under Refuted: + verify was right, missed (a real bug). Then: ai lessons mark this file.",
+        "",
         "\(.comments | length) comment(s): \([.comments[] | select(.status == "confirmed")] | length) confirmed, \([.comments[] | select(.status != "confirmed")] | length) uncertain."
             + (if .base_sha then " Range: \(.base_sha[0:7])..\(.head_sha[0:7])." else "" end)
             + (if (.runs // 1) > 1 then " From \(.runs) review runs." else "" end),
@@ -209,6 +225,8 @@ function _ai_review_comments_md_comments --description "The comment sections of 
                     "```", ((.code // .quote) | sub("^[[:space:]]+"; "")), "```", "" end),
                 .body,
                 "",
-                notes,
+                # A blank line after the notes: the mark is not part of their quote
+                ([notes] | if length > 0 then (.[], "") else empty end),
+                "Outcome: _",
                 ""))' $json | jq -Rsj (_ai_keyboard_jq | string collect)'keyboard'
 end

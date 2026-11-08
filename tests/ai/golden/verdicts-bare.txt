@@ -6,6 +6,7 @@ Not comments. Verify threw these out; it can be wrong, check any that sound real
 
 - `gbranch.fish:8` - the help text overstates the auto-detection: refuted 8/10
   > the candidates loop tries every listed branch; a why line that ends in the word is not counted as REFUTED
+  Outcome: _
 
 == untagged verdicts: the comments stage is not skipped
 testcloud unreachable (via pi) — off-network? Rerun with --provider ollama

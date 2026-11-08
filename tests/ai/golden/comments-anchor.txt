@@ -13,6 +13,8 @@
 {"findings":[],"path":"nope.fish","side":null,"line":null,"line_cited":1,"in_diff":false,"anchored":false,"anchored_by":null,"file_level":false,"seen":1,"status":"uncertain"}
 # Review comments: check before publishing
 
+Mark each Outcome: + right, - why (a false positive, say why), ~ unsure; under Refuted: + verify was right, missed (a real bug). Then: ai lessons mark this file.
+
 10 comment(s): 7 confirmed, 3 uncertain. Range: <range> From 3 review runs.
 
 ## fish/.config/fish/functions/gbranch.fish
@@ -23,11 +25,15 @@ A file-level finding (a missing test): no line, posted as a general comment; fou
 
 > File-level: no line to attach it to; post it as a general comment.
 
+Outcome: _
+
 ### Whole file | nit | uncertain, needs a human check | found by 1 of 3 runs
 
 The file named without directory or extension, as a bare class name: the one file called gbranch.*, file-level.
 
 > File-level: no line to attach it to; post it as a general comment.
+
+Outcome: _
 
 ### Line 8 (new) | nit | found by 3 of 3 runs
 
@@ -37,6 +43,7 @@ echo "Auto-detects the nearest base among develop/main/master/release/stage"
 
 An added line, cited with an abbreviated path and a wrong line number.
 
+Outcome: _
 
 ### Line 8 (new) | nit | found by 1 of 3 runs
 
@@ -48,6 +55,8 @@ An invented quote with a right line number: placed by the line, flagged.
 
 > Placed by the cited line number: the quote did not match the code (model quoted: `echo "a line the model invented"`); check this is the right line.
 
+Outcome: _
+
 ### Line 9 (new) | nit | found by 1 of 3 runs
 
 ```
@@ -57,6 +66,8 @@ echo "(override the list with \$GBRANCH_BASES) or specify manually."
 A prose quote cited two lines off (11, an empty echo): placed on the nearby line that names `GBRANCH_BASES`.
 
 > Placed on a nearby line: the quote did not match, and the cited line 11 names none of the code the comment is about, this one does. Check it.
+
+Outcome: _
 
 ### Line 43 (new) | important | found by 1 of 3 runs
 
@@ -68,6 +79,8 @@ No line and no quote, only a name: `candidates` is placed on the first changed l
 
 > Placed by a name: the comment cites no line and quotes no code; this changed line names code it talks about. Check it.
 
+Outcome: _
+
 ### Line 44 (new) | nit | found by 1 of 3 runs | F4
 
 ```
@@ -76,6 +89,7 @@ if set -q GBRANCH_BASES
 
 Two lines of code quoted as one, cited off: found by the quote without whitespace, on its first line (44).
 
+Outcome: _
 
 ### Line 115 (new) | nit | found by 1 of 3 runs
 
@@ -87,6 +101,8 @@ An unchanged line far from the change -> anchored, "not in the diff"... - typogr
 
 > Not in the diff: GitLab/GitHub take a line comment only inside the changes; post it as a general comment.
 
+Outcome: _
+
 ### Line 39 (old) | important | uncertain, needs a human check | found by 1 of 3 runs
 
 ```
@@ -95,6 +111,7 @@ else if git show-ref --verify --quiet refs/heads/develop
 
 A removed line: found in the old version.
 
+Outcome: _
 
 ## nope.fish
 
@@ -108,14 +125,18 @@ A file that does not exist: unanchored.
 
 > Unanchored: the quoted line was not found in the code; check it by hand.
 
+Outcome: _
+
 ## Refuted by verify: skim before trusting
 
 Not comments. Verify threw these out; it can be wrong, check any that sound real.
 
 - `gbranch.fish:40` - the candidate loop skips release: refuted 7/10
   > The loop reads `$GBRANCH_BASES`, which includes release.
+  Outcome: _
 - `gbranch.fish:115` - `string split \t` breaks on tabs in branch names: refuted 9/10
   > Git refuses branch names with tabs.
+  Outcome: _
 
 verdicts: 1 confirmed, 2 refuted
 [exit 0]

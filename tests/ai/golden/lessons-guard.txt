@@ -1,0 +1,7 @@
+comments: ../g.comments.md has 1 Outcome mark(s) not logged yet; run: ai lessons mark ../g.comments.md
+rc 1
+rc 0
+# Review comments: check before publishing
+
+Mark each Outcome: + right, - why (a false positive, say why), ~ unsure; under Refuted: + verify was right, missed (a real bug). Then: ai lessons mark this file.
+[exit 0]

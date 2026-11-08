@@ -26,6 +26,7 @@ Not comments. Verify threw these out; it can be wrong, check any that sound real
 
 - [F2] `b.fish:7` - the list is reversed: refuted 9/10
   > run 1: `:+` appends at the tail.
+  Outcome: _
 
 == one run of three answered: everything uncertain
 - [F1] `a.fish:3` — lost update between two writers — [UNCERTAIN]

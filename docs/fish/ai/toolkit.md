@@ -12,6 +12,7 @@ context policy), see [architecture.md](architecture.md).
 - [`ai chat`](#ai-chat)
 - [`ai code`](#ai-code)
 - [`ai review`](#ai-review)
+- [`ai lessons`](#ai-lessons)
 - [`ai gen`](#ai-gen)
 - [`ai providers`](#ai-providers)
 - [`ai models`](#ai-models)
@@ -32,6 +33,7 @@ ai chat [MODEL] [-c | -r]            interactive chat, history kept by the runne
 ai code [-e] [ARGS...]               interactive coding session (no file edits unless -e)
 ai review [PATH | BASE | --last N]   code review, mode auto-detected
 ai review --verify-only FILE         re-verify a saved review (no review pass)
+ai lessons mark FILE                 log what you marked in a review's comments
 ai gen commit                        commit message from staged (else unstaged) changes
 ai gen summary [DIR]                 project summary
 ai providers [ls | check NAME]       providers, their executors, reachability
@@ -588,6 +590,9 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
      each with its confidence and its `why:` — read straight from the verify file, not as
      comments and not in the JSON. Verify is a filter, not a referee: on a real work change it
      refuted the very race fixed a commit later, calling the regression pre-existing.
+     Every comment and every refuted entry ends in `Outcome: _`, for the mark a person gives it
+     ([`ai lessons`](#ai-lessons)). A comments stage will not overwrite a file whose marks are
+     not logged yet: it stops before the model call and says to run `ai lessons mark`.
      The comment bodies (JSON and markdown) and the whole markdown are in characters typed on
      a keyboard: typographic dashes, arrows, guillemets, curly quotes, an ellipsis, bullets and
      non-breaking spaces become `-`, `->`, `"`, `'`, `...` and a space (`_ai_keyboard_jq`; the
@@ -822,6 +827,46 @@ models registered in the runner — the ones `--agentic` and `ai code` can use w
 
 A provider with no URL in the runner's config (a built-in one) prints `… — can't tell` and exits
 0. Unreachable or unknown exits 1.
+
+## `ai lessons`
+
+What a person said about review comments, logged per project: the first part of a feedback
+loop in which every rule that reaches a prompt is one a person approved. No model is involved.
+
+```
+ai lessons mark FILE        log the Outcome marks of a <review>.comments.md
+ai lessons stats            how right the reviews and their verify were, by model
+ai lessons path             where this project's lessons and outcomes are kept
+ai lessons edit             open this project's lessons.md in $EDITOR
+```
+
+**Marks.** In the comments file, in the editor, each `Outcome: _` becomes:
+
+| Mark | Under a comment | Under "Refuted by verify" |
+|---|---|---|
+| `+` | right: posted, or fixed | verify was right to refute it |
+| `- why` | a false positive; the reason is required | not allowed |
+| `~` | unsure, or does not matter | unsure |
+| `missed` | not allowed | a real bug that verify refuted |
+
+`_` is skipped. `ai lessons mark` checks every mark first and logs nothing while one is wrong
+(each error names its line). Then it appends one JSON line per mark to `outcomes.jsonl` (date,
+range, kind, finding numbers, path and line, severity, status, the finding's title, the outcome
+and reason, the review's and verify's provider/model from their `Run:` lines) and adds
+`(logged)` to the marks it took. Run again, it takes only new marks; an entry already in the
+log is not written twice. `--dry-run` prints what it would log.
+
+**Stats.** Review precision by the review's model, right / (right + wrong); for verify, the false
+positives it let through and the real bugs it refuted; the last false positives with their
+reasons and the last refuted real bugs, the raw material for `lessons.md`.
+
+**Where.** Per project (the git repository of the current directory) and outside it, so nothing
+is committed by accident: `~/.local/share/ai/lessons/<origin>/` (`$XDG_DATA_HOME` if set),
+the origin URL without scheme, user and `.git` (`git@host:g/p.git` and `https://host/g/p` are
+both `host/g/p`): every clone and worktree shares it. No origin: `local/<repository path>`.
+Config key `lessons_dir` (the project's `.ai/config`; relative to the repository) puts them
+elsewhere. `lessons.md` (`ai lessons edit` starts it from a template: Not bugs here, Look for,
+Conventions) is not read by reviews yet.
 
 ## `ai models`
 
@@ -1104,6 +1149,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `review_parallel` | by hand | Those runs: `auto` (default: cloud in parallel, ollama one at a time), `on`, `off`; scoped like `review_runs` |
 | `verify_runs` | by hand | How many verify runs, joined by majority per finding (default 1); scoped by the verify provider/model like `review_runs` |
 | `verify_think` | by hand | How much the verifier thinks on native ollama: `false`, `low`, `medium`, … (a level the model lists); `--verify-think` and `--no-think` override; unset → the model's default |
+| `lessons_dir` | by hand | Where `ai lessons` keeps this project's outcomes and lessons.md; relative to the repository (default: `~/.local/share/ai/lessons/<origin>/`) |
 | `verify_context_lines` | by hand | `--verify-context assembled`: line budget for the code read for the findings (default 1500) |
 | `review_lens` | by hand | Default lenses for reviews and their verify, comma-separated (`redis,reactive`); unscoped, best in the project's `.ai/config`; `--lens` replaces, `--no-lens` drops it |
 | `cloud_driver` | by hand | Single calls to an OpenAI-API provider of the runner (litellm, …): `native` (default, direct HTTP) or `runner` (through pi / opencode) |

@@ -1,0 +1,41 @@
+== dry run
+would log 6 outcome(s) to <SANDBOX>/home/.local/share/ai/lessons/local<SANDBOX>/fixture/outcomes.jsonl: 1 missed, 3 right, 1 unsure, 1 wrong
+nothing written
+== mark
+lessons: logged 6 outcome(s) to <SANDBOX>/home/.local/share/ai/lessons/local<SANDBOX>/fixture/outcomes.jsonl: 1 missed, 3 right, 1 unsure, 1 wrong
+== the log
+{"range":"1c4dced..8f00743","kind":"comment","findings":[],"path":"fish/.config/fish/functions/gbranch.fish","line":null,"severity":"important","status":"confirmed","title":"A file-level finding (a missing test): no line, posted as a general comment; found by 2 runs.","outcome":"right","reason":"","review_model":"","verify_model":""}
+{"range":"1c4dced..8f00743","kind":"comment","findings":[],"path":"fish/.config/fish/functions/gbranch.fish","line":null,"severity":"nit","status":"uncertain","title":"The file named without directory or extension, as a bare class name: the one file called gbranch.*, file-level.","outcome":"wrong","reason":"reads GBRANCH_BASES, not a fixed list","review_model":"","verify_model":""}
+{"range":"1c4dced..8f00743","kind":"comment","findings":[],"path":"fish/.config/fish/functions/gbranch.fish","line":8,"severity":"nit","status":"confirmed","title":"An added line, cited with an abbreviated path and a wrong line number.","outcome":"unsure","reason":"","review_model":"","verify_model":""}
+{"range":"1c4dced..8f00743","kind":"comment","findings":["F4"],"path":"fish/.config/fish/functions/gbranch.fish","line":44,"severity":"nit","status":"confirmed","title":"gbranch: a bare name is ambiguous - two files match","outcome":"right","reason":"","review_model":"","verify_model":""}
+{"range":"1c4dced..8f00743","kind":"refuted","findings":[],"path":"","line":null,"severity":"","status":"refuted","title":"`gbranch.fish:40` - the candidate loop skips release","outcome":"missed","reason":"","review_model":"","verify_model":""}
+{"range":"1c4dced..8f00743","kind":"refuted","findings":[],"path":"","line":null,"severity":"","status":"refuted","title":"`gbranch.fish:115` - `string split \\t` breaks on tabs in branch names","outcome":"right","reason":"","review_model":"","verify_model":""}
+== the marks now
+Outcome: + (logged)
+Outcome: - reads GBRANCH_BASES, not a fixed list (logged)
+Outcome: ~ (logged)
+Outcome: + (logged)
+  Outcome: missed (logged)
+  Outcome: + (logged)
+== again
+lessons: no new marks in <SANDBOX>/lr.comments.md (6 not marked, 6 logged before)
+== stats
+
+Outcomes  6 from <date> to <date>
+  log          <SANDBOX>/home/.local/share/ai/lessons/local<SANDBOX>/fixture/outcomes.jsonl
+
+Review comments  right / (right + wrong), by the review's model
+  (unknown)    2 right, 1 wrong, 1 unsure | precision 67%
+
+Verify  a wrong comment got past it; a missed bug it refuted
+  (unknown)    1 false positive(s) let through, 1 real bug(s) refuted, 1 refuted rightly
+
+False positives  the last 1, with why
+  <date>  fish/.config/fish/functions/gbranch.fish  reads GBRANCH_BASES, not a fixed list
+
+Refuted, but real  the last 1
+  <date>  `gbranch.fish:40` - the candidate loop skips release
+== run lines
+ollama/qwen3.8:27b
+litellm/qwen/qwen3.8-27b
+[exit 0]

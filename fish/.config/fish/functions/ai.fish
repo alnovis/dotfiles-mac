@@ -1,8 +1,8 @@
-function ai --description "AI toolkit: chat, code, review, gen, config, providers, models, stop"
+function ai --description "AI toolkit: chat, code, review, lessons, gen, config, providers, models, stop"
     set -l sub $argv[1]
 
     # ai <sub> [args...] → _ai_<sub> args...
-    if contains -- "$sub" gen config models review code chat stop
+    if contains -- "$sub" gen config models review lessons code chat stop
         _ai_$sub $argv[2..]
         return
     end
@@ -34,6 +34,7 @@ function _ai_help
     echo "  providers            List providers and their executors; check NAME = reachable?"
     echo "  models               Manage models (list, install, rm, use, update, info, prune, running, label)"
     echo "  review               AI code review — project state (path) or git changes"
+    echo "  lessons              Log what you marked in review comments; how right reviews were"
     echo "  code                 Interactive coding session (code task's provider, via its runner)"
     echo "  chat                 Interactive chat (chat task's provider, history via the runner; -c/-r)"
     echo "  stop                 Stop running models or server"

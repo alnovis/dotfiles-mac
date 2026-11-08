@@ -1,0 +1,12 @@
+<SANDBOX>/lb.comments.md:<n>: '-' needs a reason: '- why it is not a bug'
+<SANDBOX>/lb.comments.md:<n>: 'missed' is for a refuted finding; a comment is + or - why
+<SANDBOX>/lb.comments.md:<n>: 'yes' is not a mark (+, - why, ~, missed)
+<SANDBOX>/lb.comments.md:<n>: a refuted finding is + (verify was right) or missed
+lessons: nothing logged — fix the marks above and run it again
+lines logged: 0
+== no file
+lessons: mark needs a <review>.comments.md (got: '../nope.comments.md')
+== unknown
+Unknown lessons subcommand: frob
+Run 'ai lessons --help' for usage.
+[exit 1]

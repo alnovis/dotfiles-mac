@@ -12,6 +12,7 @@ complete -c ai -n "__fish_seen_subcommand_from providers; and not __fish_seen_su
 complete -c ai -n "__fish_seen_subcommand_from providers; and __fish_seen_subcommand_from check" -x -a "(_ai_providers)"
 complete -c ai -n __fish_use_subcommand -a models -d "Manage models"
 complete -c ai -n __fish_use_subcommand -a review -d "AI code review"
+complete -c ai -n __fish_use_subcommand -a lessons -d "Log review comment outcomes; stats"
 complete -c ai -n __fish_use_subcommand -a code -d "Interactive coding session"
 complete -c ai -n __fish_use_subcommand -a chat -d "Interactive chat (-c continue, -r resume)"
 complete -c ai -n __fish_use_subcommand -a stop -d "Stop models or server"
@@ -19,12 +20,21 @@ complete -c ai -n __fish_use_subcommand -a help -d "Show help"
 
 # Top-level flags: until a subcommand is seen. Not __fish_use_subcommand, which takes the value
 # of --provider for a subcommand: `ai --provider ollama -m <TAB>` offered nothing.
-set -l ai_subcmds gen config providers models review code chat stop help
+set -l ai_subcmds gen config providers models review lessons code chat stop help
 complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -s m -l model -d "Use specific model" -x -a "(_ai_complete_models)"
 complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -s t -l think -d "Enable thinking mode"
 complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -l provider -d "Override provider" -x -a "(_ai_providers)"
 complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -l dry-run -d "Print assembled prompt without invoking the model"
 complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -s h -l help -d "Show help"
+
+# --- ai lessons ---
+set -l lessons_subcmds "mark stats path edit"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a mark -d "Log the Outcome marks of a comments file"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a stats -d "How right reviews and verify were"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a path -d "Where this project's lessons are kept"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a edit -d "Open this project's lessons.md"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and __fish_seen_subcommand_from mark" -F -a "(__fish_complete_suffix .comments.md)"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and __fish_seen_subcommand_from mark" -l dry-run -d "Show what would be logged"
 
 # --- ai gen ---
 set -l gen_subcmds "commit summary"
