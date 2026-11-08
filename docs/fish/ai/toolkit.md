@@ -33,7 +33,7 @@ ai chat [MODEL] [-c | -r]            interactive chat, history kept by the runne
 ai code [-e] [ARGS...]               interactive coding session (no file edits unless -e)
 ai review [PATH | BASE | --last N]   code review, mode auto-detected
 ai review --verify-only FILE         re-verify a saved review (no review pass)
-ai lessons mark FILE                 log what you marked in a review's comments
+ai lessons                           the reviews with comments; open, mark, log
 ai gen commit                        commit message from staged (else unstaged) changes
 ai gen summary [DIR]                 project summary
 ai providers [ls | check NAME]       providers, their executors, reachability
@@ -834,7 +834,10 @@ What a person said about review comments, logged per project: the first part of 
 loop in which every rule that reaches a prompt is one a person approved. No model is involved.
 
 ```
-ai lessons mark FILE        log the Outcome marks of a <review>.comments.md
+ai lessons                  the reviews with comments, newest first, and their marks
+ai lessons open [N]         open the newest (or the Nth listed) comments file in $EDITOR
+ai lessons mark             log the marks of every listed review that has new ones
+ai lessons mark FILE        the same for one <review>.comments.md
 ai lessons stats            how right the reviews and their verify were, by model
 ai lessons path             where this project's lessons and outcomes are kept
 ai lessons edit             open this project's lessons.md in $EDITOR
@@ -859,6 +862,12 @@ log is not written twice. `--dry-run` prints what it would log.
 **Stats.** Review precision by the review's model, right / (right + wrong); for verify, the false
 positives it let through and the real bugs it refuted; the last false positives with their
 reasons and the last refuted real bugs, the raw material for `lessons.md`.
+
+**No paths to remember.** Every comments file a review writes is added to a registry
+(`~/.local/share/ai/reviews.jsonl`, `$XDG_DATA_HOME` if set), wherever the review ran and
+wherever `-o` sent it; written again, it moves to the top. `ai lessons` lists the last 10 that
+still exist (`ls --all`: every one) with their marks (to log, logged, open); the loop is
+`ai lessons open`, mark in the editor, `ai lessons mark`.
 
 **Which project.** `mark` runs from anywhere: the comments stage records the repository it
 reviewed in `<review>.comments.json` (`"repo": {"root", "origin"}`), and `mark` logs to that

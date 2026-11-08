@@ -5,7 +5,7 @@
 lessons: nothing logged — fix the marks above and run it again
 lines logged: 0
 == no file
-lessons: mark needs a <review>.comments.md (got: '../nope.comments.md')
+lessons: no such file: ../nope.comments.md — 'ai lessons' lists the reviews with comments
 == unknown
 Unknown lessons subcommand: frob
 Run 'ai lessons --help' for usage.

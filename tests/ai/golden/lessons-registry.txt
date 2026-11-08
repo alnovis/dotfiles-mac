@@ -1,0 +1,41 @@
+== none yet
+lessons: no reviews with comments yet. A review with --comments (-o FILE) writes one,
+  and it is listed here: ai review --comments -o review.md
+== two reviews
+
+Reviews  newest first: ai lessons open N to mark one, ai lessons mark to log the marks
+  1  <date>  fixture      1 open
+     <SANDBOX>/rg2.comments.md
+  2  <date>  fixture      1 open
+     <SANDBOX>/rg1.comments.md
+== one marked
+
+Reviews  newest first: ai lessons open N to mark one, ai lessons mark to log the marks
+  1  <date>  fixture      1 open
+     <SANDBOX>/rg2.comments.md
+  2  <date>  fixture      1 to log
+     <SANDBOX>/rg1.comments.md
+== open
+<SANDBOX>/rg2.comments.md
+<SANDBOX>/rg1.comments.md
+lessons: no review 3 — 'ai lessons' lists 2 review(s)
+== mark, no file, outside the repository
+== <SANDBOX>/rg1.comments.md
+lessons: logged 1 outcome(s) to <SANDBOX>/lg-data/ai/lessons/local<SANDBOX>/fixture/outcomes.jsonl: 1 missed
+== again
+lessons: no new marks in the listed reviews — 'ai lessons open' to mark the newest
+== written again: first
+
+Reviews  newest first: ai lessons open N to mark one, ai lessons mark to log the marks
+  1  <date>  fixture      1 open
+     <SANDBOX>/rg1.comments.md
+  2  <date>  fixture      1 open
+     <SANDBOX>/rg2.comments.md
+== a file gone
+
+Reviews  newest first: ai lessons open N to mark one, ai lessons mark to log the marks
+  1  <date>  fixture      1 open
+     <SANDBOX>/rg1.comments.md
+== no such file
+lessons: no such file: nope.comments.md — 'ai lessons' lists the reviews with comments
+[exit 1]

@@ -28,13 +28,16 @@ complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -l dry-run -d "P
 complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -s h -l help -d "Show help"
 
 # --- ai lessons ---
-set -l lessons_subcmds "mark stats path edit"
-complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a mark -d "Log the Outcome marks of a comments file"
+set -l lessons_subcmds "ls open mark stats path edit"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a ls -d "The reviews with comments, newest first"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a open -d "Open the newest (or Nth) comments file"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a mark -d "Log the marks of the listed reviews (or of FILE)"
 complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a stats -d "How right reviews and verify were"
 complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a path -d "Where this project's lessons are kept"
 complete -c ai -n "__fish_seen_subcommand_from lessons; and not __fish_seen_subcommand_from $lessons_subcmds" -a edit -d "Open this project's lessons.md"
 complete -c ai -n "__fish_seen_subcommand_from lessons; and __fish_seen_subcommand_from mark" -F -a "(__fish_complete_suffix .comments.md)"
 complete -c ai -n "__fish_seen_subcommand_from lessons; and __fish_seen_subcommand_from mark" -l dry-run -d "Show what would be logged"
+complete -c ai -n "__fish_seen_subcommand_from lessons; and __fish_seen_subcommand_from ls" -l all -d "Every review, not the last 10"
 
 # --- ai gen ---
 set -l gen_subcmds "commit summary"

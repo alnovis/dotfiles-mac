@@ -44,6 +44,7 @@ function _ai_review_comments --description "Third review stage: line comments fo
         _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
         rm -f $arr
         _ai_review_comments_md $json $_flag_verdicts >$md
+        _ai_lessons_register $md $json
         set -q _flag_quiet; and return 0
         _ai_ui_heading Saved
         _ai_review_comments_saved $_flag_output $_flag_verdicts
@@ -91,6 +92,8 @@ VERDICTS ON THEM:
     _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
     rm -f $arr
     _ai_review_comments_md $json $_flag_verdicts >$md
+    # Remembered, so ai lessons finds it for the marks without a path
+    _ai_lessons_register $md $json
 
     set -q _flag_quiet; and return 0
     _ai_ui_heading Saved

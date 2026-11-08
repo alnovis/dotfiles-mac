@@ -3,15 +3,25 @@ function _ai_lessons --description "ai lessons: what a person said about review 
     # <review>.comments.md in the editor (Outcome: + / - why / ~ / missed), `ai lessons mark`
     # appends the marks to the project's outcomes.jsonl, `ai lessons stats` counts them.
     # Per project and private: kept outside the repository (_ai_lessons_dir), so nothing
-    # is committed by accident.
-    if contains -- --help $argv; or contains -- -h $argv; or test (count $argv) -eq 0
+    # is committed by accident. No path to remember: every comments file the comments stage
+    # writes is in a registry (_ai_lessons_register), listed by `ai lessons`.
+    if contains -- --help $argv; or contains -- -h $argv
         _ai_lessons_help
         return 0
     end
 
     switch "$argv[1]"
+        case '' ls list
+            _ai_lessons_ls $argv[2..]
+        case open
+            _ai_lessons_open $argv[2..]
         case mark
-            _ai_lessons_mark $argv[2..]
+            # A file, or every listed review with marks to log
+            if string match -q -v -- '-*' $argv[2..]
+                _ai_lessons_mark $argv[2..]
+            else
+                _ai_lessons_mark_all $argv[2..]
+            end
         case stats
             _ai_lessons_stats
         case path
@@ -28,7 +38,10 @@ function _ai_lessons --description "ai lessons: what a person said about review 
 end
 
 function _ai_lessons_help
-    echo "Usage: ai lessons mark FILE   Log the Outcome marks of a <review>.comments.md"
+    echo "Usage: ai lessons             The reviews with comments, newest first, and their marks"
+    echo "       ai lessons open [N]    Open the newest (or the Nth listed) comments file in \$EDITOR"
+    echo "       ai lessons mark        Log the marks of every listed review that has new ones"
+    echo "       ai lessons mark FILE   The same for one <review>.comments.md"
     echo "       ai lessons stats       How right the reviews and their verify were, by model"
     echo "       ai lessons path        Where this project's lessons and outcomes are kept"
     echo "       ai lessons edit        Open this project's lessons.md in \$EDITOR"
@@ -45,8 +58,9 @@ function _ai_lessons_help
     echo ""
     echo "Per project, outside its repository: ~/.local/share/ai/lessons/<origin URL>/"
     echo "(\$XDG_DATA_HOME if set); lessons_dir in the project's .ai/config puts them elsewhere."
-    echo "mark finds the project from the file, run from anywhere: the repository the comments"
-    echo "stage recorded in <review>.comments.json. stats, path and edit: the current directory's."
+    echo "Every comments file a review writes is listed, wherever it ran and wherever -o sent it."
+    echo "mark logs each file to its own project (recorded in <review>.comments.json), from any"
+    echo "directory; stats, path and edit take the current directory's repository."
 end
 
 function _ai_lessons_dir --description "A project's lessons directory: lessons_dir from its config, else <data>/ai/lessons/<the origin URL, or the repository's path>"
@@ -112,8 +126,8 @@ end
 function _ai_lessons_mark --description "Append the filled Outcome marks of a comments file to the project's outcomes.jsonl; mark them (logged)"
     argparse 'dry-run' -- $argv; or return 1
     set -l md $argv[1]
-    if test -z "$md"; or not test -f "$md"
-        echo "lessons: mark needs a <review>.comments.md (got: '$md')" >&2
+    if not test -f "$md"
+        echo "lessons: no such file: $md — 'ai lessons' lists the reviews with comments" >&2
         return 1
     end
     set md (realpath $md)
@@ -280,6 +294,84 @@ function _ai_lessons_mark --description "Append the filled Outcome marks of a co
     set -l note ""
     test $dup -gt 0; and set note "; $dup already in the log"
     echo "lessons: logged "(count $entries)" outcome(s) to $log: $counts$note"
+end
+
+function _ai_lessons_reviews --description "The registered comments files that still exist, newest first: date<tab>project<tab>path"
+    set -l registry (_ai_lessons_register --path)
+    test -s $registry; or return 0
+    jq -s -r 'reverse[] | [.date, .project, .md] | @tsv' $registry 2>/dev/null | while read -l -d \t date project md
+        test -f "$md"; and printf '%s\t%s\t%s\n' $date $project $md
+    end
+end
+
+function _ai_lessons_counts --description "A comments file's marks: to log, logged, open (a tab between)" --argument-names md
+    set -l marks (string match -r -g -- '^\s*Outcome:\s*(.*?)\s*$' <$md)
+    set -l logged (string match -e -- '(logged)' $marks | count)
+    set -l open (string match -r -- '^_?$' $marks | count)
+    printf '%s\t%s\t%s\n' (math (count $marks) - $logged - $open) $logged $open
+end
+
+function _ai_lessons_ls --description "The reviews with comments, newest first, with their marks"
+    argparse 'all' -- $argv; or return 1
+    set -l rows (_ai_lessons_reviews)
+    if not set -q rows[1]
+        echo "lessons: no reviews with comments yet. A review with --comments (-o FILE) writes one,"
+        echo "  and it is listed here: ai review --comments -o review.md"
+        return 0
+    end
+    set -l shown $rows
+    set -l more 0
+    if not set -q _flag_all; and test (count $rows) -gt 10
+        set shown $rows[1..10]
+        set more (math (count $rows) - 10)
+    end
+    _ai_ui_heading Reviews "newest first: ai lessons open N to mark one, ai lessons mark to log the marks"
+    set -l i 0
+    for r in $shown
+        set i (math $i + 1)
+        set -l f (string split \t -- $r)
+        set -l c (_ai_lessons_counts $f[3] | string split \t)
+        set -l parts
+        test $c[1] -gt 0; and set -a parts "$c[1] to log"
+        test $c[2] -gt 0; and set -a parts "$c[2] logged"
+        test $c[3] -gt 0; and set -a parts "$c[3] open"
+        set -q parts[1]; or set parts "no marks"
+        printf '  %-3s%s  %-12s %s\n' $i $f[1] $f[2] (string join ', ' -- $parts)
+        printf '     %s\n' $f[3]
+    end
+    test $more -gt 0; and echo "  … $more more: ai lessons ls --all"
+    return 0
+end
+
+function _ai_lessons_open --description "Open the Nth listed comments file (default: the newest) in \$EDITOR" --argument-names n
+    test -n "$n"; or set n 1
+    set -l rows (_ai_lessons_reviews)
+    if not string match -q -r '^[1-9][0-9]*$' -- $n; or test $n -gt (count $rows)
+        echo "lessons: no review $n — 'ai lessons' lists "(count $rows)" review(s)" >&2
+        return 1
+    end
+    set -l md (string split \t -- $rows[$n])[3]
+    set -l editor $EDITOR
+    test -n "$editor"; or set editor nvim
+    $editor $md
+end
+
+function _ai_lessons_mark_all --description "Log the marks of every listed review that has new ones"
+    set -l todo
+    for r in (_ai_lessons_reviews)
+        set -l md (string split \t -- $r)[3]
+        test (_ai_lessons_counts $md | string split \t)[1] -gt 0; and set -a todo $md
+    end
+    if not set -q todo[1]
+        echo "lessons: no new marks in the listed reviews — 'ai lessons open' to mark the newest"
+        return 0
+    end
+    set -l rc 0
+    for md in $todo
+        echo "== $md"
+        _ai_lessons_mark $argv $md; or set rc 1
+    end
+    return $rc
 end
 
 function _ai_lessons_run_model --description "provider/model of a review or verify file, from its Run: lines (several runs: each once)" --argument-names file stage
