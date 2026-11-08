@@ -551,7 +551,6 @@ the executor, and starts it with `--interactive`. `--dry-run` prints
 | Interactive sessions not probed | `ai code` / `ai chat` start the runner without a reachability check |
 | Interactive tool profiles | opencode's TUI can't take a profile or model, so `ai code`/`ai chat` via opencode need `-e` (profile edit); pi's interactive `read` keeps bash |
 | Runner context window | Runners use the server's `OLLAMA_CONTEXT_LENGTH` for ollama, not a per-request size. Register ollama models in the runner with a matching context window, or big agentic prompts come back empty |
-| claude runner isolation | `claude -p` loads the user's Claude Code memory and the project's `CLAUDE.md`, which can bias a review |
 | Runner model lists are live | `_models` runs the runner's listing on each selection (no cache) |
 | No reasoning sidecar on runner paths | Runners expose no separate thinking channel |
 

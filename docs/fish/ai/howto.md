@@ -475,8 +475,10 @@ the runner directly (`pi -p --model litellm/<model-id> "hi"`) to see its own err
 
 ### claude quotes my notes in a review
 
-`claude -p` loads your Claude Code memory and the project's `CLAUDE.md`, and they can leak into
-a review. Keep that in mind when reviewing with claude in a repo that has them.
+It shouldn't any more. A one-shot claude run (a review, verify, `ai gen`) loads no settings, no
+memory and no `CLAUDE.md` (`--setting-sources ""`, `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`,
+`CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`), so the review judges the code, not your notes about it.
+`ai code` / `ai chat` with claude are your own session and keep all three.
 
 ### A model is missing from completion or `ai models`
 

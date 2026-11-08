@@ -202,6 +202,7 @@ object LC:
     case ln: ListNode           => fromListNode(ln)
     case tn: TreeNode           => fromTreeNode(tn)
     case other                  => other.toString
-```--- dry-run: pass 2 (verify) ---
+```
+--- dry-run: pass 2 (verify) ---
 verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 150 lines)
 [exit 0]

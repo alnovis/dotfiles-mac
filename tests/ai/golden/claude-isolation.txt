@@ -1,0 +1,7 @@
+== a review run
+args: -p --no-session-persistence --setting-sources  --strict-mcp-config --tools Read Grep Glob
+memory off: 1, CLAUDE.md off: 1
+== interactive keeps them
+args: --tools Read,Grep,Glob -- hello
+memory off: , CLAUDE.md off: 
+[exit 0]

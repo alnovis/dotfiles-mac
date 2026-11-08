@@ -17,12 +17,14 @@ complete -c ai -n __fish_use_subcommand -a chat -d "Interactive chat (-c continu
 complete -c ai -n __fish_use_subcommand -a stop -d "Stop models or server"
 complete -c ai -n __fish_use_subcommand -a help -d "Show help"
 
-# Top-level flags
-complete -c ai -n __fish_use_subcommand -s m -l model -d "Use specific model" -x -a "(_ai_complete_models)"
-complete -c ai -n __fish_use_subcommand -s t -l think -d "Enable thinking mode"
-complete -c ai -n __fish_use_subcommand -l provider -d "Override provider" -x -a "(_ai_providers)"
-complete -c ai -n __fish_use_subcommand -l dry-run -d "Print assembled prompt without invoking the model"
-complete -c ai -n __fish_use_subcommand -s h -l help -d "Show help"
+# Top-level flags: until a subcommand is seen. Not __fish_use_subcommand, which takes the value
+# of --provider for a subcommand: `ai --provider ollama -m <TAB>` offered nothing.
+set -l ai_subcmds gen config providers models review code chat stop help
+complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -s m -l model -d "Use specific model" -x -a "(_ai_complete_models)"
+complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -s t -l think -d "Enable thinking mode"
+complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -l provider -d "Override provider" -x -a "(_ai_providers)"
+complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -l dry-run -d "Print assembled prompt without invoking the model"
+complete -c ai -n "not __fish_seen_subcommand_from $ai_subcmds" -s h -l help -d "Show help"
 
 # --- ai gen ---
 set -l gen_subcmds "commit summary"

@@ -87,6 +87,8 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         set_color cyan >&2; echo "--- dry-run: pass 1 (review) ---" >&2; set_color normal >&2
         test $runs -gt 1; and echo "review runs: $runs ($_flag_parallel_mode), joined under ## Run K/$runs" >&2
         printf '%s' "$pass1_prompt" | _ai_run $run_args --dry-run
+        # The prompt ends without a newline: the pass 2 header goes on a line of its own
+        echo
         set_color cyan >&2; echo "--- dry-run: pass 2 (verify) ---" >&2; set_color normal >&2
         set -l code_note "no code"
         if test -n "$_flag_code_file"; and test -f "$_flag_code_file"

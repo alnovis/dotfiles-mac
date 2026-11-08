@@ -333,6 +333,7 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
     end
     echo $summary
 end
-```--- dry-run: pass 2 (verify) ---
+```
+--- dry-run: pass 2 (verify) ---
 verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 280 lines)
 [exit 0]
