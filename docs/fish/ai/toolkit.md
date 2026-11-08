@@ -848,7 +848,7 @@ ai lessons edit             open this project's lessons.md in $EDITOR
 | Mark | Under a comment | Under "Refuted by verify" |
 |---|---|---|
 | `+` | right: posted, or fixed | verify was right to refute it |
-| `- why` | a false positive; the reason is required | not allowed |
+| `- why` | should not be posted: a false positive, a duplicate; the reason is required | not allowed |
 | `~` | unsure, or does not matter | unsure |
 | `missed` | not allowed | a real bug that verify refuted |
 

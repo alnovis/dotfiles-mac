@@ -25,10 +25,12 @@ Outcomes  6 from <date> to <date>
   log          <SANDBOX>/home/.local/share/ai/lessons/local<SANDBOX>/fixture/outcomes.jsonl
 
 Review comments  right / (right + wrong), by the review's model
-  (unknown)    2 right, 1 wrong, 1 unsure | precision 67%
+  (unknown)
+      2 right, 1 wrong, 1 unsure | precision 67%
 
 Verify  a wrong comment got past it; a missed bug it refuted
-  (unknown)    1 false positive(s) let through, 1 real bug(s) refuted, 1 refuted rightly
+  (unknown)
+      1 false positive(s) let through, 1 real bug(s) refuted, 1 refuted rightly
 
 False positives  the last 1, with why
   <date>  fish/.config/fish/functions/gbranch.fish  reads GBRANCH_BASES, not a fixed list

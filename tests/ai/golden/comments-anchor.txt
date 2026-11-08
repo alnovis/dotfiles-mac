@@ -13,7 +13,7 @@
 {"findings":[],"path":"nope.fish","side":null,"line":null,"line_cited":1,"in_diff":false,"anchored":false,"anchored_by":null,"file_level":false,"seen":1,"status":"uncertain"}
 # Review comments: check before publishing
 
-Mark each Outcome: + right, - why (a false positive, say why), ~ unsure; under Refuted: + verify was right, missed (a real bug). Then: ai lessons mark this file.
+Mark each Outcome: + right, - why it should not be posted (a false positive, a duplicate), ~ unsure; under Refuted: + verify was right, missed (a real bug). Then: ai lessons mark this file.
 
 10 comment(s): 7 confirmed, 3 uncertain. Range: <range> From 3 review runs.
 

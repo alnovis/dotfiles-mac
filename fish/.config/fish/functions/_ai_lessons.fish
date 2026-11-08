@@ -48,7 +48,7 @@ function _ai_lessons_help
     echo ""
     echo "Mark in the comments file, under each comment:"
     echo "  Outcome: +          right (posted, or fixed)"
-    echo "  Outcome: - why      a false positive; say why in a few words"
+    echo "  Outcome: - why      should not be posted (a false positive, a duplicate); say why"
     echo "  Outcome: ~          unsure, or does not matter"
     echo "Under 'Refuted by verify':"
     echo "  Outcome: +          verify was right to refute it"
@@ -224,7 +224,7 @@ function _ai_lessons_mark --description "Append the filled Outcome marks of a co
                 set outcome wrong
                 set reason (string replace -r '^-\s*' '' -- $v)
                 test "$f[2]" = comment; or set -a errors "$md:$f[1]: a refuted finding is + (verify was right) or missed"
-                test -n "$reason"; or set -a errors "$md:$f[1]: '-' needs a reason: '- why it is not a bug'"
+                test -n "$reason"; or set -a errors "$md:$f[1]: '-' needs a reason: '- why it should not be posted'"
             case '*'
                 set -a errors "$md:$f[1]: '$v' is not a mark (+, - why, ~, missed)"
         end
@@ -401,7 +401,8 @@ function _ai_lessons_stats --description "How right the reviews and verify were,
            "\($r) right, \($w) wrong, \($u) unsure"
            + (if $r + $w > 0 then " | precision \((100 * $r / ($r + $w)) | round)%" else "" end)] | @tsv' $log \
         | while read -l -d \t m v
-            _ai_ui_kv $m $v
+            # The model on a line of its own: names like litellm/qwen/qwen3.8-27b outrun a column
+            printf '  %s\n      %s\n' $m $v
         end
 
     # Verify: what it let through and what it threw out wrongly
@@ -412,7 +413,8 @@ function _ai_lessons_stats --description "How right the reviews and verify were,
            + "\(map(select(.kind == "refuted" and .outcome == "missed")) | length) real bug(s) refuted, "
            + "\(map(select(.kind == "refuted" and .outcome == "right")) | length) refuted rightly"] | @tsv' $log \
         | while read -l -d \t m v
-            _ai_ui_kv $m $v
+            # The model on a line of its own: names like litellm/qwen/qwen3.8-27b outrun a column
+            printf '  %s\n      %s\n' $m $v
         end
 
     # The reasons: the raw material of lessons.md

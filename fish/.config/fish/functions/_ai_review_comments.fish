@@ -213,7 +213,7 @@ function _ai_review_comments_md_comments --description "The comment sections of 
             (if .anchored and (.in_diff | not) then "> Not in the diff: GitLab/GitHub take a line comment only inside the changes; post it as a general comment." else empty end);
         "# Review comments: check before publishing",
         "",
-        "Mark each Outcome: + right, - why (a false positive, say why), ~ unsure; under Refuted: + verify was right, missed (a real bug). Then: ai lessons mark this file.",
+        "Mark each Outcome: + right, - why it should not be posted (a false positive, a duplicate), ~ unsure; under Refuted: + verify was right, missed (a real bug). Then: ai lessons mark this file.",
         "",
         "\(.comments | length) comment(s): \([.comments[] | select(.status == "confirmed")] | length) confirmed, \([.comments[] | select(.status != "confirmed")] | length) uncertain."
             + (if .base_sha then " Range: \(.base_sha[0:7])..\(.head_sha[0:7])." else "" end)
