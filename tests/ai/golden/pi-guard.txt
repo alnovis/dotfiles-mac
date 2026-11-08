@@ -12,14 +12,20 @@ bash {"command":"git log"} -> allowed
 == turn budget 3
 turn 1: tools [read,grep,find,ls] -
 turn 2: tools [read,grep,find,ls] -
+  stderr: ai-guard: the turn budget (3) is spent at 0s: tools off, the model is told to answer
 turn 3: tools [] told: the turn budget (3) is spent. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.
   a call after it -> blocked: the turn budget (3) is spent: no more tools — write the final answer now from what you have read
 turn 4: tools [] -
 turn 5: tools [] -
+  stderr: ai-guard: aborted at 0s: no answer 3 turns after the turn budget (3) is spent
 turn 6: tools [] - ABORTED
 == time budget
 before: tools [read,grep,find,ls]
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
 after: tools []
 a call -> blocked: the time budget (0.05s) is spent: no more tools — write the final answer now from what you have read
 turn 1: told: the time budget (0.05s) is spent. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.
+== pulse
+after the first delta: 6
+a delta right after: 6
 [exit 0]

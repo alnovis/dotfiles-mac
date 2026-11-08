@@ -35,6 +35,9 @@ Scala lenses (original to this repo — the language, then one lens per library;
 - `cats-effect` — CE 2 / 3: effects run eagerly, never or twice, `Resource` and fiber leaks, blocking on the compute pool, `Ref` atomicity
 - `zio` — ZIO 1 / 2: throwing code in infallible constructors (defects), fiber supervision and interruption, scopes and layers, blocking on the default executor
 
+Java lenses (original to this repo):
+- `java-fp` — imperative code a functional form makes shorter or safer (accumulator loops, `null` as absent, a closed set of cases as strings, mutable carriers, exceptions as control flow), each with a rewrite sketch that compiles on the build's Java version; suggestions go in an `## FP style` section as nits, side effects in stream lambdas are defects. Unlike the other lenses it mostly suggests rewrites, so its gate is "plainly better", and verify confirms a rewrite only when it is equivalent
+
 Shell lenses (original to this repo — two shells, two execution models):
 - `bash` — bash / POSIX sh: unquoted expansions, empty variables in destructive paths, `set -e` that does not fire, bashisms under `/bin/sh`
 - `fish` — fish footguns (line-split command substitution, vanishing empty lists, block scope, `"\t"`) plus a "Not bugs" list of bash habits models misapply to fish
@@ -77,6 +80,6 @@ data) come from VVAH's `iac` skill.
 
 The **quality** lenses (`documentation`, `reactive`, `resource-leak`,
 `error-handling`, `k8s-manifest`), the **Rust** lenses (`rust-unsafe`,
-`rust-async`, `rust-ownership`), the **Scala** lenses (`scala`, `akka`, `cats`, `cats-effect`, `zio`), the **shell** lenses (`bash`, `fish`), and the **data / messaging** lenses (`sql-postgres`,
+`rust-async`, `rust-ownership`), the **Scala** lenses (`scala`, `akka`, `cats`, `cats-effect`, `zio`), the **Java** lens (`java-fp`), the **shell** lenses (`bash`, `fish`), and the **data / messaging** lenses (`sql-postgres`,
 `sql-clickhouse`, `hbase`, `redis`, `kafka`) are original to this repository — same HARD GATE
 discipline, not derived from VVAH.

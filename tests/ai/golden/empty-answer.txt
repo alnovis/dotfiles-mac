@@ -16,6 +16,13 @@ status 1; why: no answer: the model wrote a tool call as text
   run 1/1  done       Ns    1 turns    0 tools  model    0s    8.1k/1.7k tokens  ../ea.md
     no tool calls: answered from the prompt alone, the repository was not read
 status 0; why: 
+== aborted by ai-guard
+  run 1/1  FAILED     Ns  aborted by ai-guard at 1080s: no answer 180s after the time budget (900s)
+     17 turns   17 tools  model    Ns   187k/19.3k tokens
+    Raise agent_timeout or agent_max_turns in the ai config, or pick a faster model.
+    ai-guard: the time budget (900s) is spent at 900s: tools off, the model is told to answer
+    ai-guard: aborted at 1080s: no answer 180s after the time budget (900s)
+status 1; why: aborted by ai-guard at 1080s: no answer 180s after the time budget (900s)
 == a leaked answer, cleaned
   run 1/1  done       Ns    3 turns    2 tools  model    0s       9k/900 tokens  ../ea.md
 status 0; why: 

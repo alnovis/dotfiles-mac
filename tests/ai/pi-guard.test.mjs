@@ -1,13 +1,20 @@
 // ai-guard (fish/.config/fish/pi/ai-guard.ts) against a stand-in for pi: no model, no pi.
 // Usage: node pi-guard.test.mjs EXTENSION REPO_DIR — prints one line per check (a golden).
-import { realpathSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 // REPO_DIR holds src/a.scala and link-out, a symlink to a directory outside it
 const [extension, repo] = process.argv.slice(2);
 const realRepo = realpathSync(repo);
 const { default: aiGuard } = await import(extension);
+
+// What the guard tells on stderr, in order with the rest (stderr and stdout are separate
+// pipes, so their order would not be kept)
+process.stderr.write = (s) => {
+	console.log(`  stderr: ${String(s).trimEnd()}`);
+	return true;
+};
 
 // What the extension registers and calls; handlers by event name
 function standIn() {
@@ -31,7 +38,7 @@ function standIn() {
 }
 
 function load(env) {
-	for (const k of ["AI_GUARD_MAX_TURNS", "AI_GUARD_TIMEOUT", "AI_GUARD_ROOT"]) delete process.env[k];
+	for (const k of ["AI_GUARD_MAX_TURNS", "AI_GUARD_TIMEOUT", "AI_GUARD_ROOT", "AI_GUARD_PULSE"]) delete process.env[k];
 	Object.assign(process.env, env);
 	const s = standIn();
 	aiGuard(s.pi);
@@ -86,4 +93,18 @@ console.log("== time budget");
 	const r = await emit("turn_end", { turnIndex: 0 });
 	console.log(`turn 1: told: ${r?.entries?.[0]?.content}`);
 	await emit("session_shutdown", {});
+}
+
+console.log("== pulse");
+{
+	const pulse = join(mkdtempSync(join(tmpdir(), "guard")), "pulse");
+	const { emit } = load({ AI_GUARD_TIMEOUT: "0", AI_GUARD_MAX_TURNS: "0", AI_GUARD_PULSE: pulse });
+	await emit("session_start", {});
+	await emit("message_start", { message: { role: "assistant" } });
+	await emit("message_update", { assistantMessageEvent: { type: "thinking_delta", delta: "Let me" } });
+	console.log(`after the first delta: ${readFileSync(pulse, "utf8").trim()}`);
+	// at most once a second: not written again yet
+	await emit("message_update", { assistantMessageEvent: { type: "text_delta", delta: "abcd" } });
+	console.log(`a delta right after: ${readFileSync(pulse, "utf8").trim()}`);
+	rmSync(dirname(pulse), { recursive: true });
 }

@@ -20,11 +20,11 @@ Majority of 3 verify runs, joined by finding number: a verdict needs 2 of 3.
 
 Verify: 1 confirmed, 1 refuted, 2 uncertain (majority of 3 runs)
 == counts: 1 confirmed, 1 refuted, 2 uncertain
-## Refuted by verify — skim before trusting
+## Refuted by verify: skim before trusting
 
-Not comments. Verify threw these out; it can be wrong — check any that sound real.
+Not comments. Verify threw these out; it can be wrong, check any that sound real.
 
-- [F2] `b.fish:7` — the list is reversed — refuted 9/10
+- [F2] `b.fish:7` - the list is reversed: refuted 9/10
   > run 1: `:+` appends at the tail.
 
 == one run of three answered: everything uncertain

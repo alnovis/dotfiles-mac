@@ -22,7 +22,7 @@
     "quote": "set -l parts (string split \\t $line)",
     "severity": "nit",
     "status": "confirmed",
-    "body": "An unchanged line far from the change: anchored, not in the diff."
+    "body": "An unchanged line far from the change → anchored, «not in the diff»… — typographic marks become ASCII, but `a → b` in code stays."
   },
   {
     "file": "nope.fish",
@@ -58,12 +58,22 @@
     "body": "A prose quote cited two lines off (11, an empty echo): placed on the nearby line that names `GBRANCH_BASES`."
   },
   {
+    "findings": ["F4"],
     "file": "fish/.config/fish/functions/gbranch.fish",
     "line": 50,
     "quote": "if set -q GBRANCH_BASES set candidates $GBRANCH_BASES",
     "severity": "nit",
     "status": "confirmed",
     "body": "Two lines of code quoted as one, cited off: found by the quote without whitespace, on its first line (44)."
+  },
+  {
+    "findings": "[F4]",
+    "file": "fish/.config/fish/functions/gbranch.fish",
+    "line": 46,
+    "quote": "set candidates $GBRANCH_BASES",
+    "severity": "nit",
+    "status": "confirmed",
+    "body": "The same finding at the other place it cites: dropped, one comment per finding (the numbers written as a string)."
   },
   {
     "file": "gbranch",

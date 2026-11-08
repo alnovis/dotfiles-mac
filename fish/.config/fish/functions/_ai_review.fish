@@ -103,7 +103,7 @@ function _ai_review_print_help
     echo "  --brief                 Short 3-5 bullet summary instead of detailed review"
     echo "                          (--lens and --verify are ignored)"
     echo "  --lens NAME[,NAME...]   Add specialist checklist(s): security, quality, Rust,"
-    echo "                          Scala, shell, data/messaging (see prompts/lenses/README.md);"
+    echo "                          Scala, Java, shell, data/messaging (see prompts/lenses/README.md);"
     echo "                          with verify, the verifier gets them too. Default: config"
     echo "                          review_lens (project .ai/config, then global), else none"
     echo "  --no-lens               No lens this time, whatever review_lens says"

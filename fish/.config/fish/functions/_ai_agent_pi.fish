@@ -59,9 +59,11 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
     # (pi/ai-guard.ts). Config: agent_max_turns (default 30), agent_timeout seconds (900); 0
     # turns a limit off. Not in a session a person watches.
     set -l guard_env
+    set -l guarded 0
     if not set -q _flag_interactive; and contains -- "$_flag_tools" read ''
         set -l guard $__fish_config_dir/pi/ai-guard.ts
         if test -f $guard
+            set guarded 1
             set -a args --extension $guard
             # Only a value that is set: an empty one would read as 0, the limit off
             set -l v (_ai_config_read agent_max_turns)
@@ -78,6 +80,9 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
         if set -q AI_PI_SESSION_DIR; and test -d "$AI_PI_SESSION_DIR"
             set sdir $AI_PI_SESSION_DIR
             set own_sdir 0
+            # How much of the answer has streamed, for the live line: the session file has
+            # only whole answers (ai-guard writes it)
+            test $guarded -eq 1; and set -a guard_env AI_GUARD_PULSE=$sdir/pulse
         else
             set sdir (mktemp -d)
         end

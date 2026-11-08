@@ -152,12 +152,19 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     # of the run (turns, tokens, reasoning) are under the line to tell the cases apart.
     # The reason of a failure, one line, for the caller's final summary — it scrolls away
     # above otherwise: the last error-looking line of the log, else its last line
+    # A run ai-guard aborted (pi/ai-guard.ts) says so on stderr: that is the reason, not the
+    # last turn's stop — granite's aborted run read "ended its turn empty (stop: toolUse)"
     set -g __ai_last_failure ""
+    set -l guard (string match -r -- '^ai-guard: aborted .*' <$errlog)[-1]
+    set guard (string replace -r -- '^ai-guard: aborted' 'aborted by ai-guard' $guard)
     if test "$rc" -eq 0; and not test -s $outfile
         set rc 1
         set -l stop (jq -r '.agent.last_stop // empty' $ufile 2>/dev/null)
         set -l hint
-        if test $textual_call -eq 1
+        if test -n "$guard"
+            set -g __ai_last_failure $guard
+            set hint "Raise agent_timeout or agent_max_turns in the ai config, or pick a faster model."
+        else if test $textual_call -eq 1
             set -g __ai_last_failure "no answer: the model wrote a tool call as text"
             set hint "The runner could not parse this model's tool calls (seen with ollama's /v1 parser for some models): pick another model, or run it without --agentic."
         else if test "$stop" = length
@@ -174,7 +181,8 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         test -n "$hint"; and printf '    %s\n' $hint >&2
         test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
     else if test "$rc" -ne 0
-        set -l why (_ai_failure_reason <$errlog)
+        set -l why $guard
+        test -n "$why"; or set why (_ai_failure_reason <$errlog)
         test -n "$why"; or set why "exit $rc"
         set -g __ai_last_failure $why
         _ai_run_watched_row "$name" FAILED $total $why >&2

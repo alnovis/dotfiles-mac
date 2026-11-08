@@ -1,10 +1,10 @@
-bare: 0 confirmed, 1 refuted, 1 uncertain
+bare: 1 confirmed, 1 refuted, 1 uncertain
 untagged: 0 confirmed, 0 refuted
-## Refuted by verify — skim before trusting
+## Refuted by verify: skim before trusting
 
-Not comments. Verify threw these out; it can be wrong — check any that sound real.
+Not comments. Verify threw these out; it can be wrong, check any that sound real.
 
-- `gbranch.fish:8` — the help text overstates the auto-detection — refuted 8/10
+- `gbranch.fish:8` - the help text overstates the auto-detection: refuted 8/10
   > the candidates loop tries every listed branch; a why line that ends in the word is not counted as REFUTED
 
 == untagged verdicts: the comments stage is not skipped

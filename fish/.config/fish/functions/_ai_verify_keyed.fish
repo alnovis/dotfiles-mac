@@ -7,5 +7,5 @@ function _ai_verify_keyed --description "How many verdicts of a verify file are 
         echo 0
         return 0
     end
-    string match -r -- '\[F[0-9]+\].*(?:\[(?:CONFIRMED|REFUTED|UNCERTAIN)|[—–-]\s*\**\s*(?:CONFIRMED|REFUTED|UNCERTAIN)(?:\s+\d+\s*/\s*10)?\s*\**\s*$)' <$file | count
+    string match -r -- '\[F[0-9]+\].*(?:\[(?:CONFIRMED|REFUTED|UNCERTAIN)|(?:[—–-]\s*\**\s*|\*\*)(?:CONFIRMED|REFUTED|UNCERTAIN)(?:\s+\d+\s*/\s*10)?\s*\**\s*$)' <$file | count
 end

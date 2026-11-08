@@ -161,16 +161,20 @@ function _ai_review_comments_md_refuted --description "What verify threw out, fr
             printf "%s\t%s\t%s\n", t, conf, why
         }' $verdicts 2>/dev/null)
     test (count $items) -gt 0; or return 0
-    echo "## Refuted by verify — skim before trusting"
-    echo
-    echo "Not comments. Verify threw these out; it can be wrong — check any that sound real."
-    echo
-    for it in $items
-        set -l f (string split \t -- $it)
-        echo "- $f[1] — refuted $f[2]"
-        test -n "$f[3]"; and echo "  > $f[3]"
-    end
-    echo
+    # In characters typed on a keyboard, as the comments are (_ai_keyboard_jq): the titles and
+    # why: lines are verify's own text
+    begin
+        echo "## Refuted by verify: skim before trusting"
+        echo
+        echo "Not comments. Verify threw these out; it can be wrong, check any that sound real."
+        echo
+        for it in $items
+            set -l f (string split \t -- $it)
+            echo "- $f[1]: refuted $f[2]"
+            test -n "$f[3]"; and echo "  > $f[3]"
+        end
+        echo
+    end | jq -Rsj (_ai_keyboard_jq | string collect)'keyboard'
 end
 
 function _ai_review_comments_md_comments --description "The comment sections of the markdown" --argument-names json
@@ -180,16 +184,17 @@ function _ai_review_comments_md_comments --description "The comment sections of 
             if .anchored then "Line \(.line) (\(.side))"
             elif .file_level then "Whole file"
             else "Line \(.line_cited // "?") cited, not found" end;
-        def found_by: if (.runs // 1) > 1 then " · found by \(.seen) of \(.runs) runs" else "" end;
+        def found_by: if (.runs // 1) > 1 then " | found by \(.seen) of \(.runs) runs" else "" end;
+        def findings: if ((.findings // []) | length) > 0 then " | " + (.findings | join(", ")) else "" end;
         def notes:
-            (if .file_level then "> File-level: no line to attach it to — post it as a general comment."
-             elif (.anchored | not) then "> Unanchored: the quoted line was not found in the code — check it by hand."
-             elif .anchored_by == "line" then "> Placed by the cited line number: the quote did not match the code (model quoted: `\(.quote)`) — check this is the right line."
-             elif .anchored_by == "nearby" then "> Placed on a nearby line: the quote did not match, and the cited line \(.line_cited) names none of the code the comment is about — this one does. Check it."
+            (if .file_level then "> File-level: no line to attach it to; post it as a general comment."
+             elif (.anchored | not) then "> Unanchored: the quoted line was not found in the code; check it by hand."
+             elif .anchored_by == "line" then "> Placed by the cited line number: the quote did not match the code (model quoted: `\(.quote)`); check this is the right line."
+             elif .anchored_by == "nearby" then "> Placed on a nearby line: the quote did not match, and the cited line \(.line_cited) names none of the code the comment is about, this one does. Check it."
              elif .anchored_by == "name" then "> Placed by a name: the comment cites no line and quotes no code; this changed line names code it talks about. Check it."
              else empty end),
-            (if .anchored and (.in_diff | not) then "> Not in the diff: GitLab/GitHub take a line comment only inside the changes — post it as a general comment." else empty end);
-        "# Review comments — check before publishing",
+            (if .anchored and (.in_diff | not) then "> Not in the diff: GitLab/GitHub take a line comment only inside the changes; post it as a general comment." else empty end);
+        "# Review comments: check before publishing",
         "",
         "\(.comments | length) comment(s): \([.comments[] | select(.status == "confirmed")] | length) confirmed, \([.comments[] | select(.status != "confirmed")] | length) uncertain."
             + (if .base_sha then " Range: \(.base_sha[0:7])..\(.head_sha[0:7])." else "" end)
@@ -198,12 +203,12 @@ function _ai_review_comments_md_comments --description "The comment sections of 
         (.comments | group_by(.path)[] | sort_by(.order) |
             "## \(.[0].path)", "",
             (.[] |
-                "### \(where) · \(.severity)" + (if .status == "confirmed" then "" else " · uncertain — needs a human check" end) + found_by,
+                "### \(where) | \(.severity)" + (if .status == "confirmed" then "" else " | uncertain, needs a human check" end) + found_by + findings,
                 "",
                 (if (.code // .quote) == "" then empty else
                     "```", ((.code // .quote) | sub("^[[:space:]]+"; "")), "```", "" end),
                 .body,
                 "",
                 notes,
-                ""))' $json
+                ""))' $json | jq -Rsj (_ai_keyboard_jq | string collect)'keyboard'
 end

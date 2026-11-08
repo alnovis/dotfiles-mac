@@ -120,7 +120,8 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
         contains -- $path $files_at_head; and set found true
         printf '%s' $c | jq -c --arg path $path --arg side "$side" --argjson line $line --argjson in_diff $in_diff \
             --arg by "$by" --arg code "$code" --argjson found $found --argjson runs $runs \
-            '{path: $path, side: (if $side == "" then null else $side end), line: (if $line > 0 then $line else null end),
+            '{findings: ([(.findings // []) | if type == "array" then .[] else . end | tostring | scan("[0-9]+") | "F" + .] | unique),
+              path: $path, side: (if $side == "" then null else $side end), line: (if $line > 0 then $line else null end),
               line_cited: (if (.line // 0) > 0 then .line else null end), anchored: ($side != ""),
               anchored_by: (if $by == "" then null else $by end),
               file_level: ($side == "" and $found and ((.line // 0) <= 0)),
@@ -132,10 +133,21 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
     # In line order within a file — neighbouring comments are often about one thing:
     # whole-file first, then new lines, then old (removed) lines — each side numbers its
     # own file — then the unanchored ones. "order" carries that for the markdown too.
+    # One comment per finding: a comment whose findings an earlier one already covers is
+    # dropped — a finding citing ":83 vs 87-93" came out as two comments on lines 83 and 84
+    # saying the same. One with no finding numbers is kept.
+    # The body only in characters typed on a keyboard (_ai_keyboard_jq): the prompt asks for
+    # that, and models still wrote arrows.
     jq -s --arg base "$base" --arg head "$head" --argjson runs $runs \
-        'map(. + {order: [(if .file_level then 0 elif .side == "new" then 1 elif .side == "old" then 2 else 3 end),
+        (_ai_keyboard_jq | string collect)'
+        map(.body |= keyboard)
+         | map(. + {order: [(if .file_level then 0 elif .side == "new" then 1 elif .side == "old" then 2 else 3 end),
                           (.line // .line_cited // 0)]})
          | sort_by(.path, .order)
+         | reduce .[] as $c ({seen: [], out: []};
+             if ($c.findings | length) > 0 and (($c.findings - .seen) | length) == 0 then .
+             else .seen += $c.findings | .out += [$c] end)
+         | .out
          | {base_sha: (if $base == "" then null else $base end), head_sha: (if $head == "" then null else $head end),
             start_sha: (if $base == "" then null else $base end), runs: $runs, comments: .}' $out
     rm -f $out

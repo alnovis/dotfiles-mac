@@ -325,6 +325,7 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | | `cats` | Errors lost to `Either` where `Validated` was meant, lawless instances, stack safety |
 | | `cats-effect` | Effects run eagerly / twice, `Resource` and fiber leaks, blocking the compute pool, `Ref` atomicity (CE 2 / 3) |
 | | `zio` | Throwing code as defects, fiber supervision, scopes and layers, blocking the executor (ZIO 1 / 2) |
+| Java (version read from the build first) | `java-fp` | Imperative code a functional form makes shorter or safer: accumulator loops → streams, `null` → `Optional`, string statuses → enum / `sealed` + exhaustive `switch`, mutable carriers → `record`, exceptions as control flow. Each suggestion carries a rewrite sketch for the build's Java version and goes in `## FP style` as a nit; verify confirms it only when the rewrite is equivalent. Side effects in stream lambdas are defects |
 | Shell | `bash` | Unquoted expansions, empty vars in `rm -rf`, `set -e` that does not fire, lost subshell state, bashisms under `/bin/sh` |
 | | `fish` | `set x (cmd)` line splitting, vanishing empty lists, block scope, `"\t"`; plus "Not bugs" (`; or`, no word splitting) |
 | Data / messaging | `sql-postgres` | Unbounded scans, missing indexes, locking, unsafe migrations, NULL semantics |
@@ -401,6 +402,19 @@ numbered — Critical, Important, Tests, Removed code (it holds real problems: a
 section left its keys dead) and any section the model named its own way (`## Bugs`). A review
 with no numbers at all is judged by titles, as before.
 
+So a bullet there must be a problem. The review prompt says so: what the tests do cover and the
+deletions that are safe are a plain sentence, not a bullet. A real review on claude wrote
+"New tests cover…" and "moved unchanged" as bullets of Tests and Removed code; verify confirmed
+both — true, and no defect — and they became merge-request comments. Should one slip through,
+verify refutes a finding that claims no defect ("not a defect"), so it stays out of the
+comments.
+
+A deletion that loses behaviour the code relied on is a regression and goes in Critical or
+Important by its impact; Removed code keeps what deserves a second look without an established
+impact. The comments take their severity from the section, so a regression the model still put
+under Removed code is "important" there — it came out a "nit" once, the one tier a reader
+skips. Tests and FP style are "nit".
+
 Output shape (one verdict per numbered finding, then a tally):
 
 ```
@@ -469,7 +483,8 @@ review ×N  →  joined under "## Run K/N"  →  one verify over all of it  → 
   (`503 Service Temporarily Unavailable`), in the run line and in the summary alike.
 - With `--comments`, the extraction merges the same problem reported by several runs into one
   comment and counts it: `"seen": 2, "runs": 3` in the JSON, `found by 2 of 3 runs` in the
-  markdown. Two different problems on one line stay two comments.
+  markdown. Two different problems on one line stay two comments; one finding is one comment,
+  also when it cites several places (below).
 - **Parallel or one at a time:** parallel runs are separate fish processes (a backgrounded fish
   function runs in the same process, one after another). `auto` runs a cloud provider in
   parallel and ollama one at a time (several local runs would not fit in memory). Each run's
@@ -510,7 +525,8 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
    With no `[CONFIRMED]` and no `[UNCERTAIN]` verdict there is nothing to extract: no model call,
    the stage line says `skipped`, and the same files are written — an empty array, and the
    markdown with what verify refuted. Verdicts are read from their tags, also when a model
-   drops the brackets (`— REFUTED 8/10` at the end of a finding's line, nowhere else); a
+   drops the brackets (`— REFUTED 8/10` at the end of a finding's line, or in bold there after
+   its reasoning, `… **REFUTED 9/10**`; nowhere else); a
    verify file with no verdict found at all is not "nothing confirmed" — the model still
    gets it, and an empty result says `no verdict recognised in the verify file`.
 2. **Anchoring (no model, `_ai_review_comments_anchor`).** A model's line numbers are often off
@@ -522,9 +538,13 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
    name (`SendTicketContainerizedTest`) by the one file called `NAME.<ext>`. Then the hunks of
    `git diff -U3` tell whether the line is **in the diff** — GitLab and GitHub accept a line
    comment only there.
+   One comment per finding: the model names the finding numbers each comment is about
+   (`"findings": ["F3"]`), and a comment whose findings an earlier one (in line order) already
+   covers is dropped — a finding citing `:83 vs 87-93` came out as two comments
+   on lines 83 and 84 saying the same. The markdown heads each comment with its numbers.
 3. **Files next to the report.** Nothing is posted:
    - `review.comments.md` — for a human to check: per file, each comment with its line and side,
-     severity, `uncertain — needs a human check` where so, the quoted line and the text. A line
+     severity, `uncertain, needs a human check` where so, the quoted line and the text. A line
      outside the diff says to post it as a general comment; one not found says `Unanchored`.
      A finding about a whole file (a missing test, a stale document) has no line: it is
      `Whole file` (`"file_level": true`), also posted as a general comment. A quote that did
@@ -537,15 +557,19 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
      then the first changed line of that file in the diff that names one of those words is
      taken — an added line before a context line (`"anchored_by": "name"`); with none, the
      comment stays `Whole file`. All three are flagged; the markdown always shows the real line.
-     At the end, **Refuted by verify — skim before trusting** lists what verify threw out,
+     At the end, **Refuted by verify: skim before trusting** lists what verify threw out,
      each with its confidence and its `why:` — read straight from the verify file, not as
      comments and not in the JSON. Verify is a filter, not a referee: on a real work change it
      refuted the very race fixed a commit later, calling the regression pre-existing.
+     The comment bodies (JSON and markdown) and the whole markdown are in characters typed on
+     a keyboard: typographic dashes, arrows, guillemets, curly quotes, an ellipsis, bullets and
+     non-breaking spaces become `-`, `->`, `"`, `'`, `...` and a space (`_ai_keyboard_jq`; the
+     prompt asks for it too, and models still wrote `→`). Code in backticks is left as quoted.
    - `review.comments.json` — for publishing, one shape for both platforms:
 
      ```json
      {"base_sha": "…", "head_sha": "…", "start_sha": "…", "runs": 3,
-      "comments": [{"path": "src/…/WhitelistOrgCache.java", "side": "new", "line": 36,
+      "comments": [{"findings": ["F2"], "path": "src/…/WhitelistOrgCache.java", "side": "new", "line": 36,
                     "line_cited": 24, "anchored": true, "anchored_by": "quote", "file_level": false,
                     "code": "        localCache = Stream.concat(…)", "quote": "localCache = Stream.concat(…)",
                     "in_diff": true, "seen": 2, "runs": 3,
@@ -577,7 +601,12 @@ On pi the instruction is also enforced: an unattended read-only run loads the ex
 - after `agent_max_turns` turns (default 30) or `agent_timeout` seconds (default 900) the tools
   are switched off and the model is told to answer from what it has read. A bare cap (the old
   native loop) ended a wandering run with no answer at all. Still no answer three turns later,
-  or 180 s after the timeout (a provider that hangs), the run is aborted.
+  or 180 s after the timeout (a provider that hangs), the run is aborted; pi still running
+  30 s after that is ended. Each step is a line on stderr with the second it came
+  (`ai-guard: aborted at 1080s: no answer 180s after the time budget (900s)`), shown under the
+  run line; an aborted run's reason is that line, not the last turn's stop;
+- while the model writes, how much of its answer has streamed goes to a pulse file next to the
+  session, for the live line (below).
 
 claude (`Read`, `Grep`, `Glob`) and opencode have no such guard; for them the skill's
 instruction is all there is.
@@ -654,12 +683,15 @@ session as it is written — the fields of the old native loop's line, and the l
   ollama · qwen3.8:27b | turn 8 | grep isWelcomeDone… | ctx 64k/131k | 11m 42s | no answer for 6m 50s
 ```
 
-The phase is `model…` while the model answers, or the tool call while its tools run. `ctx` is
+The phase is `model…` while the model answers — `model… 12k chars` once its answer streams —
+or the tool call while its tools run. `ctx` is
 the last turn's prompt (each turn sends the whole context again) over the model's window from
 pi's config: how close the run is to being cut. On a narrow terminal the last tool goes first,
 then the phase is cut, then the model's name; the turn, the context and the time stay. After
-5 minutes without a new session entry it says so in yellow: a provider that hangs no longer
-looks like a silent heading for half an hour. Parallel runs have no terminal of their own;
+5 minutes with neither a new session entry nor a streamed character it says so in yellow: a
+provider that hangs no longer looks like a silent heading for half an hour. pi writes an answer
+to the session only once it is whole, so the streamed characters come from ai-guard's pulse
+file; without them a model writing one long answer read as `no answer for 6m`. Parallel runs have no terminal of their own;
 their stage line carries each running run's turn (`1/3 done · 3m 10s · run 2: turn 9 ·
 run 3: turn 4`).
 

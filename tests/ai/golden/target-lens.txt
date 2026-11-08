@@ -41,7 +41,7 @@ Output rules:
 - Markdown headers per section
 - If findings run long, give Critical and Important in full, then a one-line tally of held-back Nits rather than dropping them silently
 
-Apply the lens(es) below IN ADDITION to the review above. The finding gate and severity rules still apply — a lens is where to look, not a mandate to find something. Report lens findings under the Critical/Important tiers by their real impact.
+Apply the lens(es) below IN ADDITION to the review above. The finding gate and severity rules still apply — a lens is where to look, not a mandate to find something. Report lens findings under the Critical/Important tiers by their real impact, unless the lens names a section of its own for what it suggests.
 
 ## Review lens: access-control
 Access-control lens. The bug here is usually the ABSENCE of a check — you are looking for what is NOT there.
