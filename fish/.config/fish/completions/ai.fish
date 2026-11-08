@@ -100,6 +100,7 @@ complete -c ai -n "__fish_seen_subcommand_from review" -l verify-provider -d "Pr
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-model -d "Model for the verify pass" -x -a "(_ai_complete_models --verify)"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-output -d "Output file for the verify pass" -r
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-runs -d "Verify N times, keep each finding's majority verdict" -x -a "2 3 5"
+complete -c ai -n "__fish_seen_subcommand_from review" -l verify-context -d "Verify on the code the findings cite, read beforehand" -x -a "assembled"
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-only -d "Re-verify an existing review file (no review pass)" -r
 complete -c ai -n "__fish_seen_subcommand_from review" -l dry-run -d "Print assembled prompt without invoking the model"
 complete -c ai -n "__fish_seen_subcommand_from review" -l lang -d "Response language" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"

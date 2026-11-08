@@ -435,6 +435,20 @@ out, with a count. `--verify-runs` turns verify on; `verify_runs` is scoped by t
 provider/model like `review_runs` (`verify_runs@litellm=3`). Majority is for verify only: a
 review's runs are joined by union, because there a finding one run saw is still a finding.
 
+**Verify on assembled code (`--verify-context assembled`).** An agentic verifier spends a turn
+on each file it opens (4-8 turns of about a minute on a local 27B model), finding code the
+findings already name by `file:line`. With this flag `_ai_verify_context` reads it first, from
+the working tree: 40 lines around every line a numbered finding cites (`path:12`, `path:12-15`,
+a bare `:12` in the file named last; a path not found as written is looked up by its tail,
+the changed file winning among several), and up to 5 places, 3 lines each, that use each name
+the finding quotes in backticks (`git grep -w`; the finding's own files first, then the changed
+ones; a name used more than 30 times is skipped). Cited lines go first, then the places, within
+`verify_context_lines` (default 1500); the block ends with what was not found, cited no line or
+was cut. Verify then runs as one request with no tools, even with `--agentic`, and is told
+that code not shown is not absent: a missing caller or guard makes a finding UNCERTAIN, not
+REFUTED. The diff still goes along as the code under review. It turns verify on and works in
+git mode, target mode and with `--verify-only`.
+
 `--verify` is opt-in (or `review_verify=1`), skipped with a note under `--brief`. The `verify`
 task is configured like any other (`ai config provider claude --task verify`,
 `ai models use verify MODEL`).
@@ -453,6 +467,7 @@ one, so run it from the repo when the verifier uses `--agentic`.
 | `--file FILE` | Code or diff to embed for the verifier. Without it (and without `--agentic`) a note says the verifier reasons from the findings text alone |
 | `--verify-output FILE`, `-o FILE` | Output path (`--verify-output` wins). Default: `<review>.verify.<ext>` |
 | `--agentic`, `--no-think`, `--lang`, `--dry-run` | As for a normal review |
+| `--verify-context assembled` | Verify on the code the findings cite, read beforehand; with `--range` the diff goes along |
 | `--comments` | Then the comments stage below |
 | `--range BASE..HEAD` | With `--comments`: the reviewed range, to anchor lines and check the diff |
 | `--verdicts FILE` | With `--comments`: an existing verify file — no verify pass, comments only |

@@ -1,0 +1,23 @@
+== verify-only
+--- dry-run: prompt that would be sent to ollama (native) ---
+  context      the code each finding cites, read from the repository; no tools
+CODE FOR THE FINDINGS (read from the repository: the lines around each line a finding cites, and places that use the names it quotes; the numbers are the file's line numbers):
+### fish/.config/fish/functions/gbranch.fish (F1, F2)
+### fish/.config/fish/functions/_ai_review_git.fish (F2)
+### fish/.config/fish/functions/clipcommit.fish (F2)
+Not found in the repository: F3 nosuch/Missing.java:10.
+Cite no line: F4.
+You have no tools: the code above and the code under review are all you can see. When the code that decides a finding is not shown (a caller, a guard, a lock, the definition of a name), the verdict is UNCERTAIN and why: names what is missing. Never REFUTED because a defence is not shown: not shown is not absent.
+== --agentic gives no tools
+--- dry-run: prompt that would be sent to claude (runner claude, profile none) ---
+  context      the code each finding cites, read from the repository; no tools
+If you have Read/Grep/bash tools, USE them — do not reason from the finding's description alone; the first pass's description is a claim, not evidence. If you have no tools, reason as strictly as you can from the code shown.
+You have no tools: the code above and the code under review are all you can see. When the code that decides a finding is not shown (a caller, a guard, a lock, the definition of a name), the verdict is UNCERTAIN and why: names what is missing. Never REFUTED because a defence is not shown: not shown is not absent.
+== no diff
+  note         no diff — the verifier sees the code the findings cite but not the old code, so it
+               cannot tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF).
+== review + verify
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 280 lines + the code the findings cite, read from the repository; no tools)
+== bad value
+Error: --verify-context takes assembled (got: 'agentic')
+[exit 1]

@@ -12,13 +12,14 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #                        its CLI, any other provider via the runner, see _ai_default_agent)
     #   --no-think           passed to the verifier (fast pass, think:false)
     #   --lens A,B           the review's lenses, as knowledge to judge the findings by
+    #   --verify-context assembled  the code the findings cite, read beforehand; no tools
     #   --lang L, --dry-run
     #   --comments           then MR line comments from the verdicts (<review>.comments.md/.json)
     #   --range BASE..HEAD   the reviewed range, to anchor the comments and check the diff
     #   --verdicts FILE      an existing verify file: skip the verify pass, build comments only
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
              'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'no-think' 'dry-run' \
-             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' 'verify-runs=' -- $argv; or return 1
+             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' 'verify-runs=' 'verify-context=' -- $argv; or return 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
         echo "Error: --lens and --no-lens exclude each other" >&2
@@ -104,9 +105,14 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         end
         _ai_ui_kv code "the diff of $_flag_range ("(count (cat $diff_tmp))" lines)"
     end
+    test "$_flag_verify_context" = assembled
+    and _ai_ui_kv context "the code each finding cites, read from the repository; no tools"
     if not set -q _flag_file; and test -z "$diff_tmp"
         set_color yellow
-        if set -q _flag_agentic
+        if test "$_flag_verify_context" = assembled
+            _ai_ui_kv note "no diff — the verifier sees the code the findings cite but not the old code, so it"
+            _ai_ui_kv "" "cannot tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF)."
+        else if set -q _flag_agentic
             _ai_ui_kv note "no diff — the verifier reads the repo but cannot see the old code, so it cannot"
             _ai_ui_kv "" "tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF)."
         else
@@ -132,6 +138,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $review_file --lang $lang_full
     test -n "$vmodel"; and set -a vargs --model $vmodel
     set -q _flag_lens; and set -a vargs --lens $_flag_lens
+    set -q _flag_verify_context; and set -a vargs --context $_flag_verify_context
     set -q _flag_agentic; and set -a vargs --agentic
     set -q _flag_no_think; and set -a vargs --no-think
     if set -q _flag_file; and test -f "$_flag_file"

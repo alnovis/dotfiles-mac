@@ -19,8 +19,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --parallel-mode M        parallel | sequential, for those runs
     #   --lens A,B               the review's lenses, handed to verify too
     #   --verify-runs N          verify N times, joined by majority per finding (_ai_verify_vote)
+    #   --verify-context assembled  verify on the code the findings cite, read beforehand
     argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
-             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' 'verify-runs=' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' 'verify-runs=' 'verify-context=' -- $argv; or return 1
     set -l runs $_flag_runs
     test -n "$runs"; or set runs 1
 
@@ -92,7 +93,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         end
         set -l lens_note ""
         test -n "$_flag_lens"; and set lens_note " + lens(es) $_flag_lens"
-        echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md$lens_note + first-pass findings + $code_note)" >&2
+        set -l ctx_note ""
+        test "$_flag_verify_context" = assembled; and set ctx_note " + the code the findings cite, read from the repository; no tools"
+        echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md$lens_note + first-pass findings + $code_note$ctx_note)" >&2
         test $vruns -gt 1; and echo "verify runs: $vruns ($vmode), joined by majority per finding (origin: $vr[2])" >&2
         test -n "$review_out"; and echo "would write: review -> $review_out ; verify -> $verify_out" >&2
         if set -q _flag_comments
@@ -183,6 +186,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     test -n "$lang"; and set -a vargs --lang $lang
     test -n "$_flag_code_file"; and set -a vargs --code-file $_flag_code_file
     test -n "$_flag_lens"; and set -a vargs --lens $_flag_lens
+    set -q _flag_verify_context; and set -a vargs --context $_flag_verify_context
     set -q _flag_agentic; and set -a vargs --agentic
     set -q _flag_no_think; and set -a vargs --no-think
 

@@ -9,7 +9,9 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     #   --lens A,B          the review's lenses, as knowledge to judge the findings by
     #   --runs N --mode M   N verify runs (parallel | sequential), joined by majority per
     #                       finding number (_ai_verify_vote); each run kept as <dest>.runK
-    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'lens=' 'runs=' 'mode=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
+    #   --context assembled the code each finding cites, read from --workdir beforehand
+    #                       (_ai_verify_context); one request, no tools, even with --agentic
+    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'lens=' 'runs=' 'mode=' 'context=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
 
     set -l provider $_flag_provider
     test -z "$provider"; and set provider ollama
@@ -64,9 +66,29 @@ CODE UNDER REVIEW (the first pass saw this):
 $code"
     end
 
+    # The code the findings cite, read here instead of by the verifier: one request instead
+    # of a turn per file it opens. Not shown is not absent, so a missing guard or caller
+    # makes a finding UNCERTAIN, not REFUTED.
+    if test "$_flag_context" = assembled
+        set -l ftmp (mktemp)
+        printf '%s\n' $findings >$ftmp
+        set -l cargs
+        test -n "$_flag_code_file"; and set cargs --diff $_flag_code_file
+        set -l budget (_ai_config_read verify_context_lines 2>/dev/null)
+        test -n "$budget"; and set -a cargs --budget $budget
+        set -l assembled (_ai_verify_context $cargs $ftmp $workdir | string collect)
+        rm -f $ftmp
+        set payload "$payload
+
+CODE FOR THE FINDINGS (read from the repository: the lines around each line a finding cites, and places that use the names it quotes; the numbers are the file's line numbers):
+$assembled
+
+You have no tools: the code above and the code under review are all you can see. When the code that decides a finding is not shown (a caller, a guard, a lock, the definition of a name), the verdict is UNCERTAIN and why: names what is missing. Never REFUTED because a defence is not shown: not shown is not absent."
+    end
+
     set -l run_args --provider $provider --workdir $workdir
     test -n "$model"; and set -a run_args --model $model
-    set -q _flag_agentic; and set -a run_args --agentic --skill ai-verify
+    set -q _flag_agentic; and test "$_flag_context" != assembled; and set -a run_args --agentic --skill ai-verify
     set -q _flag_no_think; and set -a run_args --no-think
 
     # Several runs: the same payload N times, then a majority vote per finding number

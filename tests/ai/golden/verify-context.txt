@@ -1,0 +1,97 @@
+== window 3
+### fish/.config/fish/functions/gbranch.fish (F1, F2)
+```
+    6          echo ""
+    7          echo "Show commits and diff stat of current branch vs base branch."
+    8          echo "Auto-detects the nearest base among develop/main/master/release/stage"
+    9          echo "(override the list with \$GBRANCH_BASES) or specify manually."
+   10          echo ""
+   11          echo "Options:"
+   12          echo "      --stat=N     Set stat output width (default: terminal width)"
+  ...
+   24          set color_flag --color=never
+   25      end
+   26  
+   27      set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
+   28      if test $status -ne 0
+   29          echo "Not a git repository"
+   30          return 1
+   31      end
+   32  
+   33      set -l repo_name (basename $repo_root)
+   34      set -l branch (git branch --show-current)
+   35  
+   36      # Determine base branch: explicit arg, or the nearest long-lived branch
+  ...
+   41          set base $argv[1]
+   42      else
+   43          set -l candidates develop main master release stage
+   44          if set -q GBRANCH_BASES
+   45              set candidates $GBRANCH_BASES
+   46          end
+   47          if contains -- "$branch" $candidates
+   48              set base $branch
+   49          else
+   50              set -l best_count
+   51              for c in $candidates
+   52                  set -l ref
+   53                  if git show-ref --verify --quiet refs/remotes/origin/$c
+  ...
+   57                  else
+   58                      continue
+   59                  end
+   60                  set -l n (git rev-list --count $ref..HEAD 2>/dev/null); or continue
+   61                  if test -z "$best_count"; or test $n -lt $best_count
+   62                      set best_count $n
+   63                      set base $c
+```
+
+### fish/.config/fish/functions/_ai_review_git.fish (F2)
+```
+    3      argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' 'o/output=' 'lens=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'dry-run' \
+    4               'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' -- $argv; or return 1
+    5  
+    6      set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
+    7      if test $status -ne 0
+    8          echo "Not a git repository"
+    9          return 1
+   10      end
+   11  
+   12      set -l repo_name (basename $repo_root)
+   13      set -l branch (git branch --show-current)
+   14  
+   15      # Resolve flags
+  ...
+  344      if test $do_verify -eq 1
+  345          set -l p1file (mktemp)
+  346          printf '%s' "$prompt" >$p1file
+  347          set -l flow_args --prompt-file $p1file --provider $provider --workdir $repo_root
+  348          test -n "$model"; and set -a flow_args --model $model
+  349          test -n "$output"; and set -a flow_args --output $output
+  350          set -q _flag_dry_run; and set -a flow_args --dry-run
+```
+
+### fish/.config/fish/functions/clipcommit.fish (F2)
+```
+   46      end
+   47  
+   48      # Repo info
+   49      set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
+   50      if test $status -ne 0
+   51          echo "Not a git repository"
+   52          return 1
+```
+
+Not found in the repository: F3 nosuch/Missing.java:10.
+Cite no line: F4.
+== budget 20: what is left out
+### fish/.config/fish/functions/gbranch.fish (F1)
+```
+  ...
+```
+
+Not found in the repository: F3 nosuch/Missing.java:10.
+Cite no line: F4.
+Left out to keep to 20 lines, though cited: F2.
+Left out to keep to 20 lines: 7 place(s) that use a quoted name.
+[exit 0]
