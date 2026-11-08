@@ -11,7 +11,9 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     #                       finding number (_ai_verify_vote); each run kept as <dest>.runK
     #   --context assembled the code each finding cites, read from --workdir beforehand
     #                       (_ai_verify_context); one request, no tools, even with --agentic
-    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'lens=' 'runs=' 'mode=' 'context=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
+    #   --think-level L     how much the verifier thinks (false, low, medium, …); else
+    #                       verify_think from the config; --no-think is false
+    argparse 'provider=' 'model=' 'workdir=' 'lang=' 'findings-file=' 'code-file=' 'output=' 'lens=' 'runs=' 'mode=' 'context=' 'think-level=' 'agentic' 'no-think' 'dry-run' 'label=' 'dest=' -- $argv; or return 1
 
     set -l provider $_flag_provider
     test -z "$provider"; and set provider ollama
@@ -89,7 +91,16 @@ You have no tools: the code above and the code under review are all you can see.
     set -l run_args --provider $provider --workdir $workdir
     test -n "$model"; and set -a run_args --model $model
     set -q _flag_agentic; and test "$_flag_context" != assembled; and set -a run_args --agentic --skill ai-verify
-    set -q _flag_no_think; and set -a run_args --no-think
+    # --think-level wins over --no-think; with neither, verify_think from the config
+    set -l think_level $_flag_think_level
+    if test -z "$think_level"; and not set -q _flag_no_think
+        set think_level (_ai_config_read verify_think 2>/dev/null)
+    end
+    if test -n "$think_level"
+        set -a run_args --think-level $think_level
+    else if set -q _flag_no_think
+        set -a run_args --no-think
+    end
 
     # Several runs: the same payload N times, then a majority vote per finding number
     set -l runs $_flag_runs

@@ -2,14 +2,14 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
     # Usage: echo "prompt" | _ai_run [flags]
     #    or: _ai_run [flags] "prompt text"
     #
-    # Flags: --provider P  --model M  --think  --no-think  --agentic  --workdir DIR
+    # Flags: --provider P  --model M  --think  --no-think  --think-level L  --agentic  --workdir DIR
     #        --output FILE  --thinking-output FILE  --usage-output FILE  --dry-run
     # (--usage-output: token counts as JSON — native drivers, and the pi runner with turns,
     # tool calls and timings too)
     # Provider resolution: --provider flag > config file > default (ollama).
     # Executor selection (claude CLI / native ollama / runner): _ai_select_executor.
 
-    argparse 'provider=' 'model=' 't/think' 'no-think' 'agentic' 'skill=' 'workdir=' 'output=' 'thinking-output=' 'usage-output=' 'dry-run' -- $argv; or return 1
+    argparse 'provider=' 'model=' 't/think' 'no-think' 'think-level=' 'agentic' 'skill=' 'workdir=' 'output=' 'thinking-output=' 'usage-output=' 'dry-run' -- $argv; or return 1
 
     set -l provider
     if set -q _flag_provider
@@ -42,6 +42,12 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
     end
 
     set -l model (_ai_executor_model $dispatch $provider "$_flag_model"); or return 1
+
+    # A thinking level reaches the ollama driver only: a runner, claude or a cloud model
+    # thinks as its own config says
+    if set -q _flag_think_level; and test "$dispatch" != _ai_provider_ollama
+        echo "  ↳ --think-level $_flag_think_level: only the ollama driver takes it, not $dispatch — ignored" >&2
+    end
 
     set -l prompt (string join " " $argv)
     set -l output $_flag_output
@@ -121,6 +127,8 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
         test "$dispatch" = _ai_provider_openai; and set -a dispatch_args --provider $provider
         set -q _flag_think; and set -a dispatch_args --think
         set -q _flag_no_think; and set -a dispatch_args --no-think
+        set -q _flag_think_level; and test "$dispatch" = _ai_provider_ollama
+        and set -a dispatch_args --think-level $_flag_think_level
         test -n "$thinking_out"; and set -a dispatch_args --thinking-output $thinking_out
         set -q _flag_usage_output; and set -a dispatch_args --usage-output $_flag_usage_output
     else

@@ -4,6 +4,9 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     #   --model M              model name; falls back to _ai_default_model (no literal
     #                          fallback: nothing configured is an error)
     #   --think                enable thinking mode
+    #   --think-level L        how much the model thinks: false, or one of the levels
+    #                          `ollama show` lists for it (low, medium, …); sent as
+    #                          think:"L". Wins over --think / --no-think
     #   --thinking-output F    write the model's reasoning (the `.thinking` channel) to
     #                          file F instead of dropping it; .response still streams to
     #                          stdout. Internal plumbing flag set by _ai_run(_watched)
@@ -16,7 +19,7 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     #   --usage-output F       write the run's token counts to F as JSON (prompt_tokens,
     #                          completion_tokens, tok_s) — read by _ai_run_watched for the
     #                          report footer.
-    argparse 'interactive' 'model=' 'think' 'no-think' 'thinking-output=' 'usage-output=' -- $argv; or return 1
+    argparse 'interactive' 'model=' 'think' 'no-think' 'think-level=' 'thinking-output=' 'usage-output=' -- $argv; or return 1
 
     # Resolve the model before touching the server: a missing model is a config error
     set -l model $_flag_model
@@ -58,12 +61,24 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     # stays clean. Sending think:true to a NON-thinking model is a hard error
     # ("does not support thinking"), so gate on the capability. We NEVER omit the field:
     # omitting it is exactly what made laguna dump reasoning into .response (the leak).
+    set -l info (ollama show $model 2>/dev/null)
     set -l capable 0
-    if ollama show $model 2>/dev/null | string match -rq '^\s*thinking\s*$'
-        set capable 1
-    end
+    string match -rq '^\s*thinking\s*$' -- $info; and set capable 1
     set -l think false
-    if set -q _flag_no_think
+    if test "$_flag_think_level" = false
+        # A level of false is --no-think
+    else if set -q _flag_think_level
+        # A level the model does not list is refused by name here, not guessed at
+        set -l levels (string match -r -g '^\s*levels\s+(.*?)\s*$' -- $info | string split ', ')
+        if test $capable -eq 0
+            echo "ollama: $model does not support thinking — ignoring --think-level $_flag_think_level" >&2
+        else if set -q levels[1]; and not contains -- $_flag_think_level $levels
+            echo "ollama: $model thinks at "(string join ', ' -- $levels)" (got: $_flag_think_level)" >&2
+            return 1
+        else
+            set think (printf '"%s"' $_flag_think_level)
+        end
+    else if set -q _flag_no_think
         # Explicit fast path: quarantine reasoning (think:false) even on a thinking
         # model. Reasoning generation is the bulk of a thinking model's wall-clock —
         # this trades that depth for speed on demand (`ai review --no-think`).

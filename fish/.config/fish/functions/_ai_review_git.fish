@@ -1,7 +1,7 @@
 function _ai_review_git --description "AI review of git changes (branch, last N, or specific commit)"
     # Called by _ai_review dispatcher after mode detection.
     argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' 'o/output=' 'lens=' 'no-lens' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'dry-run' \
-             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-runs=' 'verify-context=' 'comments' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-runs=' 'verify-context=' 'verify-think=' 'comments' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
         echo "Error: --lens and --no-lens exclude each other" >&2
@@ -365,6 +365,7 @@ $context_block"
         set -q _flag_verify_output; and set -a flow_args --verify-output $_flag_verify_output
         set -q _flag_verify_runs; and set -a flow_args --verify-runs $_flag_verify_runs
         set -q _flag_verify_context; and set -a flow_args --verify-context $_flag_verify_context
+        set -q _flag_verify_think; and set -a flow_args --verify-think $_flag_verify_think
         set -q _flag_lens; and set -a flow_args --lens $_flag_lens
         set -q _flag_agentic; and set -a flow_args --agentic
         set -q _flag_no_think; and set -a flow_args --no-think

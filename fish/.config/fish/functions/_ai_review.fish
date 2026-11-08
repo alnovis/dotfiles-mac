@@ -28,7 +28,7 @@ function _ai_review --description "AI code review — project state (path target
 
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
              'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' 'no-lens' \
-             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' 'verify-runs=' 'verify-context=' \
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' 'verify-runs=' 'verify-context=' 'verify-think=' \
              'comments' 'range=' 'verdicts=' 'runs=' 'parallel' 'no-parallel' -- $argv
     or return 1
 
@@ -41,6 +41,14 @@ function _ai_review --description "AI code review — project state (path target
     if set -q _flag_verify_context; and test "$_flag_verify_context" != assembled
         set_color red
         echo "Error: --verify-context takes assembled (got: '$_flag_verify_context')" >&2
+        set_color normal
+        return 1
+    end
+
+    # The levels ollama takes; which of them a model knows, its driver checks
+    if set -q _flag_verify_think; and not contains -- $_flag_verify_think false low medium high xhigh
+        set_color red
+        echo "Error: --verify-think takes false, low, medium, high or xhigh (got: '$_flag_verify_think')" >&2
         set_color normal
         return 1
     end
@@ -145,6 +153,10 @@ function _ai_review_print_help
     echo "                          quotes are used) before verify, and verify in one request"
     echo "                          without tools, even with --agentic. Turns --verify on."
     echo "                          Budget: config verify_context_lines (default 1500)"
+    echo "  --verify-think LEVEL    How much the verifier thinks: false, low, medium, high,"
+    echo "                          xhigh (the levels the model lists in ollama show)."
+    echo "                          Ollama without tools only; wins over --no-think."
+    echo "                          Default: config verify_think, else the model's own"
     echo "  --verify-only FILE      Re-verify an EXISTING review file — no review pass."
     echo "                          Verify a costly claude review, or re-verify it with"
     echo "                          another model, without paying to regenerate it."

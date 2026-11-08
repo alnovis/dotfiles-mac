@@ -13,13 +13,14 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #   --no-think           passed to the verifier (fast pass, think:false)
     #   --lens A,B           the review's lenses, as knowledge to judge the findings by
     #   --verify-context assembled  the code the findings cite, read beforehand; no tools
+    #   --verify-think L     how much the verifier thinks (false, low, medium, …); else verify_think
     #   --lang L, --dry-run
     #   --comments           then MR line comments from the verdicts (<review>.comments.md/.json)
     #   --range BASE..HEAD   the reviewed range, to anchor the comments and check the diff
     #   --verdicts FILE      an existing verify file: skip the verify pass, build comments only
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
              'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'no-think' 'dry-run' \
-             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' 'verify-runs=' 'verify-context=' -- $argv; or return 1
+             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' 'verify-runs=' 'verify-context=' 'verify-think=' -- $argv; or return 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
         echo "Error: --lens and --no-lens exclude each other" >&2
@@ -105,6 +106,9 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         end
         _ai_ui_kv code "the diff of $_flag_range ("(count (cat $diff_tmp))" lines)"
     end
+    set -l vthink $_flag_verify_think
+    test -z "$vthink"; and not set -q _flag_no_think; and set vthink (_ai_config_read verify_think 2>/dev/null)
+    test -n "$vthink"; and _ai_ui_kv think $vthink
     test "$_flag_verify_context" = assembled
     and _ai_ui_kv context "the code each finding cites, read from the repository; no tools"
     if not set -q _flag_file; and test -z "$diff_tmp"
@@ -141,6 +145,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -q _flag_verify_context; and set -a vargs --context $_flag_verify_context
     set -q _flag_agentic; and set -a vargs --agentic
     set -q _flag_no_think; and set -a vargs --no-think
+    set -q _flag_verify_think; and set -a vargs --think-level $_flag_verify_think
     if set -q _flag_file; and test -f "$_flag_file"
         set -a vargs --code-file (realpath $_flag_file)
     else if test -n "$diff_tmp"

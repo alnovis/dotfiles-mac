@@ -83,6 +83,7 @@ The dispatcher also accepts these (not listed in `ai --help`):
 |---|---|
 | `--agentic` | Profile `read`: the executor may read the current directory |
 | `--no-think` | Native ollama: send `think:false` even to a thinking model |
+| `--think-level L` | Native ollama: send `think:"L"`, a level the model lists in `ollama show` (`false` is `--no-think`); wins over `--think` / `--no-think`. Other executors ignore it with a note |
 | `--output FILE` | Write the answer to FILE (native ollama also writes a reasoning sidecar) |
 | `--workdir DIR` | Run in DIR |
 | `--skill NAME` | Inject the installed skill NAME into a runner or claude |
@@ -449,6 +450,16 @@ that code not shown is not absent: a missing caller or guard makes a finding UNC
 REFUTED. The diff still goes along as the code under review. It turns verify on and works in
 git mode, target mode and with `--verify-only`.
 
+**How much the verifier thinks (`--verify-think LEVEL`, config `verify_think`).** On a local
+model verify on assembled code spends most of its time thinking, not reading: thousands of
+tokens of reasoning at about 20 tok/s. A thinking model lists its levels in `ollama show`
+(qwen3.8: `false, low, medium, xhigh`); `--verify-think` sends one as `think:"LEVEL"` to the
+verify pass only, the review pass thinks as before. `false` is `think:false`, as `--no-think`
+would be for verify; the flag wins over `--no-think`. A level the model does not list is an
+error, not a guess. Without either, `verify_think` from the config; without that, the model's
+own default. It only reaches the native ollama driver (no tools: without `--agentic`, or with
+`--verify-context assembled`); a runner, claude or a cloud model ignores it with a note.
+
 `--verify` is opt-in (or `review_verify=1`), skipped with a note under `--brief`. The `verify`
 task is configured like any other (`ai config provider claude --task verify`,
 `ai models use verify MODEL`).
@@ -468,6 +479,7 @@ one, so run it from the repo when the verifier uses `--agentic`.
 | `--verify-output FILE`, `-o FILE` | Output path (`--verify-output` wins). Default: `<review>.verify.<ext>` |
 | `--agentic`, `--no-think`, `--lang`, `--dry-run` | As for a normal review |
 | `--verify-context assembled` | Verify on the code the findings cite, read beforehand; with `--range` the diff goes along |
+| `--verify-think LEVEL` | How much the verifier thinks (`false`, `low`, `medium`, …); else `verify_think` |
 | `--comments` | Then the comments stage below |
 | `--range BASE..HEAD` | With `--comments`: the reviewed range, to anchor lines and check the diff |
 | `--verdicts FILE` | With `--comments`: an existing verify file — no verify pass, comments only |
@@ -659,7 +671,7 @@ for non-thinking models, terminal output, or runner/claude paths.
 
 `--no-think` sends `think:false` even to a thinking model: faster, shallower, no sidecar. It is
 passed to the review pass, the verify pass and `--verify-only`. It only affects the native
-driver.
+driver. `--verify-think LEVEL` sets the verify pass alone, to any level the model lists.
 
 ### Run cost in the report
 
@@ -1091,6 +1103,8 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `review_runs` | by hand | How many review runs to join before verify (default 1); scoped: `review_runs@PROVIDER`, `review_runs@PROVIDER/MODEL` |
 | `review_parallel` | by hand | Those runs: `auto` (default: cloud in parallel, ollama one at a time), `on`, `off`; scoped like `review_runs` |
 | `verify_runs` | by hand | How many verify runs, joined by majority per finding (default 1); scoped by the verify provider/model like `review_runs` |
+| `verify_think` | by hand | How much the verifier thinks on native ollama: `false`, `low`, `medium`, … (a level the model lists); `--verify-think` and `--no-think` override; unset → the model's default |
+| `verify_context_lines` | by hand | `--verify-context assembled`: line budget for the code read for the findings (default 1500) |
 | `review_lens` | by hand | Default lenses for reviews and their verify, comma-separated (`redis,reactive`); unscoped, best in the project's `.ai/config`; `--lens` replaces, `--no-lens` drops it |
 | `cloud_driver` | by hand | Single calls to an OpenAI-API provider of the runner (litellm, …): `native` (default, direct HTTP) or `runner` (through pi / opencode) |
 | `review_verify` | by hand | `1` / `true` / `yes` / `on` → `ai review` runs the verify pass by default |

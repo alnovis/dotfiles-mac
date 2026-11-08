@@ -1,0 +1,20 @@
+== --think-level low
+rc 0, think: "low"
+== --think-level false
+rc 0, think: false
+== --no-think --think-level medium
+rc 0, think: "medium"
+== --no-think
+rc 0, think: false
+== 
+rc 0, think: true
+== --think-level high
+rc 1, think: no request
+ollama: m thinks at false, low, medium, xhigh (got: high)
+== --model plain --think-level low
+rc 0, think: false
+ollama: plain does not support thinking — ignoring --think-level low
+== a runner, claude
+  ↳ --think-level low: only the ollama driver takes it, not _ai_provider_openai — ignored
+  ↳ --think-level low: only the ollama driver takes it, not _ai_agent_claude — ignored
+[exit 0]

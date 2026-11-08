@@ -20,8 +20,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --lens A,B               the review's lenses, handed to verify too
     #   --verify-runs N          verify N times, joined by majority per finding (_ai_verify_vote)
     #   --verify-context assembled  verify on the code the findings cite, read beforehand
+    #   --verify-think L         how much the verifier thinks (false, low, medium, …)
     argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
-             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' 'verify-runs=' 'verify-context=' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' 'verify-runs=' 'verify-context=' 'verify-think=' -- $argv; or return 1
     set -l runs $_flag_runs
     test -n "$runs"; or set runs 1
 
@@ -95,7 +96,11 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         test -n "$_flag_lens"; and set lens_note " + lens(es) $_flag_lens"
         set -l ctx_note ""
         test "$_flag_verify_context" = assembled; and set ctx_note " + the code the findings cite, read from the repository; no tools"
-        echo "verify provider=$vprovider model=$vmodel (prompt: meta-verify.md$lens_note + first-pass findings + $code_note$ctx_note)" >&2
+        set -l vthink $_flag_verify_think
+        test -z "$vthink"; and not set -q _flag_no_think; and set vthink (_ai_config_read verify_think 2>/dev/null)
+        set -l think_note ""
+        test -n "$vthink"; and set think_note " think=$vthink"
+        echo "verify provider=$vprovider model=$vmodel$think_note (prompt: meta-verify.md$lens_note + first-pass findings + $code_note$ctx_note)" >&2
         test $vruns -gt 1; and echo "verify runs: $vruns ($vmode), joined by majority per finding (origin: $vr[2])" >&2
         test -n "$review_out"; and echo "would write: review -> $review_out ; verify -> $verify_out" >&2
         if set -q _flag_comments
@@ -189,6 +194,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     set -q _flag_verify_context; and set -a vargs --context $_flag_verify_context
     set -q _flag_agentic; and set -a vargs --agentic
     set -q _flag_no_think; and set -a vargs --no-think
+    set -q _flag_verify_think; and set -a vargs --think-level $_flag_verify_think
 
     set -l ver_target
     set -l ver_is_temp 0
