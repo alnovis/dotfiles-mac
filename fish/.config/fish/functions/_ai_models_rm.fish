@@ -26,6 +26,8 @@ function _ai_models_rm --description "Remove one installed tag (ai models drop r
 
     ollama rm $model; or return 1
     _ai_fetch_local >/dev/null
+    # The runners still list it otherwise, and would offer a model that is gone
+    _ai_models_unregister $model
 
     # Last tag of the model gone → its label/trial go too
     if not jq -e --arg d $digest 'any(.models[]; .digest == $d)' ~/.cache/ai-models.json >/dev/null 2>&1

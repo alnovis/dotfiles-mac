@@ -41,6 +41,8 @@ function _ai_models_drop --description "Remove a model entirely (every tag of it
     for t in $tags
         ollama rm $t; or return 1
     end
+    # The runners still list them otherwise, and would offer models that are gone
+    _ai_models_unregister (set -q _flag_yes; and echo --yes) $tags
     for field in label trial name
         _ai_models_meta_set $digest $field ''
     end

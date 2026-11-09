@@ -898,12 +898,12 @@ Manages ollama models. Without a command: the installed models, no network.
 | `info NAME[:TAG]` (alias `show`) | Installed → local details. Not installed → the ollama registry manifest: download size and RAM fit, family, params, quantization, vision, min ollama version | only when not installed |
 | `try NAME:TAG [-y]` | Show registry info, confirm, pull, mark as a trial | yes |
 | `keep NAME` | End a trial, keep the model | no |
-| `drop NAME [-y]` | Remove a model (all its tags) and its metadata; warns if a task or the default still uses it | no |
+| `drop NAME [-y]` | Remove a model (all its tags) and its metadata; warns if a task or the default still uses it; then offers to remove it from the runners' configs | no |
 | `search [QUERY]` | Open `https://ollama.com/search?q=QUERY` in the browser (ollama has no search API) | — |
 | `label [--provider P] NAME LABEL` | Group a model under LABEL (`general` clears it); `--provider` for a cloud or claude model | no |
 | `use [TASK] MODEL` | Set the default model, or a task's model | no |
 | `install MODEL` (alias `pull`) | Pull a model (no trial mark) | yes |
-| `rm MODEL` (alias `remove`) | Remove one tag (confirms) | no |
+| `rm MODEL` (alias `remove`) | Remove one tag (confirms); then offers to remove it from the runners' configs | no |
 | `update` | Re-pull every installed tag | yes |
 | `prune` (alias `cleanup`) | Find partial downloads and orphaned blobs in `~/.ollama/models`, confirm, delete | no |
 | `running` (alias `ps`) | Show loaded models (`ollama ps`) | no |
@@ -1031,6 +1031,11 @@ transfers) shows `unknown`, never a guess.
 
 `try` pulls a model and records the trial date; `keep` clears the mark; `drop` removes every tag
 of the model and its metadata. `try` and `drop` take `-y` / `--yes` to skip the confirmation.
+Once a model is gone, `rm` and `drop` look for it in the runners' configs (pi
+`~/.pi/agent/models.json`, opencode `~/.config/opencode/config.json`): a runner would still
+offer it, and a call would fail. They name the files and ask (`drop -y`: no question); each
+file changed keeps its previous version as `<file>.bak`. A tag matches as written and without
+`:latest`.
 `drop` warns first if the model is still configured (`Still configured for: default, review —
 those will fail until changed`).
 

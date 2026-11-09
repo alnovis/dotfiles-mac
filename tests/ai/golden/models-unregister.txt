@@ -1,0 +1,18 @@
+== not listed
+rc 0
+== declined
+Still listed in the runners' configs:
+  pi: <SANDBOX>/home/.pi/agent/models.json
+  opencode: <SANDBOX>/home/.config/opencode/config.json
+Kept there; a runner may still offer it
+["review-model","default-model"]
+== yes
+Still listed in the runners' configs:
+  pi: <SANDBOX>/home/.pi/agent/models.json
+  opencode: <SANDBOX>/home/.config/opencode/config.json
+  removed from pi (previous version: <SANDBOX>/home/.pi/agent/models.json.bak)
+  removed from opencode (previous version: <SANDBOX>/home/.config/opencode/config.json.bak)
+["default-model"]
+["other:7b"]
+["review-model","default-model"]
+[exit 0]
