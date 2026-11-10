@@ -160,6 +160,9 @@ All functions support `-h/--help`.
 - `gwip` / `gunwip` — quick WIP commit of all changes / undo WIP commit
 - `grelease` — create or re-release a git tag: commit + tag + push (`grelease [patch|minor|major|VERSION] [MESSAGE]`)
 
+*GitHub (needs `gh`):*
+- `ghwatch` — watch a GitHub Actions run to the end, non-zero exit on failure (`ghwatch [-w WORKFLOW] [-t TAG] [REPO]`, default `release.yml`); inside a repo it picks the HEAD commit's run and waits for it to appear, so it's safe right after a push
+
 *Docker:*
 - `registry-login` — docker login to private registry (uses `CI_REGISTRY` + `CI_PERSONAL_TOKEN`)
 - `set-ci-token` — set/update `CI_PERSONAL_TOKEN` or `CI_REGISTRY` (`-r/--registry`)
