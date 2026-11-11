@@ -88,7 +88,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         _ai_ui_heading Comments "from existing verdicts"
         _ai_ui_kv review $review_file
         _ai_ui_kv verdicts $verdicts
-        _ai_review_comments $cargs --label "Comments - $vprovider"(test -n "$vmodel"; and echo " - $vmodel")
+        _ai_review_comments $cargs --label "Comments - $vprovider$(test -n "$vmodel"; and echo " - $vmodel")"
         return
     end
 

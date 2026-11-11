@@ -171,7 +171,7 @@ function _ai_config_do_status
     set -l rm (_ai_default_model review $rp)
     echo
     set_color cyan
-    echo "Review ($rp"(test -n "$rm"; and echo " / $rm")"):"
+    echo "Review ($rp$(test -n "$rm"; and echo " / $rm")):"
     set_color normal
     begin
         printf '%s\t%s\n' prompt (_ai_review_prompt_mode --origin $rp)

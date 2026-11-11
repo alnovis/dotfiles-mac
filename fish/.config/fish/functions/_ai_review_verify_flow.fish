@@ -167,7 +167,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     if test $rc1 -ne 0; or not test -s $find_src
         set -l why "$__ai_last_failure"
         test $runs -gt 1; and set why "no run answered"
-        echo "  Review pass produced no output (provider=$provider)"(test -n "$why"; and echo ": $why")". Aborting before verify." >&2
+        echo "  Review pass produced no output (provider=$provider)$(test -n "$why"; and echo ": $why"). Aborting before verify." >&2
         for f in $rev_failed
             echo "    $f" >&2
         end

@@ -1,0 +1,5 @@
+== claude, no model: the label keeps its value
+comments provider=claude model= (prompt: meta-comments.md + review + verdicts; lines anchored by git in HEAD~1..HEAD)
+== no range: the line is still there
+comments provider=claude model= (prompt: meta-comments.md + review + verdicts; lines anchored by git)
+[exit 0]
