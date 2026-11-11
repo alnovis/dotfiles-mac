@@ -16,6 +16,8 @@
  *   hangs (an ollama runner stuck in "Stopping...") kept pi waiting for an answer that never
  *   came, and the whole eval with it. A fixed 180 s after the budget killed a local 27B model
  *   that still had to read the whole conversation again and write its review at ~20 tok/s.
+ *   At the budget plus twice the grace (twice the budget by default) the run is aborted
+ *   whatever it does: the ceiling, so a run never goes on without end.
  *   Each switch and the abort are told on stderr ("ai-guard: …", with the second it came),
  *   which the toolkit shows under the run line and gives as the reason of an empty answer:
  *   granite's run ended at 1436 s, not at 1080, and its log could not say why. Still
@@ -134,6 +136,13 @@ export default function aiGuard(pi: ExtensionAPI) {
 				}
 			};
 			later(timeoutS + graceS, check);
+			// A ceiling the run never passes, streaming or not: a model that keeps writing turn
+			// after turn could otherwise run three more turns of up to max_tokens each, an hour
+			// on a local model, with the budget long spent
+			const ceilingS = timeoutS + 2 * graceS;
+			later(ceilingS, () =>
+				abort(ctx, `the run reached its ceiling (${ceilingS}s: the time budget and twice the grace)`),
+			);
 		}
 	});
 

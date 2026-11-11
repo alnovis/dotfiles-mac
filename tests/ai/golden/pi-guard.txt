@@ -28,8 +28,13 @@ turn 1: told: the time budget (0.05s) is spent. The tools are switched off: writ
 == after the time budget: aborted on silence, not while the answer streams
   stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
 streaming: running
-  stderr: ai-guard: aborted at 1s: nothing streamed for 0.3s after the time budget (0.05s)
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
+  stderr: ai-guard: aborted at 0s: nothing streamed for 0.25s after the time budget (0.05s)
 silent: ABORTED
+== the ceiling: aborted even while streaming
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
+  stderr: ai-guard: aborted at 0s: the run reached its ceiling (0.3s: the time budget and twice the grace)
+streaming 0.8 s: ABORTED
 == pulse
 after the first delta: 6 0
 a delta right after: 6 0

@@ -97,18 +97,39 @@ console.log("== time budget");
 
 console.log("== after the time budget: aborted on silence, not while the answer streams");
 {
-	const { ctx, emit } = load({ AI_GUARD_TIMEOUT: "0.05", AI_GUARD_GRACE: "0.3", AI_GUARD_MAX_TURNS: "0" });
+	// budget 0.05 s, grace 0.6 s: silence would abort at 0.65 s, the ceiling at 1.25 s
+	const { ctx, emit } = load({ AI_GUARD_TIMEOUT: "0.05", AI_GUARD_GRACE: "0.6", AI_GUARD_MAX_TURNS: "0" });
 	await emit("session_start", {});
 	await emit("message_start", { message: { role: "assistant" } });
-	// streaming for 0.8 s, a delta every 0.04 s: well past budget + grace (0.35 s), still working
-	for (let i = 0; i < 20; i++) {
+	// streaming for 0.9 s, a delta every 0.04 s: past budget + grace, before the ceiling
+	for (let i = 0; i < 22; i++) {
 		await new Promise((r) => setTimeout(r, 40));
 		await emit("message_update", { assistantMessageEvent: { type: "text_delta", delta: "x" } });
 	}
 	console.log(`streaming: ${ctx.aborted ? "ABORTED" : "running"}`);
-	// then silent past the grace
+	await emit("session_shutdown", {});
+}
+{
+	// nothing streams at all: aborted by the silence at 0.3 s, before the ceiling (0.55 s);
+	// times far from a half second, as the abort line rounds them
+	const { ctx, emit } = load({ AI_GUARD_TIMEOUT: "0.05", AI_GUARD_GRACE: "0.25", AI_GUARD_MAX_TURNS: "0" });
+	await emit("session_start", {});
 	await new Promise((r) => setTimeout(r, 600));
 	console.log(`silent: ${ctx.aborted ? "ABORTED" : "running"}`);
+	await emit("session_shutdown", {});
+}
+
+console.log("== the ceiling: aborted even while streaming");
+{
+	// budget 0.05 + 2 * grace 0.125 = 0.3 s; deltas every 0.04 s for 0.8 s
+	const { ctx, emit } = load({ AI_GUARD_TIMEOUT: "0.05", AI_GUARD_GRACE: "0.125", AI_GUARD_MAX_TURNS: "0" });
+	await emit("session_start", {});
+	await emit("message_start", { message: { role: "assistant" } });
+	for (let i = 1; i <= 20; i++) {
+		await new Promise((r) => setTimeout(r, 40));
+		await emit("message_update", { assistantMessageEvent: { type: "text_delta", delta: "x" } });
+	}
+	console.log(`streaming 0.8 s: ${ctx.aborted ? "ABORTED" : "running"}`);
 	await emit("session_shutdown", {});
 }
 

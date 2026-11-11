@@ -657,7 +657,9 @@ On pi the instruction is also enforced: an unattended read-only run loads the ex
   or nothing streamed (no reasoning, no answer) for the grace after the timeout, the run is
   aborted; pi still running 30 s after that is ended. The grace is half of `agent_timeout`, at
   least 180 s: a fixed 180 s killed a local 27B model that still had to read the whole
-  conversation again and write its review, while one that streams is never cut off. Each step
+  conversation again and write its review, while one that streams is not cut off before the
+  ceiling: the budget plus twice the grace (twice `agent_timeout` by default), where the run is
+  aborted whatever it does, so it never goes on without end. Each step
   is a line on stderr with the second it came
   (`ai-guard: aborted at 1350s: nothing streamed for 450s after the time budget (900s)`), shown under the
   run line; an aborted run's reason is that line, not the last turn's stop;
@@ -1197,7 +1199,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `model` | `ai models use MODEL` | Default ollama model. No fallback if unset |
 | `agent` | by hand | Runner for non-claude providers: `pi` (default) or `opencode` |
 | `agent_max_turns` | by hand | Unattended read-only pi runs (agentic review, verify): turns before the tools are switched off and the model must answer (default 30; 0 = no limit) |
-| `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); then the run is aborted after half that (at least 180 s) with nothing streamed (0 = no limit) |
+| `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); then the run is aborted after half that (at least 180 s) with nothing streamed, and at twice the budget in any case (0 = no limit) |
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
 | `request_idle_timeout` | by hand | Native drivers (ollama, OpenAI-compatible): seconds without a single byte before the request is ended (default 900; the prompt is read before the first token, so keep it generous) |
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
