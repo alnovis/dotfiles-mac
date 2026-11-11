@@ -192,7 +192,7 @@ set -g golden_cases \
     'run-runner|fixture|ai --provider testcloud --dry-run hello' \
     'run-cloud-runner|fixture|mkdir -p .ai; echo cloud_driver=runner >.ai/config; ai --provider testcloud --dry-run hello; rm -rf .ai' \
     'pi-endpoint|fixture|_ai_agent_pi_endpoint testcloud cloud-model; echo ---; _ai_agent_pi_endpoint testcloud testcloud/cloud-model; echo ---; _ai_agent_pi_endpoint nosuch x; echo "nosuch rc=$status"' \
-    'openai-too-big|fixture|string repeat -n 5000 x | _ai_provider_openai --provider testcloud --model cloud-model' \
+    'openai-too-big|fixture|string repeat -n 5000 x | _ai_provider_openai --provider testcloud --model cloud-model; echo "== 300 numbered lines: 3 tokens a line on top of their chars"; seq 300 | _ai_number_lines | _ai_provider_openai --provider testcloud --model cloud-model' \
     'openai-unreachable|fixture|echo hi | _ai_provider_openai --provider testcloud --model cloud-model --no-think' \
     'run-unknown-provider|fixture|ai --provider nosuch --dry-run hello' \
     'run-unreachable|fixture|ai --provider testcloud hello' \

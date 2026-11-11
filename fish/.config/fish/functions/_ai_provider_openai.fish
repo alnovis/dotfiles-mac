@@ -45,9 +45,13 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
     # Measured on a Java review through litellm: ~4.2 chars per token (chars / 3 said 109k
     # for 77.5k, and cut a verify's max_tokens to 9.7k with 44k of the context free).
     # So 4 for ASCII; a non-ASCII char (Cyrillic) counts twice, it tokenizes denser.
-    # Erring low shows plainly: the gateway refuses an over-long request with an error
+    # Erring low shows plainly: the gateway refuses an over-long request with an error.
+    # A numbered code line ("  104  code", _ai_number_lines) costs 3 tokens more than its
+    # chars say: the same review was 79.7k bare and 98.3k numbered, 4.8 tokens a line for a
+    # 7-char prefix (qwen splits the digits one by one, and the spaces apart from the indent)
     set -l nonascii (string replace -ra -- '[\x00-\x7f]+' '' "$prompt" | string length)
-    set -l prompt_tokens (math "round(("(string length -- "$prompt")" + $nonascii) / 4)")
+    set -l numbered (string split \n -- "$prompt" | string match -r -- '^ {0,4}[0-9]+  ' | count)
+    set -l prompt_tokens (math "round(("(string length -- "$prompt")" + $nonascii) / 4) + 3 * $numbered")
     if test -n "$ctx"
         if test $prompt_tokens -ge $ctx
             echo "$provider: prompt ~$prompt_tokens tokens does not fit $model's $ctx-token context. Use --context-lines 0 (diff-only) or a smaller change." >&2
