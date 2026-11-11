@@ -105,6 +105,19 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     # Two files: the request is built while tee already writes the stream (one pipeline)
     set -l pfile (mktemp)
     set -l raw (mktemp)
+    # A caller's live line (_ai_run_watched, _ai_stream_activity): the stream goes to its dir
+    # as it arrives, with the model and the prompt size, and curl's pid to follow
+    set -l keep_raw 0
+    # curl, or curl leaving its pid for the live line (sh writes its own pid and execs curl)
+    set -l fetch curl
+    if set -q AI_STREAM_DIR; and test -d "$AI_STREAM_DIR"
+        rm -f $raw
+        set raw $AI_STREAM_DIR/stream
+        set keep_raw 1
+        echo "ollama/$model" >$AI_STREAM_DIR/model
+        echo "$sized[2] $num_ctx" >$AI_STREAM_DIR/ctx
+        set fetch sh -c 'echo $$ >"$AI_STREAM_DIR/pid"; exec curl "$@"' curl
+    end
     printf '%s' "$prompt" >$pfile
     # Nothing at all for request_idle_timeout seconds (default 900) ends the request: with
     # no timeout a stalled server held the run until Ctrl-C. Generous, as a big prompt is
@@ -113,7 +126,7 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     string match -qr '^[1-9][0-9]*$' -- "$idle"; or set idle 900
     jq -cn --arg m $model --rawfile p $pfile --argjson ctx $num_ctx --argjson think $think \
         '{model:$m, prompt:$p, stream:true, think:$think, options:{num_ctx:$ctx}}' \
-        | curl -sS --no-buffer --connect-timeout 10 --speed-limit 1 --speed-time $idle $host/api/generate -d @- 2>$raw.err \
+        | $fetch -sS --no-buffer --connect-timeout 10 --speed-limit 1 --speed-time $idle $host/api/generate -d @- 2>$raw.err \
         | tee $raw \
         | jq -R -j --unbuffered 'fromjson? | .response // empty'
     set -l curl_rc $pipestatus[2]
@@ -151,6 +164,7 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
                tok_s: (if (.eval_duration // 0) > 0 then (.eval_count / (.eval_duration / 1e9) | . * 10 | round / 10) else null end)}' \
             $raw 2>/dev/null | tail -1 >$_flag_usage_output
     end
-    rm -f $raw $pfile
+    test $keep_raw -eq 1; or rm -f $raw
+    rm -f $pfile
     return $rc
 end

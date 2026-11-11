@@ -96,36 +96,33 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         end
         test -n "$sdir"; and rm -rf $sdir
     else
-        # Non-agentic single call: `read` has no timeout, so update only as lines
-        # arrive; print an honest prefill estimate, then a live line count.
-        # The prefill estimate is about a local model; a cloud one starts in seconds. Kept to
-        # one line: a wrapped line can't be cleared with \r, and the result would stick to it.
-        set -l provider
-        set -l pi (contains -i -- --provider $run_args)
-        test -n "$pi"; and set provider $run_args[(math $pi + 1)]
-        if test $tty -eq 1
-            if test "$provider" = ollama
-                set -l esec (math "round($tokens / 120)")
-                set -l etime "~"$esec"s"
-                test $esec -ge 90; and set etime "~"(math "round($esec / 60)")"m"
-                printf '  %sworking… ~%dk tokens, est %s prefill (Ctrl-C stops it)' \
-                    $name (math "round($tokens / 1000)") $etime >&2
-            else
-                printf '  %sworking… ~%dk tokens (Ctrl-C stops it)' $name (math "round($tokens / 1000)") >&2
-            end
+        # Non-agentic single call: the same live line as a pi run (_ai_run_progress), from the
+        # stream the native driver keeps in the dir (_ai_stream_activity): reading context,
+        # thinking N, writing N. The line count it replaced stood still for the minutes a
+        # model thinks, its reasoning never on stdout; parallel runs have a dir of their
+        # caller's (_ai_review_runs) and no terminal of their own.
+        set -l sdir ""
+        set -l poller ""
+        if test $tty -eq 1; and not set -q AI_STREAM_DIR
+            set sdir (mktemp -d)
+            set -l width $COLUMNS
+            test -n "$width"; or set width 80
+            set -l setfp "set -g fish_function_path "(string escape -- $fish_function_path | string join ' ')
+            fish --no-config -c "$setfp; _ai_run_progress "(string escape -- $sdir $t0 "$name" $width | string join ' ') </dev/null &
+            set poller $last_pid
         end
+        test -n "$sdir"; and set -lx AI_STREAM_DIR $sdir
 
-        set -l n 0
         set -l na_args $run_args --usage-output $ufile
         test -n "$sidecar"; and set -a na_args --thinking-output $sidecar
-        _ai_run $na_args <$pfile 2>$errlog | tee $outfile | while read -l line
-            set n (math $n + 1)
-            if test $tty -eq 1; and test (math $n % 3) -eq 0
-                printf '\r\033[K  %sworking… %ds, %d lines' $name (math (date +%s) - $t0) $n >&2
-            end
+        _ai_run $na_args <$pfile 2>$errlog >$outfile
+        set rc $status
+        if test -n "$poller"
+            kill $poller 2>/dev/null
+            wait $poller 2>/dev/null
+            printf '\r\033[K' >&2
         end
-        set rc $pipestatus[1]
-        test $tty -eq 1; and printf '\r\033[K' >&2
+        test -n "$sdir"; and rm -rf $sdir
     end
 
     set -l total (math (date +%s) - $t0)

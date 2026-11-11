@@ -486,9 +486,11 @@ unknown name is an error listing the available ones.
 7. Pipe prompt + stdin into the executor; with `--output`, redirect stdout to the file. It never
    writes via `/dev/stdout`, which would reopen the terminal and escape an enclosing pipe.
 
-**`_ai_run_watched`** wraps `_ai_run` for file output: one foreground pipeline
-(`_ai_run | tee FILE`), so Ctrl-C reaches `curl` and actually stops the model. It prints a
-prefill estimate, then a live line count, then the run's one line: `[run K/N  ]done  Ns  <stats>
+**`_ai_run_watched`** wraps `_ai_run` for file output, in the foreground, so Ctrl-C reaches
+`curl` and actually stops the model. On a terminal one live line follows the run, drawn by a
+process of its own (`_ai_run_progress`) from a dir it reads every second: a pi run's session,
+or a native driver's stream (`AI_STREAM_DIR`, `_ai_stream_activity`), so every stage shows
+`reading context`, `thinking N` or `writing N`. Then the run's one line: `[run K/N  ]done  Ns  <stats>
 FILE` or `FAILED  Ns  <why>` (`--row` names the run; `--heading` prints a single run's stage
 heading first). On `--agentic` it lets the runner's own output through and skips the sidecar.
 

@@ -99,4 +99,16 @@ same
 ## Summary
 
 - ok
+== the section name alone on its line (gpt-oss)
+Summary  
+Fine overall.
+
+Critical issues  
+* [F1] **a race** in a.java:3
+
+Tests are thin here, a sentence, not a heading
+* [F2] still under Critical issues
+
+Nits
+* a typo
 [exit 0]

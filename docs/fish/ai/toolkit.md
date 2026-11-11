@@ -739,7 +739,11 @@ either the provider (few turns, long model time, failed requests) or the agent's
 turns and tool calls). The prompt counts every turn: each one sends the whole context again.
 opencode and claude get the prompt-size estimate.
 
-While an agentic pi run works, a live line takes its place on a terminal, read from pi's
+Every run on a terminal gets one live line. A native driver's run (the review without
+`--agentic`, verify, comments) has no turns and no tools: its line shows the model, what it
+does (`reading context`, `thinking 8.4k chars`, `writing 2k chars`), the prompt over the
+window and the time, from the stream the driver keeps while it arrives. Counts below 100k have
+one decimal, as in the `Run:` footer. While an agentic pi run works, the line is read from pi's
 session as it is written — the fields of the old native loop's line, and the last tool call:
 
 ```

@@ -48,7 +48,7 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
             set -l log (mktemp)
             set -a logs $log
             set -a sdirs (mktemp -d)
-            set -l cmd "$setfp; set -gx AI_PI_SESSION_DIR "(string escape -- $sdirs[$k])"; _ai_run_watched --label "(string escape -- "$_flag_label run $k/$n")" --row "(string escape -- "run $k/$n")" --output "(string escape -- $files[$k])" --dest "(string escape -- $files[$k])" -- "(string escape -- $run_args | string join ' ')
+            set -l cmd "$setfp; set -gx AI_PI_SESSION_DIR "(string escape -- $sdirs[$k])"; set -gx AI_STREAM_DIR "(string escape -- $sdirs[$k])"; _ai_run_watched --label "(string escape -- "$_flag_label run $k/$n")" --row "(string escape -- "run $k/$n")" --output "(string escape -- $files[$k])" --dest "(string escape -- $files[$k])" -- "(string escape -- $run_args | string join ' ')
             fish --no-config -c $cmd <$_flag_prompt_file 2>$log &
             set -a pids $last_pid
         end
@@ -80,7 +80,9 @@ function _ai_review_runs --description "Run the review N times (parallel or sequ
                 for k in $left
                     set -l p (_ai_session_progress $sdirs[$k] | string split \t)
                     set -q p[1]; or continue
-                    set -l part "run $k: turn "(math $p[1] + 1)
+                    # A pi run: its turn; a native driver's run has none, what its model does
+                    set -l part "run $k: "(_ai_activity_text $p[7])
+                    test -n "$p[1]"; and set part "run $k: turn "(math $p[1] + 1)
                     test "$p[3]" -ge 300; and set part "$part, no answer for "(_ai_ui_duration $p[3])
                     set -a parts $part
                 end

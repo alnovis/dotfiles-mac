@@ -23,21 +23,14 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
     set -l phase
     set -l tail (_ai_ui_duration $elapsed)
     set -l tool
-    if test -n "$argv[4]"
+    # A native driver's run (_ai_stream_activity) has no turns: the model, the phase, the
+    # context and the time, without "turn N" and the last tool
+    if test -n "$argv[4]"; or test -n "$argv[10]"
         test -n "$argv[7]"; and set -a head (string replace / ' · ' -- $argv[7])
-        set -a head "turn "(math $argv[4] + 1)
+        test -n "$argv[4]"; and set -a head "turn "(math $argv[4] + 1)
         set phase model…
         # What the model does in its turn, and how much it has streamed so far
-        set -l act (string split ' ' -- "$argv[10]")
-        switch "$act[1]"
-            case reading
-                set phase "reading context"
-            case retry
-                # pi gave up on the request and sends it again: the model reads the prompt anew
-                set phase "reading context, retry $act[2] ($act[3..])"
-            case thinking writing
-                set phase "$act[1] "(_ai_k $act[2])" chars"
-        end
+        test -n "$argv[10]"; and set phase (_ai_activity_text $argv[10])
         string match -q 'tool *' -- "$argv[9]"; and set phase (string sub -s 6 -- $argv[9])…
         if test -n "$argv[8]"; and test "$argv[8]" -gt 0
             set -l ctx "ctx "(_ai_k $argv[8])
@@ -66,14 +59,4 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
     printf '  %s%s' $name $line
     test -n "$warn"; and printf '%s%s%s' (set_color yellow) $warn (set_color normal)
     return 0
-end
-
-function _ai_k --description "A token count as 950, 57k, 1.2M"
-    if test $argv[1] -ge 1000000
-        echo (math -s1 "$argv[1] / 1000000")M
-    else if test $argv[1] -ge 1000
-        echo (math "round($argv[1] / 1000)")k
-    else
-        echo $argv[1]
-    end
 end

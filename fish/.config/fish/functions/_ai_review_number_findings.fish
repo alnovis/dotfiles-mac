@@ -68,6 +68,9 @@ function _ai_review_number_findings --description "Number the findings of a revi
         }
         /^(\*\*|\*\*[0-9]+\. |[0-9]+\. \*\*)/ && known(section($0)) { sec = section($0); top = 0; hf = 0; print; next }
         /^[0-9]+\. [A-Z]/ && plainhead($0) { sec = section($0); top = 0; hf = 0; print; next }
+        # The section name alone on its line, no "##", no bold, no number: gpt-oss wrote
+        # "Critical issues  " so, nothing was numbered and the flow skipped verify
+        /^[A-Z]/ && plainhead($0) { sec = section($0); top = 0; hf = 0; print; next }
         /^([-*]|[0-9]+\.) / { top = 1 }
         sec != "" && !plain(sec) && !hf && (/^([-*]|[0-9]+\.) / || (!top && /^ {1,3}[-*] /)) {
             # "- (none)" in an empty tier is not a finding, nor "- (none) — the removed X is

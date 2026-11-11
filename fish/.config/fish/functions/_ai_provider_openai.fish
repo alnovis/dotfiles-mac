@@ -90,6 +90,19 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
     # The key goes through a file, never the command line (ps would show it)
     printf 'Content-Type: application/json\n' >$hdr
     test -n "$key"; and printf 'Authorization: Bearer %s\n' $key >>$hdr
+    # A caller's live line (_ai_run_watched, _ai_stream_activity): the stream goes to its dir
+    # as it arrives, with the model and the prompt size, and curl's pid to follow
+    set -l keep_raw 0
+    # curl, or curl leaving its pid for the live line (sh writes its own pid and execs curl)
+    set -l fetch curl
+    if set -q AI_STREAM_DIR; and test -d "$AI_STREAM_DIR"
+        rm -f $raw
+        set raw $AI_STREAM_DIR/stream
+        set keep_raw 1
+        echo "$provider/$model" >$AI_STREAM_DIR/model
+        echo "$prompt_tokens $ctx" >$AI_STREAM_DIR/ctx
+        set fetch sh -c 'echo $$ >"$AI_STREAM_DIR/pid"; exec curl "$@"' curl
+    end
 
     # One jq for the whole stream: the answer to stdout as it arrives, leading blank
     # lines dropped. The raw stream is kept for the reasoning, usage and errors afterwards.
@@ -97,7 +110,7 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
     # stalled gateway held the run until Ctrl-C.
     set -l idle (_ai_config_read request_idle_timeout)
     string match -qr '^[1-9][0-9]*$' -- "$idle"; or set idle 900
-    curl -sS -N --connect-timeout 10 --speed-limit 1 --speed-time $idle -H @$hdr -d @$body -w '\n__HTTP__%{http_code}\n' $url 2>$raw.err \
+    $fetch -sS -N --connect-timeout 10 --speed-limit 1 --speed-time $idle -H @$hdr -d @$body -w '\n__HTTP__%{http_code}\n' $url 2>$raw.err \
         | tee $raw \
         | jq -R -n -j --unbuffered 'foreach (inputs | select(startswith("data: {")) | .[6:] | fromjson? | .choices[0]?.delta?.content // empty) as $c
             ({s: false, out: ""};
@@ -155,6 +168,7 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
         end
         rm -f $chunks
     end
-    rm -f $raw $raw.err
+    test $keep_raw -eq 1; or rm -f $raw
+    rm -f $raw.err
     return $rc
 end

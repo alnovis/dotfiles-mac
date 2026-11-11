@@ -1,11 +1,11 @@
-function _ai_run_progress --description "Draw an agentic pi run's live line every second while its pi process lives (a separate process beside the run)"
+function _ai_run_progress --description "Draw a run's live line every second while its process lives (a separate process beside the run): a pi session, or a native driver's stream"
     # Usage: _ai_run_progress SESSION_DIR T0 NAME WIDTH
     # Started by _ai_run_watched as its own fish process: the model must stay in the
     # foreground so Ctrl-C reaches it, and a fish function cannot run in the background.
-    # It follows pi by the pid _ai_agent_pi leaves in SESSION_DIR/pid and stops when that
-    # process is gone — on Ctrl-C too, when the caller's cleanup never runs — or when no pid
-    # shows up within 30 s (not a pi run). Not by its command line: pi rewrites it, and a
-    # search for "--session-dir" found nothing, so the line froze at "turn 1 · 30s".
+    # It follows the pid left in SESSION_DIR/pid (pi's by _ai_agent_pi, curl's by a native
+    # driver) and stops when that process is gone (on Ctrl-C too, when the caller's cleanup
+    # never runs) or when no pid shows up within 30 s. Not by its command line: pi rewrites
+    # it, and a search for "--session-dir" found nothing, so the line froze at "turn 1, 30s".
     set -l sdir $argv[1]
     set -l t0 $argv[2]
     set -l name $argv[3]
@@ -20,7 +20,11 @@ function _ai_run_progress --description "Draw an agentic pi run's live line ever
             break
         end
         set -l p (_ai_session_progress $sdir | string split \t)
-        # The model's context window, once its name is known: from pi's model config
+        # The model's context window: the one a native driver sized for this request (its ctx
+        # file), else, once the model's name is known, from pi's model config
+        if test -z "$window"; and test -f $sdir/ctx
+            set window (string split ' ' -- (string trim <$sdir/ctx))[2]
+        end
         if test -z "$window"; and test -n "$p[4]"
             set -l pm (string split -m1 / -- $p[4])
             set window (jq -r --arg p $pm[1] --arg m $pm[2] \

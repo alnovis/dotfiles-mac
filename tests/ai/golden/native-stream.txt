@@ -1,0 +1,16 @@
+== nothing streamed yet: reading
+|ollama/qwen3.8:27b|58000|model|reading
+== reasoning: thinking
+thinking 22
+== then the answer: writing
+writing 11
+  ollama · qwen3.8:27b | writing 11 chars | ctx 58k/65.5k | 3m 20s
+== an OpenAI stream
+writing 2
+== the driver writes its dir
+model: yes
+ctx: yes
+pid: yes
+stream: yes
+ollama/m
+[exit 0]

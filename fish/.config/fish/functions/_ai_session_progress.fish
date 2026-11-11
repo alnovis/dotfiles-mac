@@ -19,7 +19,16 @@ function _ai_session_progress --description "Where an agentic pi run is, from it
     # does, ACTIVITY is "retry N MESSAGE": the line read "turn 2 | reading context" of a run
     # looping on its first request.
     set -l f (path filter -f $argv[1]/*.jsonl)[1]
-    test -n "$f"; or return 1
+    if test -z "$f"
+        # No pi session: a native driver's run, its stream in the dir (_ai_stream_activity).
+        # No turns and no tools; the model and the prompt size as the driver wrote them
+        # ("PROVIDER/MODEL" in model, "PROMPT_TOKENS WINDOW" in ctx).
+        test -f $argv[1]/stream; or return 1
+        set -l model (string trim <$argv[1]/model 2>/dev/null)
+        set -l ctx (string split ' ' -- (string trim <$argv[1]/ctx 2>/dev/null))
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "" "" (path mtime --relative $argv[1]/stream) "$model" "$ctx[1]" model (_ai_stream_activity $argv[1])
+        return 0
+    end
     set -l stops (grep '"role":"assistant"' $f | jq -r '.message.stopReason // ""' 2>/dev/null)
     set -l turns (count (string match -v -- error $stops))
     # The failed requests since the last answered one
@@ -53,13 +62,17 @@ function _ai_session_progress --description "Where an agentic pi run is, from it
     # the session in the same second
     if test "$phase" = model; and test -f $pulse; and test (path mtime $pulse) -gt (path mtime $f)
         set idle (path mtime --relative $pulse)
-        set -l n (string split ' ' -- (string trim <$pulse))
-        # One number: a pulse from before the two were counted apart, all of it text
-        set -q n[2]; or set -p n 0
-        if test "$n[2]" -gt 0
-            set activity "writing $n[2]"
-        else if test "$n[1]" -gt 0
-            set activity "thinking $n[1]"
+        # Read between ai-guard's truncate and write the file is empty ("Invalid number" every
+        # few seconds on the live line): only a pulse of numbers counts, else the activity stays
+        set -l n (string trim <$pulse 2>/dev/null | string match -r '^\d+(?: \d+)?$' | string split ' ')
+        if set -q n[1]
+            # One number: a pulse from before the two were counted apart, all of it text
+            set -q n[2]; or set -p n 0
+            if test "$n[2]" -gt 0
+                set activity "writing $n[2]"
+            else if test "$n[1]" -gt 0
+                set activity "thinking $n[1]"
+            end
         end
     end
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' $turns "$call" $idle "$model" "$ctx" "$phase" "$activity"
