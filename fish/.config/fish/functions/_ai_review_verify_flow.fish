@@ -175,21 +175,20 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         return 1
     end
 
+    # Findings get numbers [F1], [F2]... in the saved review: verify keys its verdicts by them
+    set -l numbered (mktemp)
+    _ai_review_number_findings <$find_src >$numbered; and mv $numbered $find_src
+    rm -f $numbered
+
     # Not empty is not enough: a model that meant to explore first can stop after one
-    # sentence ("I'll examine the key files…"). Every review format has a severity
-    # section or the clean verdict — without one there is nothing to verify. A review in
-    # Russian may name them in Russian (both cases spelled out: grep -i follows the locale).
-    if not grep -qiE 'critical|important|no issues found|Критич|критич|Важн|важн|Проблем не (найдено|обнаружено)|проблем не (найдено|обнаружено)' $find_src
-        echo "  Review pass does not look like a review (no Critical/Important section, no \"No issues found\") — skipping verify. It wrote:" >&2
+    # sentence ("I'll examine the key files..."). A review has sections or numbered findings,
+    # in whatever language it is written; without them there is nothing to verify.
+    if not grep -qE '^#{1,6} |\[F[0-9]+\] ' $find_src; and not grep -qi 'no issues found' $find_src
+        echo "  Review pass does not look like a review (no sections, no findings), skipping verify. It wrote:" >&2
         head -5 $find_src | sed 's/^/    | /' >&2
         test $find_is_temp -eq 1; and rm -f $find_src
         return 1
     end
-
-    # Findings get numbers [F1], [F2]… in the saved review: verify keys its verdicts by them
-    set -l numbered (mktemp)
-    _ai_review_number_findings <$find_src >$numbered; and mv $numbered $find_src
-    rm -f $numbered
 
     # Pass 2 — verify.
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $find_src

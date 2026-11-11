@@ -101,7 +101,11 @@ $lens_block"
 
     # Language instruction
     set -l lang_full (_ai_lang_name $lang)
-    set prompt "IMPORTANT: Write your entire response in $lang_full.
+    # The section headings are structure, not prose: findings are numbered by them
+    # (_ai_review_number_findings), so they stay in English in any language
+    set -l keep ""
+    test "$lang_full" != English; and not set -q _flag_brief; and set keep " Keep the section headings as the format below writes them, in English: tools read them."
+    set prompt "IMPORTANT: Write your entire response in $lang_full.$keep
 
 $prompt"
 

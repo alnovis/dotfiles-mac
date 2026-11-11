@@ -40,7 +40,10 @@ function _ai_review_verify --description "Second-opinion verify pass over first-
     end
 
     set -l lang_prefix ""
-    test -n "$lang"; and set lang_prefix "IMPORTANT: Write your response in $lang."\n\n
+    # The verdicts and finding numbers are structure: the vote and the counters read them
+    set -l keep ""
+    test "$lang" != English; and set keep " Keep the finding numbers [Fn] and the verdicts ([CONFIRMED N/10], [REFUTED N/10], [UNCERTAIN]) as they are, in English: tools read them."
+    test -n "$lang"; and set lang_prefix "IMPORTANT: Write your response in $lang.$keep"\n\n
 
     set -l payload "$lang_prefix$vprompt"
     # The review's lenses: what a misread of the language or library looks like

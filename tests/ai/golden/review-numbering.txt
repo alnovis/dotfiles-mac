@@ -87,24 +87,16 @@
 Plain text outside any bullet stays as it is.
 == numbering twice changes nothing
 same
-== sections named in Russian
-## Резюме
-
-- всё хорошо
-
+== headings with no Latin word: each is a section, its bullets numbered
 ## Критические проблемы
 
-- [F1] **гонка** в `a.java:3`
+- [F1] гонка
 
-**Важные замечания**
+## [!] Critical
 
-1. [F2] нет таймаута
+- [F2] a race
 
-## Мелочи
+## Summary
 
-- опечатка
-
-## Прочее
-
-- [F3] странный код
+- ok
 [exit 0]

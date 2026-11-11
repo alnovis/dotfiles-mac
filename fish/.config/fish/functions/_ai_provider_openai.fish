@@ -105,7 +105,7 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
                 echo "$provider: connection refused ($ep[1])" >&2
             case 28
                 if grep -q 'too slow' $raw.err
-                    echo "$provider: no data for $idle s — timed out (config key request_idle_timeout)" >&2
+                    echo "$provider: no data for $idle s, timed out (config key request_idle_timeout)" >&2
                 else
                     echo "$provider: timed out connecting ($ep[1])" >&2
                 end

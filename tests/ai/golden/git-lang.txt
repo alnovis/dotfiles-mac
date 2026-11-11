@@ -10,7 +10,7 @@ Changes  HEAD~1..HEAD
   1 file changed, 33 insertions(+), 10 deletions(-)
   context      208 lines across 1 files (budget 2000)
 --- dry-run: prompt that would be sent to ollama (native) ---
-IMPORTANT: Write your final response in Russian. You may think in English, but the output must be in Russian.
+IMPORTANT: Write your final response in Russian. You may think in English, but the output must be in Russian. Keep the section headings as the format below writes them, in English: tools read them.
 
 You are reviewing a git diff. The diff shows lines added (+), removed (-), and surrounding context.
 

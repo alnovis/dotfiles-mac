@@ -131,7 +131,7 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
                 echo "ollama: connection refused ($host)" >&2
             case 28
                 if grep -q 'too slow' $raw.err
-                    echo "ollama: no data for $idle s — timed out (config key request_idle_timeout)" >&2
+                    echo "ollama: no data for $idle s, timed out (config key request_idle_timeout)" >&2
                 else
                     echo "ollama: timed out connecting ($host)" >&2
                 end

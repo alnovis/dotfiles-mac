@@ -12,7 +12,7 @@ IMPORTANT: Write your entire response in English.
 comments language: German
   comments     on (MR line comments from the verdicts)
   language     German
-IMPORTANT: Write your final response in German. You may think in English, but the output must be in German.
+IMPORTANT: Write your final response in German. You may think in English, but the output must be in German. Keep the section headings as the format below writes them, in English: tools read them.
 == verify-only with verdicts
 comments language: Russian
 == needs -o

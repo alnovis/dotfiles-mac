@@ -10,6 +10,11 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
     set -l n $argv[1]
     set -l files $argv[2..]
     awk -v N=$n '
+        # The em and en dashes the models write, as octal bytes: the source stays ASCII
+        BEGIN {
+            EM = "\342\200\224"; EN = "\342\200\223"
+            BARE = "(" EM "|" EN "|-|[*][*])[[:space:]]*[*]*[[:space:]]*(CONFIRMED|REFUTED|UNCERTAIN)([[:space:]]+[0-9]+[[:space:]]*/[[:space:]]*10)?[[:space:]]*[*]*[[:space:]]*$"
+        }
         function flush() {
             if (id != "" && v != "" && !((RUN, id) in seen)) {
                 seen[RUN, id] = 1
@@ -22,7 +27,7 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
         # a dash or in bold. A why: line may say "not REFUTED" and is no verdict.
         function tag_of(l,   s) {
             if (match(l, /\[(CONFIRMED|REFUTED|UNCERTAIN)[^]]*\]/)) return substr(l, RSTART + 1, RLENGTH - 2)
-            if (match(l, /(—|–|-|\*\*)[[:space:]]*\**[[:space:]]*(CONFIRMED|REFUTED|UNCERTAIN)([[:space:]]+[0-9]+[[:space:]]*\/[[:space:]]*10)?[[:space:]]*\**[[:space:]]*$/)) {
+            if (match(l, BARE)) {
                 s = substr(l, RSTART, RLENGTH); sub(/^[^A-Z]*/, "", s); gsub(/[[:space:]*]+$/, "", s); return s
             }
             return ""
@@ -36,7 +41,7 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
             line = $0
             g = tag_of(line)
             # A finding starts where its [Fn] leads the line (after list, heading or bold
-            # marks); an [Fn] further in, as in "why: unlike [F2] …", only mentions one
+            # marks); an [Fn] further in, as in "why: unlike [F2] ...", only mentions one
             if (match(line, /\[F[0-9]+\]/) && substr(line, 1, RSTART - 1) ~ /^[[:space:]>#*|0-9.)-]*$/) {
                 flush()
                 id = substr(line, RSTART + 2, RLENGTH - 3) + 0

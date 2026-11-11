@@ -303,16 +303,20 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     set -l lang_prefix ""
     set -l lang_suffix ""
     set -l lang_full (_ai_lang_name $lang)
+    # The section headings are structure, not prose: findings are numbered by them
+    # (_ai_review_number_findings), so they stay in English in any language
+    set -l keep ""
+    test "$lang_full" != English; and not set -q _flag_brief; and set keep " Keep the section headings as the format below writes them, in English: tools read them."
     if test -n "$lang"
         if test $lang_all -eq 1
-            set lang_prefix "IMPORTANT: You MUST write your ENTIRE response in $lang_full, including your thinking/reasoning process. All text must be in $lang_full.
+            set lang_prefix "IMPORTANT: You MUST write your ENTIRE response in $lang_full, including your thinking/reasoning process. All text must be in $lang_full.$keep
 
 "
             set lang_suffix "
 
 REMINDER: Write EVERYTHING in $lang_full, including thinking."
         else
-            set lang_prefix "IMPORTANT: Write your final response in $lang_full. You may think in English, but the output must be in $lang_full.
+            set lang_prefix "IMPORTANT: Write your final response in $lang_full. You may think in English, but the output must be in $lang_full.$keep
 
 "
             set lang_suffix "
