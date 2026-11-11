@@ -95,6 +95,23 @@ console.log("== time budget");
 	await emit("session_shutdown", {});
 }
 
+console.log("== after the time budget: aborted on silence, not while the answer streams");
+{
+	const { ctx, emit } = load({ AI_GUARD_TIMEOUT: "0.05", AI_GUARD_GRACE: "0.3", AI_GUARD_MAX_TURNS: "0" });
+	await emit("session_start", {});
+	await emit("message_start", { message: { role: "assistant" } });
+	// streaming for 0.8 s, a delta every 0.04 s: well past budget + grace (0.35 s), still working
+	for (let i = 0; i < 20; i++) {
+		await new Promise((r) => setTimeout(r, 40));
+		await emit("message_update", { assistantMessageEvent: { type: "text_delta", delta: "x" } });
+	}
+	console.log(`streaming: ${ctx.aborted ? "ABORTED" : "running"}`);
+	// then silent past the grace
+	await new Promise((r) => setTimeout(r, 600));
+	console.log(`silent: ${ctx.aborted ? "ABORTED" : "running"}`);
+	await emit("session_shutdown", {});
+}
+
 console.log("== pulse");
 {
 	const pulse = join(mkdtempSync(join(tmpdir(), "guard")), "pulse");

@@ -25,6 +25,11 @@ before: tools [read,grep,find,ls]
 after: tools []
 a call -> blocked: the time budget (0.05s) is spent: no more tools — write the final answer now from what you have read
 turn 1: told: the time budget (0.05s) is spent. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.
+== after the time budget: aborted on silence, not while the answer streams
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
+streaming: running
+  stderr: ai-guard: aborted at 1s: nothing streamed for 0.3s after the time budget (0.05s)
+silent: ABORTED
 == pulse
 after the first delta: 6
 a delta right after: 6

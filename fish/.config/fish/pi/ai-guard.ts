@@ -10,9 +10,12 @@
  *   is told to answer from what it has read. A bare cap (the old native loop) ended a wandering
  *   run with no answer at all; here the last turns go to the answer. Still no answer a few
  *   turns later: the run is aborted.
- * - Time: after AI_GUARD_TIMEOUT seconds (default 900) the same switch to answering; 180 s
- *   later the run is aborted. A provider that hangs (an ollama runner stuck in "Stopping…")
- *   kept pi waiting for an answer that never came, and the whole eval with it.
+ * - Time: after AI_GUARD_TIMEOUT seconds (default 900) the same switch to answering; then the
+ *   run is aborted once the model has been silent (no reasoning, no answer streamed) for the
+ *   grace, AI_GUARD_GRACE seconds (default half the budget, at least 180). A provider that
+ *   hangs (an ollama runner stuck in "Stopping...") kept pi waiting for an answer that never
+ *   came, and the whole eval with it. A fixed 180 s after the budget killed a local 27B model
+ *   that still had to read the whole conversation again and write its review at ~20 tok/s.
  *   Each switch and the abort are told on stderr ("ai-guard: …", with the second it came),
  *   which the toolkit shows under the run line and gives as the reason of an empty answer:
  *   granite's run ended at 1436 s, not at 1080, and its log could not say why. Still
@@ -30,7 +33,8 @@ import { dirname, isAbsolute, resolve, sep } from "node:path";
 const FILE_TOOLS = new Set(["read", "grep", "find", "ls"]);
 // Turns allowed after the budget is spent before the run is aborted
 const GRACE_TURNS = 3;
-const ABORT_AFTER_TIMEOUT_S = 180;
+// Silence after the time budget before the run is aborted, at least
+const MIN_GRACE_S = 180;
 const EXIT_AFTER_ABORT_S = 30;
 
 // The real path of the longest existing prefix, so a path that does not exist still resolves
@@ -69,7 +73,10 @@ function pathsOf(toolName: string, input: Record<string, unknown>): string[] {
 export default function aiGuard(pi: ExtensionAPI) {
 	const maxTurns = Number(process.env.AI_GUARD_MAX_TURNS ?? 30);
 	const timeoutS = Number(process.env.AI_GUARD_TIMEOUT ?? 900);
+	const graceS = Number(process.env.AI_GUARD_GRACE ?? Math.max(MIN_GRACE_S, timeoutS / 2));
 	const pulse = process.env.AI_GUARD_PULSE ?? "";
+	// When the model last streamed anything, reasoning or answer
+	let streamedAt = 0;
 	let root = process.env.AI_GUARD_ROOT ?? "";
 	let spent = "";
 	let turnsAfter = 0;
@@ -111,9 +118,18 @@ export default function aiGuard(pi: ExtensionAPI) {
 		root = real(resolve(root || ctx.cwd));
 		if (timeoutS > 0) {
 			later(timeoutS, () => spend(`the time budget (${timeoutS}s) is spent`));
-			later(timeoutS + ABORT_AFTER_TIMEOUT_S, () =>
-				abort(ctx, `no answer ${ABORT_AFTER_TIMEOUT_S}s after the time budget (${timeoutS}s)`),
-			);
+			// Aborted after graceS of silence past the budget, not at a fixed time: a model
+			// still streaming its answer is working, not hung
+			const budgetAt = t0 + timeoutS * 1000;
+			const check = () => {
+				const silentS = (Date.now() - Math.max(streamedAt, budgetAt)) / 1000;
+				if (silentS >= graceS) {
+					abort(ctx, `nothing streamed for ${graceS}s after the time budget (${timeoutS}s)`);
+				} else {
+					later(graceS - silentS, check);
+				}
+			};
+			later(timeoutS + graceS, check);
 		}
 	});
 
@@ -125,6 +141,7 @@ export default function aiGuard(pi: ExtensionAPI) {
 		const e = event.assistantMessageEvent;
 		if ("delta" in e && typeof e.delta === "string") streamed += e.delta.length;
 		const now = Date.now();
+		streamedAt = now;
 		if (!pulse || now - pulsedAt < 1000) return;
 		pulsedAt = now;
 		try {
