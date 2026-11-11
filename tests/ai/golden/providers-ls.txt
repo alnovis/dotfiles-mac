@@ -2,7 +2,7 @@
  -----------------------------------------------------------------------
  ollama     native (127.0.0.1:9)      via pi        2 installed, 2 in pi
  claude     claude CLI                claude CLI    sonnet, opus, haiku
- testcloud  native, endpoint from pi  via pi        1
+ testcloud  native, endpoint from pi  via pi        2
  -----------------------------------------------------------------------
 
  Reachable now? ai providers check NAME · runner: config key agent (pi) · models: ai models --provider all

@@ -58,7 +58,17 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
             return 1
         end
         if test (math $prompt_tokens + $max_tokens) -gt $ctx
-            set max_tokens (math "max(1024, $ctx - $prompt_tokens)")
+            set -l wanted $max_tokens
+            set -l room (math $ctx - $prompt_tokens)
+            set max_tokens (math "max(1024, $room)")
+            # A reasoning model thinks before it answers, and that counts against max_tokens:
+            # a verify of ~104k tokens left 22.7k of the 32k configured, and all three runs
+            # spent it thinking and answered nothing (paid for all the same). Below three
+            # quarters of the configured room it is refused here, before the request.
+            if test "$ep[6]" = true; and test $room -lt (math "floor($wanted * 3 / 4)")
+                echo "$provider: prompt ~$prompt_tokens tokens leaves $room of the $wanted max_tokens configured for $model ($ctx-token context): too little room for a reasoning model to think and answer. Make the prompt smaller: --context-lines 0 (diff-only), a smaller range, or for verify --verify-context assembled." >&2
+                return 1
+            end
         end
         echo "$provider: prompt ~$prompt_tokens tokens, max_tokens $max_tokens, context $ctx (model $model)" >&2
     else

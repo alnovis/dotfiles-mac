@@ -5,6 +5,8 @@ Error: testcloud has no model nosuch (ai models --provider testcloud)
  ------------------------------------------------------------------------------
  Coding:
     cloud-model     1000                      ✓
+ General:
+    think-model     1000        thinking      ✓
  ------------------------------------------------------------------------------
 cloud-model → General
 {

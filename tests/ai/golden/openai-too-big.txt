@@ -1,4 +1,9 @@
 testcloud: prompt ~1250 tokens does not fit cloud-model's 1000-token context. Use --context-lines 0 (diff-only) or a smaller change.
 == 300 numbered lines: 3 tokens a line on top of their chars
 testcloud: prompt ~1698 tokens does not fit cloud-model's 1000-token context. Use --context-lines 0 (diff-only) or a smaller change.
+== a reasoning model left under 3/4 of its max_tokens: refused before the request
+testcloud: prompt ~750 tokens leaves 250 of the 400 max_tokens configured for think-model (1000-token context): too little room for a reasoning model to think and answer. Make the prompt smaller: --context-lines 0 (diff-only), a smaller range, or for verify --verify-context assembled.
+== the same prompt, a model that does not reason: clamped and sent
+testcloud: prompt ~750 tokens, max_tokens 1024, context 1000 (model cloud-model)
+testcloud: connection refused (http://127.0.0.1:9/v1)
 [exit 1]
