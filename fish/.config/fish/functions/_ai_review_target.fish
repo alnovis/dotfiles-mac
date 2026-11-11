@@ -129,7 +129,9 @@ $prompt"
             _ai_ui_kv verify "requested (ignored — --brief mode)"
             set_color normal
         else
+            # As the verify flow resolves it: flag > config verify_provider > review provider
             set -l vp $_flag_verify_provider
+            test -z "$vp"; and set vp (_ai_config_read verify_provider 2>/dev/null)
             test -z "$vp"; and set vp "$provider"
             _ai_ui_kv verify "on ($vp)"
             set -q _flag_comments; and _ai_ui_kv comments "on (line comments from the verdicts)"

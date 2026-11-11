@@ -1,0 +1,9 @@
+== git mode: from the config
+verify provider=claude model= (prompt: meta-verify.md + first-pass findings + code: 280 lines)
+  verify       on (claude)
+== target mode
+  verify       on (claude)
+== the flag wins
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 280 lines)
+  verify       on (ollama)
+[exit 1]

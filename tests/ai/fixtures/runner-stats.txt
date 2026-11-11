@@ -1,0 +1,5 @@
+  run 2/3  FAILED    72s  the model returned no answer
+     87.3k/9.7k tokens  cost 3.516
+    A reasoning model may have used up max_tokens thinking: raise maxTokens for the model, rerun, or pick another model.
+    litellm: prompt ~121383 tokens, max_tokens 9689, context 131072 (model selectel/qwen/qwen3.8-27b)
+    litellm: the answer hit max_tokens (9689) and is cut off — raise maxTokens for selectel/qwen/qwen3.8-27b in the pi config

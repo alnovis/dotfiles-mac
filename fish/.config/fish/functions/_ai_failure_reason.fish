@@ -21,7 +21,7 @@ function _ai_failure_reason --description "Why a run failed, one line, from its 
     set -l rest (string match -v -r -- '(?:^| )FAILED +[0-9]+s ' $lines)
     set -l why
     if set -q rest[1]
-        set why (string match -r -i -- '.*(?:http|error|forbidden|denied|refused|timed out|truncated|not found|\b[45][0-9][0-9]\b).*' $rest)[-1]
+        set why (string match -r -i -- '.*(?:http|error|forbidden|denied|refused|timed out|truncated|not found|(?<![.,])\b[45][0-9][0-9]\b(?![.,][0-9])).*' $rest)[-1]
     end
     test -n "$why"; or set why $own
     test -n "$why"; or set why $rest[-1]

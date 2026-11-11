@@ -330,6 +330,11 @@ runner.
 overflow the argument limit); the `Authorization` header goes through a 600-mode file, never the
 command line. With a known `contextWindow` a prompt that cannot fit is refused before sending, and
 `max_tokens` is lowered to what is left; without one the driver says the context is unknown.
+The prompt is estimated as `(chars + non-ASCII chars) / 4` tokens — close to the ~4.2 measured on
+a Java review, a little high. Unlike ollama's `chars / 3` it must not err high by much: on a
+330 KB review `/ 3` said 109k for 77.5k and left a verify 9.7k of `max_tokens` with 44k of the
+context free, so a reasoner thought it all away and answered nothing. Erring low shows plainly:
+the gateway refuses a request over the context with an error.
 
 **Response.** One `jq` streams `delta.content` to stdout, leading blank lines dropped. From the
 kept raw stream: `delta.reasoning_content` (or `delta.reasoning`) → the sidecar; the final

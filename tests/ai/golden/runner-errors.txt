@@ -3,4 +3,6 @@
 reason: 503 Service Temporarily Unavailable
 == a coloured run line
 reason: the model returned no answer (max_tokens spent thinking?)
+== a cost in the stats is no status
+reason: the model returned no answer
 [exit 0]
