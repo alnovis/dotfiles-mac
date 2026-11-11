@@ -72,8 +72,11 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
     chmod 600 $hdr
     # The prompt through a file: a big review would overflow the argument limit
     printf '%s' "$prompt" >$raw
-    jq -n --arg m $model --rawfile p $raw --argjson mt $max_tokens \
-        '{model: $m, messages: [{role: "user", content: $p}], stream: true, stream_options: {include_usage: true}, max_tokens: $mt}' >$body
+    # This driver is single-shot with no tools, and the model is told so, as the claude and
+    # pi runners tell theirs: a lens asking for a build file outside the prompt made a
+    # tool-less model write out a tool call instead of a review
+    jq -n --arg m $model --rawfile p $raw --argjson mt $max_tokens --arg s (_ai_no_tools_prompt) \
+        '{model: $m, messages: [{role: "system", content: $s}, {role: "user", content: $p}], stream: true, stream_options: {include_usage: true}, max_tokens: $mt}' >$body
     # The key goes through a file, never the command line (ps would show it)
     printf 'Content-Type: application/json\n' >$hdr
     test -n "$key"; and printf 'Authorization: Bearer %s\n' $key >>$hdr

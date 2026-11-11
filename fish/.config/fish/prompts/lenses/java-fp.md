@@ -12,6 +12,7 @@ Finding the version (at the reviewed commit):
 - Maven: `<java.version>` (Spring Boot), `<maven.compiler.release>` / `<release>`, or `<source>` / `<maven.compiler.source>` in `pom.xml`; a module can override the parent.
 - Gradle: `java { toolchain { languageVersion = JavaLanguageVersion.of(N) } }`, `sourceCompatibility` / `release` in `build.gradle(.kts)`.
 - No build file: say so and suggest nothing newer than Java 8.
+- A build file you cannot see (not in the prompt, and no tools to read it): do not try to open it. Say the version is unknown, and suggest nothing newer than Java 8.
 
 Where to look first (non-exhaustive — reason beyond this list):
 - A loop that fills a list, set, map or counter: `stream()` with `map` / `filter` / `collect` (`Collectors.groupingBy`, `toMap`, `partitioningBy`, `joining`), `Stream.toList()` (16+), `IntStream` for index ranges. Mind `toMap` throwing on duplicate keys where the loop overwrote — give the merge function.

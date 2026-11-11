@@ -1,6 +1,9 @@
 == a review run
 args: -p --no-session-persistence --setting-sources  --strict-mcp-config --tools Read Grep Glob
 memory off: 1, CLAUDE.md off: 1
+== no tools: and it is told so
+args: -p --no-session-persistence --setting-sources  --append-system-prompt You are a careful senior engineer. You have NO tools in this conversation: you cannot open files, search, or run commands, and none will be offered. Everything you need is in the user's message. Answer directly and completely in this single reply. --strict-mcp-config --tools 
+memory off: 1, CLAUDE.md off: 1
 == interactive keeps them
 args: --tools Read,Grep,Glob -- hello
 memory off: , CLAUDE.md off: 

@@ -53,6 +53,10 @@ function _ai_agent_claude --description "Runner: claude CLI (Anthropic models, s
     # --tools goes last: it is variadic
     switch "$_flag_tools"
         case none
+            # Claude Code's system prompt describes its tools even with all of them off: a
+            # review whose lens asked for the Java version from pom.xml (not in the prompt)
+            # came back as a Bash call written out as text. Said plainly, as pi's runner does.
+            set -a args --append-system-prompt (_ai_no_tools_prompt)
             set -a args --strict-mcp-config --tools ""
         case read ''
             set -a args --strict-mcp-config --tools Read Grep Glob
