@@ -14,9 +14,10 @@ Resolved per task:
   summary  ollama    config-model  global+top     global
 
 Review (ollama / review-model):
-  prompt       lean (auto: not claude)
-  runs         1 (default)
-  parallel     sequential (auto: a local model)
-  verify runs  1 (default)
-  lens         none (set review_lens in .ai/config)
+  prompt          lean (auto: not claude)
+  runs            1 (default)
+  parallel        sequential (auto: a local model)
+  verify runs     1 (default)
+  verify context  embedded (default)
+  lens            none (set review_lens in .ai/config)
 [exit 0]

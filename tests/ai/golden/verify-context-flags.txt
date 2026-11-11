@@ -18,6 +18,32 @@ You have no tools: the code above and the code under review are all you can see.
                cannot tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF).
 == review + verify
 verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 281 lines + the code the findings cite, read from the repository; no tools)
+== a plain review, an agentic verify
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 281 lines + read-only tools, skill ai-verify)
+== an agentic review: verify follows it
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 65 lines + read-only tools, skill ai-verify)
+== an agentic review, an embedded verify
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 65 lines)
+== verify-only: --agentic is the verify mode
+  context      read-only tools, skill ai-verify
+== from the config, scoped by the verify provider
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 281 lines + the code the findings cite, read from the repository; no tools; context assembled from config project verify_context@ollama)
+  verify context  assembled (config project verify_context@ollama)
+== a bad value in the config
+
+Review  fixture (feature)
+  last         1 commit(s) on feature
+  provider     ollama
+  model        review-model
+  verify       on (ollama)
+  language     English
+  output       ../vc-out.md
+
+Changes  HEAD~1..HEAD
+  fish/.config/fish/functions/gbranch.fish | 43 ++++++++++++++++++++++++-------
+  1 file changed, 33 insertions(+), 10 deletions(-)
+  context      208 lines across 1 files (budget 2000)
+Error: verify context takes embedded, assembled or agentic (got 'tools' from config project verify_context)
 == bad value
-Error: --verify-context takes assembled (got: 'agentic')
+Error: --verify-context takes embedded, assembled or agentic (got: 'tools')
 [exit 1]

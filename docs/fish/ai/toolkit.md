@@ -438,6 +438,22 @@ out, with a count. `--verify-runs` turns verify on; `verify_runs` is scoped by t
 provider/model like `review_runs` (`verify_runs@litellm=3`). Majority is for verify only: a
 review's runs are joined by union, because there a finding one run saw is still a finding.
 
+**What the verifier sees (`--verify-context MODE`, config `verify_context`).** Three modes:
+
+| Mode | The verifier gets | Tools |
+|---|---|---|
+| `embedded` | the code the review saw: the diff and the embedded files (git), the file or the directory's files (target) | none |
+| `assembled` | the same, plus the code the findings cite, read beforehand (below) | none |
+| `agentic` | the minimum, and reads the rest itself; skill `ai-verify` | read-only |
+
+Precedence: the flag, then `verify_context` scoped by the verify provider/model like
+`verify_runs` (`verify_context@ollama=assembled`), then the review's mode: an `--agentic`
+review gets an agentic verify, any other an embedded one. So `--agentic` alone keeps both
+passes agentic, and `--agentic --verify-context assembled` is an agentic review with an
+assembled verify. The flag turns verify on; the config key does not (as `verify_runs`). With
+`--verify-only` there is no review: `--agentic` is the verify mode unless `--verify-context`
+says otherwise. `ai config status` shows the mode a non-agentic review would get.
+
 **Verify on assembled code (`--verify-context assembled`).** An agentic verifier spends a turn
 on each file it opens (4-8 turns of about a minute on a local 27B model), finding code the
 findings already name by `file:line`. With this flag `_ai_verify_context` reads it first, from
@@ -480,7 +496,7 @@ one, so run it from the repo when the verifier uses `--agentic`.
 | `--file FILE` | Code or diff to embed for the verifier. Without it (and without `--agentic`) a note says the verifier reasons from the findings text alone |
 | `--verify-output FILE`, `-o FILE` | Output path (`--verify-output` wins). Default: `<review>.verify.<ext>` |
 | `--agentic`, `--no-think`, `--lang`, `--dry-run` | As for a normal review |
-| `--verify-context assembled` | Verify on the code the findings cite, read beforehand; with `--range` the diff goes along |
+| `--verify-context MODE` | `embedded`, `assembled` (the code the findings cite, read beforehand; with `--range` the diff goes along) or `agentic`; wins over `--agentic`. Default: `verify_context`, else `--agentic`, else `embedded` |
 | `--verify-think LEVEL` | How much the verifier thinks (`false`, `low`, `medium`, …); else `verify_think` |
 | `--comments` | Then the comments stage below |
 | `--range BASE..HEAD` | With `--comments`: the reviewed range, to anchor lines and check the diff |
@@ -1178,6 +1194,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `review_runs` | by hand | How many review runs to join before verify (default 1); scoped: `review_runs@PROVIDER`, `review_runs@PROVIDER/MODEL` |
 | `review_parallel` | by hand | Those runs: `auto` (default: cloud in parallel, ollama one at a time), `on`, `off`; scoped like `review_runs` |
 | `verify_runs` | by hand | How many verify runs, joined by majority per finding (default 1); scoped by the verify provider/model like `review_runs` |
+| `verify_context` | by hand | What the verifier sees: `embedded`, `assembled` or `agentic` (default: agentic for an `--agentic` review, else embedded); scoped like `verify_runs`; `--verify-context` overrides |
 | `verify_think` | by hand | How much the verifier thinks on native ollama: `false`, `low`, `medium`, … (a level the model lists); `--verify-think` and `--no-think` override; unset → the model's default |
 | `lessons_dir` | by hand | Where `ai lessons` keeps this project's outcomes and lessons.md; relative to the repository (default: `~/.local/share/ai/lessons/<origin>/`) |
 | `verify_context_lines` | by hand | `--verify-context assembled`: line budget for the code read for the findings (default 1500) |

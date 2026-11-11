@@ -114,19 +114,30 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -l vthink $_flag_verify_think
     test -z "$vthink"; and not set -q _flag_no_think; and set vthink (_ai_config_read verify_think 2>/dev/null)
     test -n "$vthink"; and _ai_ui_kv think $vthink
-    test "$_flag_verify_context" = assembled
-    and _ai_ui_kv context "the code each finding cites, read from the repository; no tools"
+    # What verify sees: --verify-context > verify_context (scoped) > --agentic > embedded.
+    # Here --agentic has no review to apply to: it is verify's mode unless the flag says
+    # otherwise. Checked outside (...) first: stderr inside it skips the caller's redirect
+    _ai_verify_context_mode $vprovider "$vmodel" "$_flag_verify_context" "$(set -q _flag_agentic; and echo 1)" >/dev/null; or return 1
+    set -l vctx (_ai_verify_context_mode $vprovider "$vmodel" "$_flag_verify_context" "$(set -q _flag_agentic; and echo 1)" | string split \t)
+    set -l from ""
+    string match -q 'config *' -- $vctx[2]; and set from " (from $vctx[2])"
+    switch $vctx[1]
+        case assembled
+            _ai_ui_kv context "the code each finding cites, read from the repository; no tools$from"
+        case agentic
+            _ai_ui_kv context "read-only tools, skill ai-verify$from"
+    end
     if not set -q _flag_file; and test -z "$diff_tmp"
         set_color yellow
-        if test "$_flag_verify_context" = assembled
+        if test "$vctx[1]" = assembled
             _ai_ui_kv note "no diff — the verifier sees the code the findings cite but not the old code, so it"
             _ai_ui_kv "" "cannot tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF)."
-        else if set -q _flag_agentic
+        else if test "$vctx[1]" = agentic
             _ai_ui_kv note "no diff — the verifier reads the repo but cannot see the old code, so it cannot"
             _ai_ui_kv "" "tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF)."
         else
             _ai_ui_kv note "no code embedded — the verifier reasons from the findings text alone."
-            _ai_ui_kv "" "Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo."
+            _ai_ui_kv "" "Pass --range BASE..HEAD (or --file DIFF) for grounding, or --verify-context assembled or agentic."
         end
         set_color normal
     end
@@ -147,8 +158,12 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -l vargs --provider $vprovider --workdir $workdir --findings-file $review_file --lang $lang_full
     test -n "$vmodel"; and set -a vargs --model $vmodel
     set -q _flag_lens; and set -a vargs --lens $_flag_lens
-    set -q _flag_verify_context; and set -a vargs --context $_flag_verify_context
-    set -q _flag_agentic; and set -a vargs --agentic
+    switch $vctx[1]
+        case assembled
+            set -a vargs --context assembled
+        case agentic
+            set -a vargs --agentic
+    end
     set -q _flag_no_think; and set -a vargs --no-think
     set -q _flag_verify_think; and set -a vargs --think-level $_flag_verify_think
     if set -q _flag_file; and test -f "$_flag_file"

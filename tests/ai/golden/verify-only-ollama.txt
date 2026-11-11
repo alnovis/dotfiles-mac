@@ -4,7 +4,7 @@ Verify  an existing review
   provider     ollama
   model        default-model
   note         no code embedded — the verifier reasons from the findings text alone.
-               Pass --range BASE..HEAD (or --file DIFF) for grounding, or --agentic to let it read the repo.
+               Pass --range BASE..HEAD (or --file DIFF) for grounding, or --verify-context assembled or agentic.
   output       <SANDBOX>/review.verify.md
 --- dry-run: prompt that would be sent to ollama (native) ---
 IMPORTANT: Write your response in English.

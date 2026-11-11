@@ -185,6 +185,9 @@ function _ai_config_do_status
         set -l vmd (_ai_default_model verify $vp 2>/dev/null)
         set -l v (_ai_verify_runs_count $vp "$vmd" "" 2>/dev/null | string split \t)
         test -n "$v[1]"; and printf '%s\t%s\n' "verify runs" "$v[1] ($v[2])"
+        # As for a review without --agentic; an --agentic review makes the default agentic
+        set -l c (_ai_verify_context_mode $vp "$vmd" "" "" 2>/dev/null | string split \t)
+        test -n "$c[1]"; and printf '%s\t%s\n' "verify context" "$c[1] ($c[2])"
         set -l l (_ai_review_lens_choice "" "" | string split \t)
         if test -n "$l[1]"
             printf '%s\t%s\n' lens "$l[1] ($l[2])"

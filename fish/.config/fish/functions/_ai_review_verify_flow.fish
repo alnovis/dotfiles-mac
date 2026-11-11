@@ -68,6 +68,11 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         test -n "$vm[1]"; and set vmode $vm[1]
     end
 
+    # What verify sees: --verify-context > verify_context (scoped by the verify provider/model)
+    # > the review's mode. Checked outside (...) first, as the runs above
+    _ai_verify_context_mode $vprovider "$vmodel" "$_flag_verify_context" "$(set -q _flag_agentic; and echo 1)" >/dev/null; or return 1
+    set -l vctx (_ai_verify_context_mode $vprovider "$vmodel" "$_flag_verify_context" "$(set -q _flag_agentic; and echo 1)" | string split \t)
+
     # Two output paths: review -> --output; verify -> --verify-output or derived.
     # Both empty => stream a combined view to the terminal.
     set -l review_out $output
@@ -100,7 +105,14 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         set -l lens_note ""
         test -n "$_flag_lens"; and set lens_note " + lens(es) $_flag_lens"
         set -l ctx_note ""
-        test "$_flag_verify_context" = assembled; and set ctx_note " + the code the findings cite, read from the repository; no tools"
+        switch $vctx[1]
+            case assembled
+                set ctx_note " + the code the findings cite, read from the repository; no tools"
+            case agentic
+                set ctx_note " + read-only tools, skill ai-verify"
+        end
+        # Where the mode came from, when the config chose it: a flag is on the command line
+        string match -q 'config *' -- $vctx[2]; and set ctx_note "$ctx_note; context $vctx[1] from $vctx[2]"
         set -l vthink $_flag_verify_think
         test -z "$vthink"; and not set -q _flag_no_think; and set vthink (_ai_config_read verify_think 2>/dev/null)
         set -l think_note ""
@@ -196,8 +208,12 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     test -n "$lang"; and set -a vargs --lang $lang
     test -n "$_flag_code_file"; and set -a vargs --code-file $_flag_code_file
     test -n "$_flag_lens"; and set -a vargs --lens $_flag_lens
-    set -q _flag_verify_context; and set -a vargs --context $_flag_verify_context
-    set -q _flag_agentic; and set -a vargs --agentic
+    switch $vctx[1]
+        case assembled
+            set -a vargs --context assembled
+        case agentic
+            set -a vargs --agentic
+    end
     set -q _flag_no_think; and set -a vargs --no-think
     set -q _flag_verify_think; and set -a vargs --think-level $_flag_verify_think
 

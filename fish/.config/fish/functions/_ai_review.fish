@@ -37,10 +37,10 @@ function _ai_review --description "AI code review — project state (path target
         return 0
     end
 
-    # One mode for now: the code each finding cites, read beforehand (_ai_verify_context)
-    if set -q _flag_verify_context; and test "$_flag_verify_context" != assembled
+    # What the verify pass sees (_ai_verify_context_mode): embedded, assembled or agentic
+    if set -q _flag_verify_context; and not contains -- "$_flag_verify_context" embedded assembled agentic
         set_color red
-        echo "Error: --verify-context takes assembled (got: '$_flag_verify_context')" >&2
+        echo "Error: --verify-context takes embedded, assembled or agentic (got: '$_flag_verify_context')" >&2
         set_color normal
         return 1
     end
@@ -148,11 +148,15 @@ function _ai_review_print_help
     echo "                          (2 of 3; otherwise UNCERTAIN), joined by finding number"
     echo "                          [F1], [F2]… — turns --verify on. Default: config"
     echo "                          verify_runs (scoped like review_runs), else 1"
-    echo "  --verify-context assembled"
-    echo "                          Read the code each finding cites (and where the names it"
-    echo "                          quotes are used) before verify, and verify in one request"
-    echo "                          without tools, even with --agentic. Turns --verify on."
-    echo "                          Budget: config verify_context_lines (default 1500)"
+    echo "  --verify-context MODE   What the verifier sees. Turns --verify on."
+    echo "                          embedded: the code the review saw, no tools"
+    echo "                          assembled: that, plus the code each finding cites and"
+    echo "                          where the names it quotes are used, read beforehand; one"
+    echo "                          request, no tools (budget: config verify_context_lines,"
+    echo "                          default 1500)"
+    echo "                          agentic: read-only tools, the model reads what it needs"
+    echo "                          Default: config verify_context (scoped like verify_runs),"
+    echo "                          else agentic for an --agentic review, embedded otherwise"
     echo "  --verify-think LEVEL    How much the verifier thinks: false, low, medium, high,"
     echo "                          xhigh (the levels the model lists in ollama show)."
     echo "                          Ollama without tools only; wins over --no-think."
