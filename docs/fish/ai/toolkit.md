@@ -1171,6 +1171,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `agent_max_turns` | by hand | Unattended read-only pi runs (agentic review, verify): turns before the tools are switched off and the model must answer (default 30; 0 = no limit) |
 | `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); 180 s later the run is aborted (0 = no limit) |
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
+| `request_idle_timeout` | by hand | Native drivers (ollama, OpenAI-compatible): seconds without a single byte before the request is ended (default 900; the prompt is read before the first token, so keep it generous) |
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
 | `review_prompt` | by hand | Review prompt depth: `auto` (default: full for claude, lean for every other model), `full`, `lean` |

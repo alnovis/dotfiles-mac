@@ -71,6 +71,24 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     set -l base $argv[1]
     set -l custom_prompt $argv[2]
     set -l output $_flag_output
+    # With --commit or --last there is no base, so a lone positional is the custom prompt:
+    # "ai review --last 2 \"focus on X\"" took the text as a base and dropped it. A ref there
+    # is a base given by habit, ignored as before.
+    if test -n "$commit_sha"; or test $last_n -gt 0
+        if test (count $argv) -eq 1; and not git rev-parse --verify -q "$argv[1]^{commit}" >/dev/null 2>&1
+            set custom_prompt $argv[1]
+        end
+        set base ""
+    else if test -n "$base"
+        # A base that is no ref is a prompt in the wrong place: "ai review \"focus on X\""
+        if not git rev-parse --verify -q "$base^{commit}" >/dev/null 2>&1
+            and not git rev-parse --verify -q "origin/$base^{commit}" >/dev/null 2>&1
+            set_color red
+            echo "Error: '$base' is not a branch or commit. A custom prompt goes after the base: ai review BASE \"text\", or with --last / --commit"
+            set_color normal
+            return 1
+        end
+    end
 
     # Get diff based on mode. $range drives --stat / --name-status; $tip is the
     # commit whose file contents we read for the "full changed files" context.
@@ -165,6 +183,7 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     end
 
     # Cap diff size (override with --max-lines)
+    set -l diff_header "Diff:"
     set -l diff_lines (echo "$diff_content" | wc -l | string trim)
     set -l max_lines 500
     if set -q _flag_max_lines
@@ -185,6 +204,9 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         set_color normal
         echo ""
         set diff_content (echo "$diff_content" | head -n $max_lines | string collect)
+        # Said in the prompt too: the model saw a diff that stops mid-hunk and took the
+        # missing rest for code the change removed
+        set diff_header "Diff (cut at $max_lines of $diff_lines lines: the rest of the change is not shown, do not review what is missing from it):"
     end
 
     # Header: the same blocks as the stages and the Saved list (_ai_ui_heading, _ai_ui_kv)
@@ -311,7 +333,7 @@ Additional instructions: $custom_prompt"
     if set -q _flag_brief
         set prompt "$lang_prefix""Give a brief summary of this code change in 3-5 bullet points. Focus on what changed and potential risks. Be concise.$custom_suffix$lang_suffix
 
-Diff:
+$diff_header
 $diff_content"
     else
         # Load template (overridable); fallback to minimal default
@@ -336,7 +358,7 @@ $lens_block"
 
         set prompt "$lang_prefix$base$lens_suffix$custom_suffix$lang_suffix
 
-Diff:
+$diff_header
 $diff_content"
         if test -n "$context_block"
             set prompt "$prompt

@@ -94,4 +94,13 @@ Not found in the repository: F3 nosuch/Missing.java:10.
 Cite no line: F4.
 Left out to keep to 20 lines, though cited: F2.
 Left out to keep to 20 lines: 7 place(s) that use a quoted name.
+== a nit under a bold heading is not code for the finding above
+### fish/.config/fish/functions/gbranch.fish (F1)
+```
+    2      argparse 'h/help' 'no-color' 'stat=' -- $argv; or return 1
+    3  
+    4      if set -q _flag_help
+```
+
+
 [exit 0]

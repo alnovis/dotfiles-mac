@@ -1,0 +1,3 @@
+[]
+[wk/.ai/config]
+[exit 0]

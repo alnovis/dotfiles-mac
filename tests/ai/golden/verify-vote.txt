@@ -34,4 +34,15 @@ Not comments. Verify threw these out; it can be wrong, check any that sound real
 - [F3] `c.fish:9` — missing timeout — [UNCERTAIN]
 - [F4] `d.fish:1` — only this run judged it — [UNCERTAIN]
 Verify: 0 confirmed, 0 refuted, 4 uncertain (majority of 3 runs)
+== run 2 failed: its column stays empty
+  votes: C8 - R6 (C confirmed, R refuted, U uncertain, - not judged)
+  votes: R9 - C8 (C confirmed, R refuted, U uncertain, - not judged)
+  votes: C6 - U (C confirmed, R refuted, U uncertain, - not judged)
+  votes: C7 - - (C confirmed, R refuted, U uncertain, - not judged)
+== an [Fn] in a why: line is a mention, a verdict without a bullet counts
+- [F1] lost update — [CONFIRMED 7/10]
+  why: unlike [F2], this one is real.
+- [F2] reversed — [REFUTED 8/10]
+  why: no bullet.
+Verify: 1 confirmed, 1 refuted, 0 uncertain (majority of 2 runs)
 [exit 0]

@@ -12,8 +12,11 @@ function _ai_review_context_block --description "Emit full content of the given 
     for path in $paths
         set -l content (git show "$tip:$path" 2>/dev/null | string collect)
         test -z "$content"; and continue
+        # The extension of the file name, not of the path: "nvim/.config/nvim/LICENSE" gave
+        # the fence "config/nvim/LICENSE"
+        set -l name (path basename -- $path)
         set -l ext ""
-        string match -q '*.*' -- $path; and set ext (string match -r '[^.]+$' -- $path)
+        string match -q '*.*' -- $name; and set ext (string match -r '[^.]+$' -- $name)
         set -l fence (_ai_md_fence "$content")
         printf '\n## %s\n%s%s\n%s\n%s\n' $path $fence $ext (printf '%s\n' "$content" | _ai_number_lines | string collect) $fence
     end

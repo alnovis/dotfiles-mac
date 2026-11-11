@@ -46,122 +46,123 @@ Path: <SANDBOX>/fixture/leetcode/LeetCode.scala
 Review this file. You may briefly consult neighboring files in the parent project for context if needed.
 
 ## File: LeetCode.scala
+Each line starts with its line number in the file and two spaces: cite these numbers, do not count lines. The number is not part of the code — quote code without it.
 ```scala
-import scala.collection.mutable
-import scala.collection.mutable.*
-import scala.math.*
-
-// --- LeetCode Data Structures ---
-
-class ListNode(var _x: Int = 0):
-  var x: Int = _x
-  var next: ListNode = null
-
-class TreeNode(var _value: Int = 0):
-  var value: Int = _value
-  var left: TreeNode = null
-  var right: TreeNode = null
-
-// --- Parsers & Formatters ---
-
-object LC:
-  // Array parsers
-  def parseArray(s: String): Array[Int] =
-    val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
-    if trimmed.isEmpty then Array.empty[Int]
-    else trimmed.split(",").map(_.trim.toInt)
-
-  def parseLongArray(s: String): Array[Long] =
-    val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
-    if trimmed.isEmpty then Array.empty[Long]
-    else trimmed.split(",").map(_.trim.toLong)
-
-  def parseStringArray(s: String): Array[String] =
-    val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
-    if trimmed.isEmpty then Array.empty[String]
-    else trimmed.split(",").map(_.trim.stripPrefix("\"").stripSuffix("\""))
-
-  def parseMatrix(s: String): Array[Array[Int]] =
-    val inner = s.trim.stripPrefix("[").stripSuffix("]").trim
-    if inner.isEmpty then Array.empty[Array[Int]]
-    else
-      val rows = ArrayBuffer[Array[Int]]()
-      var depth = 0
-      var start = 0
-      for i <- inner.indices do
-        inner(i) match
-          case '[' => if depth == 0 then start = i; depth += 1
-          case ']' =>
-            depth -= 1
-            if depth == 0 then rows += parseArray(inner.substring(start, i + 1))
-          case _ =>
-      rows.toArray
-
-  // ListNode
-  def toListNode(arr: Array[Int]): ListNode =
-    if arr.isEmpty then null
-    else
-      val head = ListNode(arr(0))
-      var curr = head
-      for i <- 1 until arr.length do
-        curr.next = ListNode(arr(i))
-        curr = curr.next
-      head
-
-  def fromListNode(head: ListNode): String =
-    val buf = ArrayBuffer[Int]()
-    var curr = head
-    while curr != null do
-      buf += curr.x
-      curr = curr.next
-    buf.mkString("[", ",", "]")
-
-  // TreeNode (level-order, LeetCode format)
-  def toTreeNode(s: String): TreeNode =
-    val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
-    if trimmed.isEmpty then return null
-    val parts = trimmed.split(",").map(_.trim)
-    if parts.isEmpty || parts(0) == "null" then return null
-    val root = TreeNode(parts(0).toInt)
-    val queue = mutable.Queue[TreeNode](root)
-    var i = 1
-    while i < parts.length && queue.nonEmpty do
-      val node = queue.dequeue()
-      if i < parts.length && parts(i) != "null" then
-        node.left = TreeNode(parts(i).toInt)
-        queue.enqueue(node.left)
-      i += 1
-      if i < parts.length && parts(i) != "null" then
-        node.right = TreeNode(parts(i).toInt)
-        queue.enqueue(node.right)
-      i += 1
-    root
-
-  def fromTreeNode(root: TreeNode): String =
-    if root == null then return "[]"
-    val result = ArrayBuffer[String]()
-    val queue = mutable.Queue[TreeNode](root)
-    while queue.nonEmpty do
-      val node = queue.dequeue()
-      if node == null then result += "null"
-      else
-        result += node.value.toString
-        queue.enqueue(node.left)
-        queue.enqueue(node.right)
-    // Trim trailing nulls
-    while result.nonEmpty && result.last == "null" do result.dropRightInPlace(1)
-    result.mkString("[", ",", "]")
-
-  // Result formatting
-  def fmt(v: Any): String = v match
-    case arr: Array[Array[Int]] => arr.map(_.mkString("[", ",", "]")).mkString("[", ",", "]")
-    case arr: Array[Int]        => arr.mkString("[", ",", "]")
-    case arr: Array[Long]       => arr.mkString("[", ",", "]")
-    case arr: Array[String]     => arr.map(s => s"\"$s\"").mkString("[", ",", "]")
-    case list: List[_]          => list.mkString("[", ",", "]")
-    case ln: ListNode           => fromListNode(ln)
-    case tn: TreeNode           => fromTreeNode(tn)
-    case other                  => other.toString
+    1  import scala.collection.mutable
+    2  import scala.collection.mutable.*
+    3  import scala.math.*
+    4  
+    5  // --- LeetCode Data Structures ---
+    6  
+    7  class ListNode(var _x: Int = 0):
+    8    var x: Int = _x
+    9    var next: ListNode = null
+   10  
+   11  class TreeNode(var _value: Int = 0):
+   12    var value: Int = _value
+   13    var left: TreeNode = null
+   14    var right: TreeNode = null
+   15  
+   16  // --- Parsers & Formatters ---
+   17  
+   18  object LC:
+   19    // Array parsers
+   20    def parseArray(s: String): Array[Int] =
+   21      val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
+   22      if trimmed.isEmpty then Array.empty[Int]
+   23      else trimmed.split(",").map(_.trim.toInt)
+   24  
+   25    def parseLongArray(s: String): Array[Long] =
+   26      val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
+   27      if trimmed.isEmpty then Array.empty[Long]
+   28      else trimmed.split(",").map(_.trim.toLong)
+   29  
+   30    def parseStringArray(s: String): Array[String] =
+   31      val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
+   32      if trimmed.isEmpty then Array.empty[String]
+   33      else trimmed.split(",").map(_.trim.stripPrefix("\"").stripSuffix("\""))
+   34  
+   35    def parseMatrix(s: String): Array[Array[Int]] =
+   36      val inner = s.trim.stripPrefix("[").stripSuffix("]").trim
+   37      if inner.isEmpty then Array.empty[Array[Int]]
+   38      else
+   39        val rows = ArrayBuffer[Array[Int]]()
+   40        var depth = 0
+   41        var start = 0
+   42        for i <- inner.indices do
+   43          inner(i) match
+   44            case '[' => if depth == 0 then start = i; depth += 1
+   45            case ']' =>
+   46              depth -= 1
+   47              if depth == 0 then rows += parseArray(inner.substring(start, i + 1))
+   48            case _ =>
+   49        rows.toArray
+   50  
+   51    // ListNode
+   52    def toListNode(arr: Array[Int]): ListNode =
+   53      if arr.isEmpty then null
+   54      else
+   55        val head = ListNode(arr(0))
+   56        var curr = head
+   57        for i <- 1 until arr.length do
+   58          curr.next = ListNode(arr(i))
+   59          curr = curr.next
+   60        head
+   61  
+   62    def fromListNode(head: ListNode): String =
+   63      val buf = ArrayBuffer[Int]()
+   64      var curr = head
+   65      while curr != null do
+   66        buf += curr.x
+   67        curr = curr.next
+   68      buf.mkString("[", ",", "]")
+   69  
+   70    // TreeNode (level-order, LeetCode format)
+   71    def toTreeNode(s: String): TreeNode =
+   72      val trimmed = s.trim.stripPrefix("[").stripSuffix("]").trim
+   73      if trimmed.isEmpty then return null
+   74      val parts = trimmed.split(",").map(_.trim)
+   75      if parts.isEmpty || parts(0) == "null" then return null
+   76      val root = TreeNode(parts(0).toInt)
+   77      val queue = mutable.Queue[TreeNode](root)
+   78      var i = 1
+   79      while i < parts.length && queue.nonEmpty do
+   80        val node = queue.dequeue()
+   81        if i < parts.length && parts(i) != "null" then
+   82          node.left = TreeNode(parts(i).toInt)
+   83          queue.enqueue(node.left)
+   84        i += 1
+   85        if i < parts.length && parts(i) != "null" then
+   86          node.right = TreeNode(parts(i).toInt)
+   87          queue.enqueue(node.right)
+   88        i += 1
+   89      root
+   90  
+   91    def fromTreeNode(root: TreeNode): String =
+   92      if root == null then return "[]"
+   93      val result = ArrayBuffer[String]()
+   94      val queue = mutable.Queue[TreeNode](root)
+   95      while queue.nonEmpty do
+   96        val node = queue.dequeue()
+   97        if node == null then result += "null"
+   98        else
+   99          result += node.value.toString
+  100          queue.enqueue(node.left)
+  101          queue.enqueue(node.right)
+  102      // Trim trailing nulls
+  103      while result.nonEmpty && result.last == "null" do result.dropRightInPlace(1)
+  104      result.mkString("[", ",", "]")
+  105  
+  106    // Result formatting
+  107    def fmt(v: Any): String = v match
+  108      case arr: Array[Array[Int]] => arr.map(_.mkString("[", ",", "]")).mkString("[", ",", "]")
+  109      case arr: Array[Int]        => arr.mkString("[", ",", "]")
+  110      case arr: Array[Long]       => arr.mkString("[", ",", "]")
+  111      case arr: Array[String]     => arr.map(s => s"\"$s\"").mkString("[", ",", "]")
+  112      case list: List[_]          => list.mkString("[", ",", "]")
+  113      case ln: ListNode           => fromListNode(ln)
+  114      case tn: TreeNode           => fromTreeNode(tn)
+  115      case other                  => other.toString
 ```
 
 ## Project structure

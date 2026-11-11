@@ -13,8 +13,8 @@ function _ai_project_config_file --description "Walk up from PWD to find nearest
         end
 
         # git-root is the project boundary — check this dir's .ai/config first (done above),
-        # then refuse to search beyond it.
-        if test -d "$dir/.git"
+        # then refuse to search beyond it. In a worktree or a submodule .git is a file.
+        if test -e "$dir/.git"
             return 1
         end
 

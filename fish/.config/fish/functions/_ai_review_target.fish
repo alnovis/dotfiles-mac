@@ -168,6 +168,7 @@ $prompt"
     # by default the file, tree and README for every executor; with --agentic only the target
     # file — the executor explores the rest read-only. Embedded content is a floor, not a ceiling.
     set -l context ""
+    set -l file_numbered ""
 
     if test -n "$target_file"
         set -l file_basename (basename $target_file)
@@ -181,11 +182,15 @@ $prompt"
             set scope_note "Review this file. You may briefly consult neighboring files in the parent project for context if needed."
         end
         set -l fence (_ai_md_fence "$file_content")
+        # Numbered like the git context and a directory's files: the prompt asks for
+        # file:line, and a bare file left the model to count the lines itself
+        set file_numbered (printf '%s\n' "$file_content" | _ai_number_lines | string collect)
         set context "$scope_note
 
 ## File: $file_basename
+Each line starts with its line number in the file and two spaces: cite these numbers, do not count lines. The number is not part of the code — quote code without it.
 $fence$file_ext
-$file_content
+$file_numbered
 $fence
 "
     end
@@ -293,10 +298,13 @@ $context"
         set -q _flag_lens; and set -a flow_args --lens $_flag_lens
         set -q _flag_agentic; and set -a flow_args --agentic
         set -q _flag_no_think; and set -a flow_args --no-think
-        # The verifier gets the code pass 1 saw: the target file, or the directory's files.
+        # The verifier gets the code pass 1 saw: the target file, numbered, or the
+        # directory's files.
         set -l code_tmp
         if test -n "$target_file"
-            set -a flow_args --code-file $target_file
+            set code_tmp (mktemp)
+            printf '%s' "$file_numbered" >$code_tmp
+            set -a flow_args --code-file $code_tmp
         else if test -n "$files_block"
             set code_tmp (mktemp)
             printf '%s' "$files_block" >$code_tmp

@@ -1,0 +1,12 @@
+== --last with a lone text: the custom prompt
+Additional instructions: focus on X
+== a text where the base goes
+Error: 'focus on X' is not a branch or commit. A custom prompt goes after the base: ai review BASE "text", or with --last / --commit
+== the diff cut: said in the prompt
+Diff (cut at 5 of 65 lines: the rest of the change is not shown, do not review what is missing from it):
+== the fence takes the file name extension, not the path
+```
+```
+```toml
+```
+[exit 0]

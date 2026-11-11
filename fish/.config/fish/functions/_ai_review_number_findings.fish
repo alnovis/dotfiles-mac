@@ -29,9 +29,32 @@ function _ai_review_number_findings --description "Number the findings of a revi
         rm -f $tmp
         return 0
     end
+    # A review in Russian may name its sections in Russian: they map to the same names, and any
+    # other Cyrillic heading is a section of its own ("other"), verified like "## Bugs". Left
+    # empty, a "## Критические проблемы" numbered nothing under it. awk here works on bytes,
+    # so the words are matched literally, never by a character class.
     awk '
-        function section(line,   s, p) {
-            s = line; sub(/^[#0-9. ]*\*?\*?[0-9. ]*/, "", s); split(s, p, /[^A-Za-z]/); return tolower(p[1])
+        BEGIN { CYR = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя" }
+        function ru(s) {
+            if (s ~ /^(Резюме|резюме|Итог|итог|Сводка|сводка|Кратк|кратк|Обзор|обзор|Общее|общее)/) return "summary"
+            if (s ~ /^(Критич|критич)/) return "critical"
+            if (s ~ /^(Важн|важн)/) return "important"
+            if (s ~ /^(Тест|тест)/) return "tests"
+            if (s ~ /^(Удал|удал)/) return "removed"
+            if (s ~ /^(Мелоч|мелоч|Мелк|мелк|Придир|придир|Незначит|незначит)/) return "nits"
+            if (s ~ /^(Безопасн|безопасн)/) return "security"
+            if (s ~ /^(Замечан|замечан|Проблем|проблем|Находк|находк|Ошибк|ошибк)/) return "issues"
+            if (s ~ /^(Вердикт|вердикт|Заключен|заключен)/) return "verdict"
+            if (s ~ /^(Архитект|архитект)/) return "architecture"
+            if (s ~ /^(Сильн|сильн|Плюс|плюс|Достоинств|достоинств)/) return "strengths"
+            # a Cyrillic letter is two bytes, at an odd offset of CYR
+            c = index(CYR, substr(s, 1, 2))
+            return (c > 0 && c % 2 == 1) ? "other" : ""
+        }
+        function section(line,   s, p, r) {
+            s = line; sub(/^[#0-9. ]*\*?\*?[0-9. ]*/, "", s)
+            r = ru(s); if (r != "") return r
+            split(s, p, /[^A-Za-z]/); return tolower(p[1])
         }
         function known(name) {
             return name ~ /^(summary|critical|important|tests?|removed|nits?|security|findings|issues|verdict|architecture|strengths?|held)$/
@@ -58,7 +81,7 @@ function _ai_review_number_findings --description "Number the findings of a revi
             match($0, /^#+ /)
             n++; print substr($0, 1, RLENGTH) "[F" n "] " substr($0, RLENGTH + 1); top = 0; hf = 1; next
         }
-        /^(\*\*[A-Z]|\*\*[0-9]+\. [A-Z]|[0-9]+\. \*\*[A-Z])/ && known(section($0)) { sec = section($0); top = 0; hf = 0; print; next }
+        /^(\*\*|\*\*[0-9]+\. |[0-9]+\. \*\*)/ && known(section($0)) { sec = section($0); top = 0; hf = 0; print; next }
         /^[0-9]+\. [A-Z]/ && plainhead($0) { sec = section($0); top = 0; hf = 0; print; next }
         /^([-*]|[0-9]+\.) / { top = 1 }
         sec != "" && !plain(sec) && !hf && (/^([-*]|[0-9]+\.) / || (!top && /^ {1,3}[-*] /)) {

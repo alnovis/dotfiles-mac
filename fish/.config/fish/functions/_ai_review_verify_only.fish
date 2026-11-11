@@ -159,6 +159,10 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
 
     set -l com_args --findings $review_file --verdicts $verify_out --output $review_file \
         --provider $vprovider --model "$vmodel" --lang $com_lang --range "$_flag_range" --root $workdir
+    # A joined review answers how many runs it holds: one "## Run K/N" part per answered run.
+    # Without it the comments lost "found by K of N runs", as the review flow passes them.
+    set -l review_runs (string match -r -- '^## Run \d+/\d+$' <$review_file | count)
+    test $review_runs -gt 1; and set -a com_args --runs $review_runs
 
     if set -q _flag_dry_run
         set -a vargs --dry-run

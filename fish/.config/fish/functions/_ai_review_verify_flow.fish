@@ -177,8 +177,9 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
 
     # Not empty is not enough: a model that meant to explore first can stop after one
     # sentence ("I'll examine the key files…"). Every review format has a severity
-    # section or the clean verdict — without one there is nothing to verify.
-    if not grep -qiE 'critical|important|no issues found' $find_src
+    # section or the clean verdict — without one there is nothing to verify. A review in
+    # Russian may name them in Russian (both cases spelled out: grep -i follows the locale).
+    if not grep -qiE 'critical|important|no issues found|Критич|критич|Важн|важн|Проблем не (найдено|обнаружено)|проблем не (найдено|обнаружено)' $find_src
         echo "  Review pass does not look like a review (no Critical/Important section, no \"No issues found\") — skipping verify. It wrote:" >&2
         head -5 $find_src | sed 's/^/    | /' >&2
         test $find_is_temp -eq 1; and rm -f $find_src

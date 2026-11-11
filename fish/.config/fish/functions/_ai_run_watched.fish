@@ -213,6 +213,17 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         end
         # What the agentic runner printed besides its answer (a warning), under its line
         test $agentic -eq 1; and test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
+        # A native driver's log is its own chatter (prompt size, context), but an answer cut
+        # off at max_tokens is a warning: it was lost, and a truncated review said "done"
+        set -l cut
+        if test $agentic -eq 0; and test -s $errlog
+            set cut (string match -r -- '.* is cut off.*' <$errlog)[1]
+            if test -n "$cut"
+                set_color yellow >&2
+                printf '    %s\n' $cut >&2
+                set_color normal >&2
+            end
+        end
         test -n "$sidecar"; and test -s "$sidecar"; and printf '    reasoning  %s\n' $sidecar >&2
         # The report's last line, "Run: …": comparing toolkit versions or models later needs
         # nothing but the files (grep -h '^Run: '). Plain text: the reports are read in a
@@ -222,6 +233,7 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
             for p in (_ai_run_stats $ufile $tokens $thinking_bytes)
                 set line "$line | "(string replace \t ' ' -- $p)
             end
+            test -n "$cut"; and set line "$line | cut off at max_tokens"
             printf '\n---\n%s\n' $line >>$outfile
         end
     end

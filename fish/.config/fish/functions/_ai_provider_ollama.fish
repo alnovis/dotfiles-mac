@@ -106,18 +106,44 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     set -l pfile (mktemp)
     set -l raw (mktemp)
     printf '%s' "$prompt" >$pfile
+    # Nothing at all for request_idle_timeout seconds (default 900) ends the request: with
+    # no timeout a stalled server held the run until Ctrl-C. Generous, as a big prompt is
+    # read for minutes before the first token arrives.
+    set -l idle (_ai_config_read request_idle_timeout)
+    string match -qr '^[1-9][0-9]*$' -- "$idle"; or set idle 900
     jq -cn --arg m $model --rawfile p $pfile --argjson ctx $num_ctx --argjson think $think \
         '{model:$m, prompt:$p, stream:true, think:$think, options:{num_ctx:$ctx}}' \
-        | curl -s --no-buffer $host/api/generate -d @- \
+        | curl -sS --no-buffer --connect-timeout 10 --speed-limit 1 --speed-time $idle $host/api/generate -d @- 2>$raw.err \
         | tee $raw \
         | jq -R -j --unbuffered 'fromjson? | .response // empty'
+    set -l curl_rc $pipestatus[2]
 
     set -l rc 0
     set -l err (jq -r 'select(.error) | .error' $raw 2>/dev/null | head -1)
     if test -n "$err"
         echo "ollama: $err" >&2
         set rc 1
+    else if test "$curl_rc" -ne 0
+        # curl's status was never read: a refused connection or a cut stream ended as an
+        # empty or partial answer with exit 0
+        switch $curl_rc
+            case 7
+                echo "ollama: connection refused ($host)" >&2
+            case 28
+                if grep -q 'too slow' $raw.err
+                    echo "ollama: no data for $idle s — timed out (config key request_idle_timeout)" >&2
+                else
+                    echo "ollama: timed out connecting ($host)" >&2
+                end
+            case '*'
+                echo "ollama: curl failed (exit $curl_rc): "(head -1 $raw.err) >&2
+        end
+        set rc 1
+    else if not jq -e 'select(.done == true)' $raw >/dev/null 2>&1
+        echo "ollama: the stream ended before the answer was done" >&2
+        set rc 1
     end
+    rm -f $raw.err
     test -n "$_flag_thinking_output"; and jq -j '.thinking // empty' $raw >$_flag_thinking_output 2>/dev/null
     if test -n "$_flag_usage_output"
         jq -c 'select(.done == true and .eval_count)

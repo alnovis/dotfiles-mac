@@ -420,13 +420,16 @@ function _ai_lessons_stats --description "How right the reviews and verify were,
             printf '  %s\n      %s\n' $m $v
         end
 
-    # Verify: what it let through and what it threw out wrongly
-    _ai_ui_heading Verify "a wrong comment got past it; a missed bug it refuted"
+    # Verify: what it let through and what it threw out wrongly. Let through is what it
+    # CONFIRMED: a wrong comment it left uncertain was flagged for a human, not passed
+    _ai_ui_heading Verify "a wrong comment it confirmed; a missed bug it refuted"
     jq -s -r 'group_by(.verify_model)[]
+        | (map(select(.kind == "comment" and .outcome == "wrong" and .status == "uncertain")) | length) as $wu
         | [(.[0].verify_model | if . == "" then "(unknown)" else . end),
-           "\(map(select(.kind == "comment" and .outcome == "wrong")) | length) false positive(s) let through, "
+           "\(map(select(.kind == "comment" and .outcome == "wrong" and .status != "uncertain")) | length) false positive(s) let through, "
            + "\(map(select(.kind == "refuted" and .outcome == "missed")) | length) real bug(s) refuted, "
-           + "\(map(select(.kind == "refuted" and .outcome == "right")) | length) refuted rightly"] | @tsv' $log \
+           + "\(map(select(.kind == "refuted" and .outcome == "right")) | length) refuted rightly"
+           + (if $wu > 0 then ", \($wu) wrong left uncertain" else "" end)] | @tsv' $log \
         | while read -l -d \t m v
             # The model on a line of its own: names like litellm/qwen/qwen3.8-27b outrun a column
             printf '  %s\n      %s\n' $m $v

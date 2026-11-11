@@ -111,7 +111,10 @@ function _ai_run --description "Dispatch a prompt to the executor for the config
                     return 1
                 end
                 set dispatch $sel[1]
-                set native 1
+                # By what ollama got, as at the top: an agentic run falls back to a runner on
+                # ollama, and marked native it reached pi without --provider, tools or skill
+                set native 0
+                contains -- $dispatch _ai_provider_ollama _ai_provider_openai; and set native 1
                 set label "$sel[2], fallback from $from"
                 echo "  ↳ running on ollama/$model ($label)" >&2
             end

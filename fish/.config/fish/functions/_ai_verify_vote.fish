@@ -5,29 +5,39 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
     # The kept title and why: come from the winning run with the highest confidence; a
     # "votes:" line shows every run's verdict. Verdicts without a finding number cannot be
     # matched across runs and are left out, with a count.
+    # Column K of "votes:" is run K, taken from the file name (<dest>.runK): a failed run
+    # leaves no file, and its column stays "-" instead of the next run's moving into it.
     set -l n $argv[1]
     set -l files $argv[2..]
     awk -v N=$n '
         function flush() {
-            if (id != "" && v != "" && !((FNUM, id) in seen)) {
-                seen[FNUM, id] = 1
-                verdict[id, FNUM] = v; conf[id, FNUM] = c; title[id, FNUM] = t; why[id, FNUM] = w
+            if (id != "" && v != "" && !((RUN, id) in seen)) {
+                seen[RUN, id] = 1
+                verdict[id, RUN] = v; conf[id, RUN] = c; title[id, RUN] = t; why[id, RUN] = w
                 ids[id] = 1
             }
             id = ""; v = ""; c = ""; t = ""; w = ""
         }
+        # A bare verdict is read as _ai_verdict_counts reads it: at the end of the line, after
+        # a dash or in bold. A why: line may say "not REFUTED" and is no verdict.
         function tag_of(l,   s) {
             if (match(l, /\[(CONFIRMED|REFUTED|UNCERTAIN)[^]]*\]/)) return substr(l, RSTART + 1, RLENGTH - 2)
-            if (l ~ /^[[:space:]]*[-*]/ && match(l, /(CONFIRMED|REFUTED|UNCERTAIN)([ ]+[0-9]+[ ]*\/[ ]*10)?[ *]*$/)) {
-                s = substr(l, RSTART, RLENGTH); gsub(/[ *]+$/, "", s); return s
+            if (match(l, /(—|–|-|\*\*)[[:space:]]*\**[[:space:]]*(CONFIRMED|REFUTED|UNCERTAIN)([[:space:]]+[0-9]+[[:space:]]*\/[[:space:]]*10)?[[:space:]]*\**[[:space:]]*$/)) {
+                s = substr(l, RSTART, RLENGTH); sub(/^[^A-Z]*/, "", s); gsub(/[[:space:]*]+$/, "", s); return s
             }
             return ""
         }
-        FNR == 1 { flush(); FNUM++ }
+        FNR == 1 {
+            flush(); FNUM++; RUN = FNUM
+            if (match(FILENAME, /\.run[0-9]+(\.[^.\/]*)?$/)) { s = substr(FILENAME, RSTART + 4); sub(/\..*$/, "", s); RUN = s + 0 }
+            if (RUN > RUNS) RUNS = RUN
+        }
         {
             line = $0
             g = tag_of(line)
-            if (match(line, /\[F[0-9]+\]/)) {
+            # A finding starts where its [Fn] leads the line (after list, heading or bold
+            # marks); an [Fn] further in, as in "why: unlike [F2] …", only mentions one
+            if (match(line, /\[F[0-9]+\]/) && substr(line, 1, RSTART - 1) ~ /^[[:space:]>#*|0-9.)-]*$/) {
                 flush()
                 id = substr(line, RSTART + 2, RLENGTH - 3) + 0
                 t = line
@@ -35,7 +45,7 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
                 # A bullet with its own text but no number is another finding, not part of
                 # the one above; a bare "- [CONFIRMED 6/10]" line still belongs to its title
                 rest = line; sub(/\[(CONFIRMED|REFUTED|UNCERTAIN)[^]]*\]/, "", rest)
-                sub(/(CONFIRMED|REFUTED|UNCERTAIN)([ ]+[0-9]+[ ]*\/[ ]*10)?[ *]*$/, "", rest)
+                sub(/(CONFIRMED|REFUTED|UNCERTAIN)([[:space:]]+[0-9]+[[:space:]]*\/[[:space:]]*10)?[[:space:]*]*$/, "", rest)
                 gsub(/[-*[:space:]—–]/, "", rest)
                 if (rest != "") { flush(); if (g != "") unnumbered++; next }
             }
@@ -58,9 +68,10 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
             need = int(N / 2) + 1
             printf "Majority of %d verify runs, joined by finding number: a verdict needs %d of %d.\n\n", N, need, N
             nc = nr = nu = 0
+            if (RUNS < N) RUNS = N
             for (a = 1; a <= k; a++) {
                 i = order[a]; cc = rr = uu = 0; votes = ""
-                for (f = 1; f <= FNUM; f++) {
+                for (f = 1; f <= RUNS; f++) {
                     if (!((i, f) in verdict)) { votes = votes " -"; continue }
                     vv = verdict[i, f]; letter = substr(vv, 1, 1)
                     votes = votes " " letter conf[i, f]
@@ -70,7 +81,7 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
                 if (cc >= need) win = "CONFIRMED"; else if (rr >= need) win = "REFUTED"
                 # title and why: the winning run with the highest confidence; for UNCERTAIN, any run
                 best = 0; bc = -1
-                for (f = 1; f <= FNUM; f++) {
+                for (f = 1; f <= RUNS; f++) {
                     if (!((i, f) in verdict)) continue
                     if (win != "UNCERTAIN" && verdict[i, f] != win) continue
                     cf = conf[i, f] + 0
@@ -83,7 +94,7 @@ function _ai_verify_vote --description "Join N verify runs by majority per findi
                 if (win == "UNCERTAIN") { tag = "[UNCERTAIN]"; nu++ }
                 else {
                     sum = 0; m = 0
-                    for (f = 1; f <= FNUM; f++) if ((i, f) in verdict && verdict[i, f] == win && conf[i, f] != "") { sum += conf[i, f]; m++ }
+                    for (f = 1; f <= RUNS; f++) if ((i, f) in verdict && verdict[i, f] == win && conf[i, f] != "") { sum += conf[i, f]; m++ }
                     tag = "[" win (m > 0 ? " " int(sum / m + 0.5) "/10" : "") "]"
                     if (win == "CONFIRMED") nc++; else nr++
                 }

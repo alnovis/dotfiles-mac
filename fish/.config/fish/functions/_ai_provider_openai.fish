@@ -80,7 +80,11 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
 
     # One jq for the whole stream: the answer to stdout as it arrives, leading blank
     # lines dropped. The raw stream is kept for the reasoning, usage and errors afterwards.
-    curl -sS -N --connect-timeout 10 -H @$hdr -d @$body -w '\n__HTTP__%{http_code}\n' $url 2>$raw.err \
+    # Nothing at all for request_idle_timeout seconds (default 900) ends the request: a
+    # stalled gateway held the run until Ctrl-C.
+    set -l idle (_ai_config_read request_idle_timeout)
+    string match -qr '^[1-9][0-9]*$' -- "$idle"; or set idle 900
+    curl -sS -N --connect-timeout 10 --speed-limit 1 --speed-time $idle -H @$hdr -d @$body -w '\n__HTTP__%{http_code}\n' $url 2>$raw.err \
         | tee $raw \
         | jq -R -n -j --unbuffered 'foreach (inputs | select(startswith("data: {")) | .[6:] | fromjson? | .choices[0]?.delta?.content // empty) as $c
             ({s: false, out: ""};
@@ -100,7 +104,11 @@ function _ai_provider_openai --description "Native driver: one OpenAI chat-compl
             case 7
                 echo "$provider: connection refused ($ep[1])" >&2
             case 28
-                echo "$provider: timed out" >&2
+                if grep -q 'too slow' $raw.err
+                    echo "$provider: no data for $idle s — timed out (config key request_idle_timeout)" >&2
+                else
+                    echo "$provider: timed out connecting ($ep[1])" >&2
+                end
             case '*'
                 echo "$provider: curl failed (exit $curl_rc): "(head -1 $raw.err) >&2
         end

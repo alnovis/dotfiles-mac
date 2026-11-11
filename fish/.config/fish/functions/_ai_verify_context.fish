@@ -33,6 +33,10 @@ function _ai_verify_context --description "The code a verify pass needs, assembl
             if (match($0, /^( {0,3}([-*]|[0-9]+\.)|#+) \[F[0-9]+\] /)) {
                 s = substr($0, RSTART, RLENGTH); sub(/^.*\[F/, "", s); sub(/\].*$/, "", s)
                 cur = "F" s; last = ""; named[cur] = 0; print "F", cur
+            } else if ($0 ~ /^#+ / || $0 ~ /^([0-9]+\. )?\*\*[^*]+\*\*:?[[:space:]]*$/) {
+                # Any other heading ("### Notes", "**Nits**") ends the finding above: a nit
+                # under it citing b.txt:90 was read as code for that finding
+                cur = ""; next
             }
             if (cur == "") next
             rest = $0

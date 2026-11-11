@@ -211,6 +211,8 @@ function _ai_review_print_help
     echo "  ai review main                           Vs main branch"
     echo "  ai review --last                         Last commit"
     echo "  ai review --last 3                       Last 3 commits"
+    echo "  ai review main \"focus on X\"              Custom prompt after the base"
+    echo "  ai review --last 2 \"focus on X\"          Custom prompt, no base needed"
     echo "  ai review --commit abc1234               Specific commit"
     echo "  ai review --commit abc1234~1..def5678    A range of commits"
     echo "  ai review --commit abc1234,def5678       A task's commits (checked contiguous)"
