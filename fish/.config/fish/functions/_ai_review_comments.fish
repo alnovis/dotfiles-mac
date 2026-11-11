@@ -17,6 +17,7 @@ function _ai_review_comments --description "Third review stage: line comments fo
 
     if set -q _flag_dry_run
         echo "comments provider=$_flag_provider model=$_flag_model (prompt: meta-comments.md + review + verdicts; lines anchored by git"(test -n "$_flag_range"; and echo " in $_flag_range")")" >&2
+        test -n "$_flag_lang"; and test "$_flag_lang" != English; and echo "comments language: $_flag_lang" >&2
         echo "would write: comments -> $md ; $json" >&2
         return 0
     end

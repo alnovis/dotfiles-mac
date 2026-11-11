@@ -14,6 +14,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --verify-model M         override verify model (default: per-task config)
     #   --code-file FILE         code/diff context embedded for the verifier
     #   --comments               a third stage: MR line comments from the verified findings
+    #   --comments-lang FULL     language name of those comments (default: --lang)
     #   --range BASE..HEAD       the reviewed range, for anchoring those comments
     #   --runs N                 run the review N times and join them (_ai_review_runs)
     #   --parallel-mode M        parallel | sequential, for those runs
@@ -22,7 +23,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     #   --verify-context assembled  verify on the code the findings cite, read beforehand
     #   --verify-think L         how much the verifier thinks (false, low, medium, …)
     argparse 'prompt-file=' 'provider=' 'model=' 'workdir=' 'output=' 'verify-output=' 'lang=' 'dry-run' 'agentic' 'no-think' \
-             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'range=' 'runs=' 'parallel-mode=' 'lens=' 'verify-runs=' 'verify-context=' 'verify-think=' -- $argv; or return 1
+             'verify-provider=' 'verify-model=' 'code-file=' 'comments' 'comments-lang=' 'range=' 'runs=' 'parallel-mode=' 'lens=' 'verify-runs=' 'verify-context=' 'verify-think=' -- $argv; or return 1
     set -l runs $_flag_runs
     test -n "$runs"; or set runs 1
 
@@ -38,6 +39,8 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     test -z "$workdir"; and set workdir $PWD
     set -l output $_flag_output
     set -l lang $_flag_lang
+    set -l com_lang $_flag_comments_lang
+    test -n "$com_lang"; or set com_lang $lang
 
     # Resolve verify provider: flag > verify_* config > review provider.
     set -l vprovider $_flag_verify_provider
@@ -107,7 +110,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
         test -n "$review_out"; and echo "would write: review -> $review_out ; verify -> $verify_out" >&2
         if set -q _flag_comments
             set_color cyan >&2; echo "--- dry-run: pass 3 (comments) ---" >&2; set_color normal >&2
-            _ai_review_comments --dry-run --output $review_out --provider $vprovider --model "$vmodel" --range "$_flag_range"
+            _ai_review_comments --dry-run --output $review_out --provider $vprovider --model "$vmodel" --lang "$com_lang" --range "$_flag_range"
         end
         return 0
     end
@@ -225,7 +228,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
     if set -q _flag_comments; and test -n "$review_out"
         if test -s "$ver_target"
             _ai_review_comments --findings $find_src --verdicts $ver_target --output $review_out \
-                --provider $vprovider --model "$vmodel" --lang "$lang" --range "$_flag_range" --root $workdir \
+                --provider $vprovider --model "$vmodel" --lang "$com_lang" --range "$_flag_range" --root $workdir \
                 --runs $runs_ok --label "[3/3] $com_label" --quiet
             set rc3 $status
             set -l com_why "$__ai_last_failure"

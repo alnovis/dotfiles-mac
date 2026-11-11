@@ -1,0 +1,20 @@
+== git mode: review in English, comments in Russian
+comments language: Russian
+  comments     on (MR line comments from the verdicts, in Russian)
+  language     English
+IMPORTANT: Write your final response in English. You may think in English, but the output must be in English.
+== target mode
+comments language: Russian
+  language     English
+  comments     on (line comments from the verdicts, in Russian)
+IMPORTANT: Write your entire response in English.
+== --lang alone: the comments follow it
+comments language: German
+  comments     on (MR line comments from the verdicts)
+  language     German
+IMPORTANT: Write your final response in German. You may think in English, but the output must be in German.
+== verify-only with verdicts
+comments language: Russian
+== needs -o
+Error: --comments writes files next to the report — give -o FILE
+[exit 1]

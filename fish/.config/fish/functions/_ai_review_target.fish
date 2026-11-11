@@ -1,7 +1,7 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
     argparse 'h/help' 'provider=' 'model=' 'lang=' 'o/output=' 'with-project-context' 'lens=' 'no-lens' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
-             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-runs=' 'verify-context=' 'verify-think=' 'comments' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
+             'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-runs=' 'verify-context=' 'verify-think=' 'comments' 'comments-lang=' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
         echo "Error: --lens and --no-lens exclude each other" >&2
@@ -13,6 +13,8 @@ function _ai_review_target --description "AI review of a project directory or si
         set _flag_lens $lc[1]
         set lens_origin $lc[2]
     end
+    # A language for the comments means comments
+    set -q _flag_comments_lang; and set -l _flag_comments 1
     # Quoted: an empty (…) would vanish and shift the arguments
     _ai_review_comments_check "$(set -q _flag_comments; and echo 1)" "$(set -q _flag_brief; and echo 1)" \
         "$(set -q _flag_no_verify; and echo 1)" "$_flag_output"; or return 1
@@ -134,7 +136,7 @@ $prompt"
             test -z "$vp"; and set vp (_ai_config_read verify_provider 2>/dev/null)
             test -z "$vp"; and set vp "$provider"
             _ai_ui_kv verify "on ($vp)"
-            set -q _flag_comments; and _ai_ui_kv comments "on (line comments from the verdicts)"
+            set -q _flag_comments; and _ai_ui_kv comments "on (line comments from the verdicts$(set -q _flag_comments_lang; and echo ", in "(_ai_lang_name $_flag_comments_lang)))"
             test $runs -gt 1; and _ai_ui_kv runs "$runs ($plan[3])"
         end
     end
@@ -277,6 +279,7 @@ $context"
         set -l flow_args --prompt-file $p1file --provider $provider --workdir $work_dir --lang $lang_full
         # No range here: comments are anchored in the working tree, and none is in a diff
         set -q _flag_comments; and set -a flow_args --comments
+        set -q _flag_comments_lang; and set -a flow_args --comments-lang (_ai_lang_name $_flag_comments_lang)
         set -a flow_args --runs $runs --parallel-mode $plan[2]
         test -n "$model"; and set -a flow_args --model $model
         test -n "$output"; and set -a flow_args --output $output

@@ -16,11 +16,14 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     #   --verify-think L     how much the verifier thinks (false, low, medium, …); else verify_think
     #   --lang L, --dry-run
     #   --comments           then MR line comments from the verdicts (<review>.comments.md/.json)
+    #   --comments-lang L    those comments in L, verify in --lang; turns --comments on
     #   --range BASE..HEAD   the reviewed range, to anchor the comments and check the diff
     #   --verdicts FILE      an existing verify file: skip the verify pass, build comments only
     argparse 'h/help' 'verify-only=' 'provider=' 'model=' 'lang=' 'o/output=' \
              'verify-provider=' 'verify-model=' 'verify-output=' 'file=' 'agentic' 'no-think' 'dry-run' \
-             'comments' 'range=' 'verdicts=' 'lens=' 'no-lens' 'verify-runs=' 'verify-context=' 'verify-think=' -- $argv; or return 1
+             'comments' 'comments-lang=' 'range=' 'verdicts=' 'lens=' 'no-lens' 'verify-runs=' 'verify-context=' 'verify-think=' -- $argv; or return 1
+    # A language for the comments means comments
+    set -q _flag_comments_lang; and set -l _flag_comments 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
         echo "Error: --lens and --no-lens exclude each other" >&2
@@ -53,6 +56,8 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -l lang en
     test -n "$_flag_lang"; and set lang $_flag_lang
     set -l lang_full (_ai_lang_name $lang)
+    set -l com_lang $lang_full
+    set -q _flag_comments_lang; and set com_lang (_ai_lang_name $_flag_comments_lang)
 
     # Output: --verify-output > -o > derived from the review file.
     set -l verify_out $_flag_verify_output
@@ -78,7 +83,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
         end
         set -l verdicts (realpath $_flag_verdicts)
         set -l cargs --findings $review_file --verdicts $verdicts --output $review_file \
-            --provider $vprovider --model "$vmodel" --lang $lang_full --range "$_flag_range" --root $workdir
+            --provider $vprovider --model "$vmodel" --lang $com_lang --range "$_flag_range" --root $workdir
         set -q _flag_dry_run; and set -a cargs --dry-run
         _ai_ui_heading Comments "from existing verdicts"
         _ai_ui_kv review $review_file
@@ -153,7 +158,7 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     end
 
     set -l com_args --findings $review_file --verdicts $verify_out --output $review_file \
-        --provider $vprovider --model "$vmodel" --lang $lang_full --range "$_flag_range" --root $workdir
+        --provider $vprovider --model "$vmodel" --lang $com_lang --range "$_flag_range" --root $workdir
 
     if set -q _flag_dry_run
         set -a vargs --dry-run

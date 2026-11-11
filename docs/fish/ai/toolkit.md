@@ -550,7 +550,10 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
 1. **Extraction (the verify model, one short call).** Only the review and the verdicts go in, no
    code: `meta-comments.md` asks for the `[CONFIRMED]` and `[UNCERTAIN]` findings as a JSON array
    of `file`, `line`, `quote` (one line of code, verbatim), `severity`, `status`, `body`.
-   `[REFUTED]` ones are dropped. The bodies follow `--lang` (English by default); code stays as is.
+   `[REFUTED]` ones are dropped. The bodies follow `--comments-lang`, else `--lang` (English by
+   default); code stays as is. `--comments-lang ru` keeps the review and verify in English — the
+   models' strongest language, and findings comparable across runs — and writes only the MR
+   comments in Russian; it turns `--comments` on, also with `--verify-only` and `--verdicts`.
    With no `[CONFIRMED]` and no `[UNCERTAIN]` verdict there is nothing to extract: no model call,
    the stage line says `skipped`, and the same files are written — an empty array, and the
    markdown with what verify refuted. Verdicts are read from their tags, also when a model

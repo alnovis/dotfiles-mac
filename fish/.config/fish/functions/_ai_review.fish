@@ -29,7 +29,7 @@ function _ai_review --description "AI code review — project state (path target
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
              'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' 'no-lens' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' 'verify-runs=' 'verify-context=' 'verify-think=' \
-             'comments' 'range=' 'verdicts=' 'runs=' 'parallel' 'no-parallel' -- $argv
+             'comments' 'comments-lang=' 'range=' 'verdicts=' 'runs=' 'parallel' 'no-parallel' -- $argv
     or return 1
 
     if set -q _flag_help
@@ -170,7 +170,10 @@ function _ai_review_print_help
     echo "                          <output>.comments.json for GitLab/GitHub. Each line is"
     echo "                          found by its quoted code, so a wrong line number is"
     echo "                          fixed; a line outside the diff is marked. Needs -o."
-    echo "  --runs N                Run the review N times and join them before verify:"
+    echo "  --comments-lang LANG    The comments in LANG, the review and verify in --lang:"
+    echo "                          English findings, Russian comments for the MR. Turns"
+    echo "                          --comments on. Default: --lang"
+    echo "  --runs N              Run the review N times and join them before verify:"
     echo "                          one run is a sample, several find more (turns --verify"
     echo "                          on). Default: config review_runs (scoped by provider/"
     echo "                          model, e.g. review_runs@litellm=3), else 1"
@@ -225,6 +228,7 @@ function _ai_review_print_help
     echo "  ai review --verify -o review.md          review.md + review.verify.md"
     echo "  ai review --last 2 --comments -o review.md   + review.comments.md/.json"
     echo "  ai review --verify-only review.md --verdicts review.verify.md --comments --range A~1..B"
+    echo "  ai review --comments-lang ru -o review.md   English review, Russian MR comments"
     echo "  ai review --provider ollama --verify --verify-provider claude"
     echo "                                           Generate locally, verify with claude"
     echo "  ai review . --lens access-control --verify   Lens + verify together"

@@ -120,6 +120,7 @@ complete -c ai -n "__fish_seen_subcommand_from review" -l verify-think -d "How m
 complete -c ai -n "__fish_seen_subcommand_from review" -l verify-only -d "Re-verify an existing review file (no review pass)" -r
 complete -c ai -n "__fish_seen_subcommand_from review" -l dry-run -d "Print assembled prompt without invoking the model"
 complete -c ai -n "__fish_seen_subcommand_from review" -l lang -d "Response language" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"
+complete -c ai -n "__fish_seen_subcommand_from review" -l comments-lang -d "MR comments in this language, the review in --lang" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"
 # git-mode-only flags
 complete -c ai -n "__fish_seen_subcommand_from review" -l lang-all -d "Full response + thinking in language (git mode)" -x -a "en ru fr de es pl pt it nl ja ko zh uk cs sv tr ar"
 complete -c ai -n "__fish_seen_subcommand_from review" -l last -d "Review last N commits (git mode)"
