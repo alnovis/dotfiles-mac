@@ -9,13 +9,20 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
     # The fields of the old native loop's line (model, turn, phase, context, time), plus the
     # last tool call; while a tool runs it is the phase. One line: a wrapped one cannot be
     # redrawn with \r, so it is cut to the width — the last tool, at the end, gives way.
-    # After 300 s of a quiet session it says so in yellow: the hang the eval only found by
-    # reading the session by hand.
+    # After 300 s of a quiet session it says so in yellow (the hang the eval only found by
+    # reading the session by hand), unless the model is still reading its prompt.
     set -l name $argv[1]
     set -l elapsed $argv[2]
     set -l width $argv[3]
+    # Reading the prompt is silent by nature: minutes on a local model (63k tokens took 9 min),
+    # and the yellow "no answer" said "hung" all the while. Then the line says how long it has
+    # read, plainly; the warning is for a model that streamed and went quiet. A provider that
+    # hangs while reading is ended by the timeouts (request_idle_timeout, pi's
+    # httpIdleTimeoutMs, ai-guard).
+    set -l reading 0
+    string match -qr '^(reading|retry)' -- "$argv[10]"; and set reading 1
     set -l warn ""
-    if test -n "$argv[6]"; and test "$argv[6]" -ge 300
+    if test $reading -eq 0; and test -n "$argv[6]"; and test "$argv[6]" -ge 300
         set warn " | no answer for "(_ai_ui_duration $argv[6])
     end
     set -l avail (math "max(20, $width - 3 - "(string length -- "$name$warn")")")
@@ -31,6 +38,9 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
         set phase model…
         # What the model does in its turn, and how much it has streamed so far
         test -n "$argv[10]"; and set phase (_ai_activity_text $argv[10])
+        # How long this read has taken, from a minute on: "reading context 6m 03s"
+        test $reading -eq 1; and test -n "$argv[6]"; and test "$argv[6]" -ge 60
+        and set phase "$phase "(_ai_ui_duration $argv[6])
         string match -q 'tool *' -- "$argv[9]"; and set phase (string sub -s 6 -- $argv[9])…
         if test -n "$argv[8]"; and test "$argv[8]" -gt 0
             set -l ctx "ctx "(_ai_k $argv[8])

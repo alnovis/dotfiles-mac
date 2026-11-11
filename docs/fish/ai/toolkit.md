@@ -765,7 +765,10 @@ the last turn's prompt (each turn sends the whole context again) over the model'
 pi's config: how close the run is to being cut. On a narrow terminal the last tool goes first,
 then the phase is cut, then the model's name; the turn, the context and the time stay. After
 5 minutes with neither a new session entry nor a streamed character it says so in yellow: a
-provider that hangs no longer looks like a silent heading for half an hour. pi writes an answer
+provider that hangs no longer looks like a silent heading for half an hour. Not while the
+model reads its prompt, which is silent by nature (63k tokens took a local model 9 minutes):
+then the phase says how long it has read, `reading context 6m 03s`, and a provider that hangs
+there is ended by the timeouts. pi writes an answer
 to the session only once it is whole, so the streamed characters come from ai-guard's pulse
 file; without them a model writing one long answer read as `no answer for 6m`. Parallel runs have no terminal of their own;
 their stage line carries each running run's turn (`1/3 done · 3m 10s · run 2: turn 9 ·

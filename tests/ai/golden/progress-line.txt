@@ -11,4 +11,8 @@ a pulse read mid-write, empty: reading
   working… | 45s
   run 1/3  turn 13 | model… | ctx 1.2M | 1m 40s
   ollama · granite4.2:8b | turn 6 | writing 12.3k chars | ctx 30k/131k | 6m 40s
+== reading the prompt for 6 min: said plainly, no warning
+  ollama · qwen3.8:27b | reading context 6m 03s | ctx 63k/73.7k | 9m 03s
+== streamed, then quiet for 6 min: the warning
+  ollama · qwen3.8:27b | turn 5 | thinking 2.4k chars | ctx 63k/131k | 15m 00s | no answer for 6m 40s
 [exit 0]
