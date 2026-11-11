@@ -1,0 +1,7 @@
+== no answer: the session goes beside the report
+  FAILED <t>  the model returned no answer
+    session  ../ag.session.jsonl
+{"type":"session"}
+== an answer: no session kept
+not kept
+[exit 0]

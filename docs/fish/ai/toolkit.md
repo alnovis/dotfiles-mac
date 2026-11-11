@@ -664,6 +664,10 @@ On pi the instruction is also enforced: an unattended read-only run loads the ex
 - while the model writes, how much of its answer has streamed goes to a pulse file next to the
   session, for the live line (below).
 
+A pi run that fails (no answer, aborted, an error) leaves its session beside the report as
+`<base>.session.jsonl` (`review.session.jsonl`, `review.run2.session.jsonl`): every turn, tool
+call and tool result, the record of why it ended with nothing. A run that answers keeps none.
+
 claude (`Read`, `Grep`, `Glob`) and opencode have no such guard; for them the skill's
 instruction is all there is.
 

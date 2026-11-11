@@ -108,6 +108,9 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
         if test -n "$sdir"
             set -l session (find $sdir -name '*.jsonl' -type f | head -1)
             test -n "$session"; and _ai_pi_session_stats $session >$_flag_usage_output
+            # A copy for the caller (_ai_run_watched): a failed run's session is the only record
+            # of what its last turns did, and the dir goes away right below
+            set -q AI_PI_SESSION_KEEP; and test -n "$session"; and cp $session $AI_PI_SESSION_KEEP
             test $own_sdir -eq 1; and rm -rf $sdir
         end
         return $rc

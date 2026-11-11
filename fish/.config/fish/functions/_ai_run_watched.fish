@@ -63,6 +63,9 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     set -l ufile (mktemp)
 
     set -l rc
+    # The pi session of an agentic run, kept beside the report when the run fails: two local
+    # runs ended with no answer, and the session that said why was deleted with its temp dir
+    set -l keep ""
     if test $agentic -eq 1
         # Agentic: the answer (stdout) goes to the file, the runner's stderr to the log,
         # shown after the run line. Left on the terminal, an error came before the run
@@ -82,6 +85,8 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
             set poller $last_pid
         end
         test -n "$sdir"; and set -lx AI_PI_SESSION_DIR $sdir
+        set keep (mktemp)
+        set -lx AI_PI_SESSION_KEEP $keep
         _ai_run $run_args --usage-output $ufile <$pfile >$outfile 2>$errlog
         set rc $status
         if test -n "$poller"
@@ -235,6 +240,16 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
             end
             test -n "$cut"; and set line "$line | cut off at max_tokens"
             printf '\n---\n%s\n' $line >>$outfile
+        end
+    end
+    # A failed agentic run's session beside its report: <base>.session.jsonl
+    if test -n "$keep"
+        if test "$rc" -ne 0; and test -s $keep; and test -n "$dest"; and test "$dest" != "(terminal)"
+            set -l saved (path dirname -- $dest)/(string replace -r '\.[^.]+$' '' -- (path basename -- $dest)).session.jsonl
+            mv $keep $saved
+            printf '    session  %s\n' $saved >&2
+        else
+            rm -f $keep
         end
     end
     rm -f $errlog $pfile $ufile
