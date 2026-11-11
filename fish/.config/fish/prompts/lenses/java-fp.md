@@ -6,7 +6,7 @@ Where the findings go:
 - A suggestion goes in its own section, `## FP style`, after Removed code: one bullet per site, with the file:line, the current shape and the rewrite sketch. Its severity is nit.
 - What the lens turns up that is a real defect (a side effect inside a stream lambda, a `.get()` on an `Optional` that can be empty) goes in Critical or Important like any finding, gated as one.
 
-For verify: a suggestion is CONFIRMED only when the rewrite is equivalent (results, order, exceptions, side effects) and compiles on the project's Java version; REFUTED when it changes behaviour, needs an API or library the project lacks, or is no shorter and removes no risk. That the rewrite is more elegant is not enough.
+For verify: a suggestion is CONFIRMED only when the rewrite is equivalent (results, order, exceptions, side effects) and compiles on the project's Java version; REFUTED when it changes behaviour, needs an API or library the project lacks, or is no shorter and removes no risk. That the rewrite is more elegant is not enough. REFUTED also when it goes the other way — a stream, `Optional` chain or `switch` expression turned into a loop or an `if` chain — however equivalent: that is not this lens's suggestion.
 
 Finding the version (at the reviewed commit):
 - Maven: `<java.version>` (Spring Boot), `<maven.compiler.release>` / `<release>`, or `<source>` / `<maven.compiler.source>` in `pom.xml`; a module can override the parent.
@@ -29,6 +29,7 @@ Where to look first (non-exhaustive — reason beyond this list):
 Not findings (do not report these):
 - A loop with an early `break` / `return`, a checked exception inside, index arithmetic over several arrays, or a counter updated in several places — the stream version is longer or needs workarounds (`takeWhile`, wrapping checked exceptions). Leave it.
 - A loop on a hot path or over primitives where the stream would box or allocate per element, unless the code is clearly not hot.
+- A rewrite the other way: a stream, an `Optional` chain or a `switch` expression turned into a loop, `null` checks or an `if` chain — even when it is shorter or allocates less. The lens goes one way, imperative to functional; `## FP style` carries only functional rewrites. A stream's cost on a proven hot path is a performance note, not FP style.
 - `for` over a collection that only calls one method per element (`for (var x : xs) send(x)`) — `xs.forEach(this::send)` is not better.
 - `var` versus an explicit type, method references versus lambdas, `Stream.of` versus `Arrays.stream` — taste.
 - Mutable state confined to one method or one thread (a `StringBuilder`, a local `ArrayList` returned at the end) — the mutation is not shared; only suggest a rewrite when it is also shorter.
