@@ -114,7 +114,8 @@ git -C $sb/gen add README.md
 # name | dir (fixture, gen) | command run inside the sandbox
 set -g golden_cases \
     'git-last-ollama|fixture|ai review --last 1 --dry-run' \
-    'git-prompt-place|fixture|echo "== --last with a lone text: the custom prompt"; ai review --last 1 "focus on X" --dry-run 2>&1 | string match -e "Additional instructions"; echo "== a text where the base goes"; ai review "focus on X" --dry-run; echo "== the diff cut: said in the prompt"; ai review --last 1 --max-lines 5 --dry-run 2>/dev/null | string match -e -r "^Diff"; echo "== the fence takes the file name extension, not the path"; mkdir -p ../fx/.config/x; echo hi >../fx/.config/x/LICENSE; echo hi >../fx/.config/x/a.toml; _ai_review_files_block ../fx .config/x/LICENSE .config/x/a.toml | string match -e -r "^```"' \
+    'git-prompt-place|fixture|echo "== --last with a lone text: the custom prompt"; ai review --last 1 focus --dry-run 2>&1 | string match -e -r "Additional instructions"; echo "== a text where the base goes"; ai review focus --dry-run; echo "== the diff cut: said in the prompt"; ai review --last 1 --max-lines 5 --dry-run 2>&1 | string match -e -r "^Diff"' \
+    'review-fence|fixture|echo "== the fence takes the file name extension, not the path"; mkdir -p ../fx/.config/x; echo hi >../fx/.config/x/LICENSE; echo hi >../fx/.config/x/a.toml; _ai_review_files_block ../fx .config/x/LICENSE .config/x/a.toml | string match -e -r "^```"' \
     'config-walk-worktree|fixture|mkdir -p ../wk/.ai ../wk/sub; echo review_lens=crypto >../wk/.ai/config; echo "gitdir: /elsewhere" >../wk/sub/.git; cd ../wk/sub; echo "[$(_ai_project_config_file)]"; cd ..; echo "[$(_ai_project_config_file | string replace -r ".*/wk/" "wk/")]"' \
     'git-last-claude|fixture|ai review --last 1 --provider claude --dry-run' \
     'git-commit|fixture|ai review --commit d6f255b --dry-run' \
