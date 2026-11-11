@@ -1,8 +1,11 @@
 function _ai_progress_line --description "The live line of an agentic run: MODEL | turn N | PHASE | ctx USED/WINDOW | ELAPSED | LAST TOOL [| no answer for M], cut to WIDTH"
-    # Usage: _ai_progress_line NAME ELAPSED_S WIDTH [TURNS TOOL IDLE_S MODEL CTX PHASE STREAMED WINDOW]
-    # TURNS…STREAMED come from _ai_session_progress, WINDOW is the model's context window from
-    # the runner config; without them only the time — a runner with no session.
-    #   ollama · qwen3.8:27b | turn 9 | model… | ctx 57k/131k | 4m 12s | read RouteStage.scala
+    # Usage: _ai_progress_line NAME ELAPSED_S WIDTH [TURNS TOOL IDLE_S MODEL CTX PHASE ACTIVITY WINDOW]
+    # TURNS to ACTIVITY come from _ai_session_progress, WINDOW is the model's context window
+    # from the runner config; without them only the time: a runner with no session.
+    #   <model> | turn 9 | thinking 8k chars | ctx 57k/131k | 4m 12s | last: read RouteStage.scala
+    # The model's turn is one of: reading context (nothing streamed yet: it reads the whole
+    # context again, minutes on a local model), thinking, writing. The last tool is the one
+    # before that turn, so it says "last:": unchanged for minutes, it read as a stuck line.
     # The fields of the old native loop's line (model, turn, phase, context, time), plus the
     # last tool call; while a tool runs it is the phase. One line: a wrapped one cannot be
     # redrawn with \r, so it is cut to the width — the last tool, at the end, gives way.
@@ -24,15 +27,21 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
         test -n "$argv[7]"; and set -a head (string replace / ' · ' -- $argv[7])
         set -a head "turn "(math $argv[4] + 1)
         set phase model…
-        # The answer being written: how much of it so far ("model… 12k chars")
-        test -n "$argv[10]"; and test "$argv[10]" -gt 0; and set phase "model… "(_ai_k $argv[10])" chars"
+        # What the model does in its turn, and how much it has streamed so far
+        set -l act (string split ' ' -- "$argv[10]")
+        switch "$act[1]"
+            case reading
+                set phase "reading context"
+            case thinking writing
+                set phase "$act[1] "(_ai_k $act[2])" chars"
+        end
         string match -q 'tool *' -- "$argv[9]"; and set phase (string sub -s 6 -- $argv[9])…
         if test -n "$argv[8]"; and test "$argv[8]" -gt 0
             set -l ctx "ctx "(_ai_k $argv[8])
             test -n "$argv[11]"; and set ctx "$ctx/"(_ai_k $argv[11])
             set -p tail $ctx
         end
-        test -n "$argv[5]"; and not string match -q 'tool *' -- "$argv[9]"; and set tool $argv[5]
+        test -n "$argv[5]"; and not string match -q 'tool *' -- "$argv[9]"; and set tool "last: $argv[5]"
     else
         set phase working…
     end

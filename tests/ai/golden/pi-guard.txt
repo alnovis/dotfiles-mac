@@ -31,6 +31,6 @@ streaming: running
   stderr: ai-guard: aborted at 1s: nothing streamed for 0.3s after the time budget (0.05s)
 silent: ABORTED
 == pulse
-after the first delta: 6
-a delta right after: 6
+after the first delta: 6 0
+a delta right after: 6 0
 [exit 0]

@@ -735,12 +735,15 @@ While an agentic pi run works, a live line takes its place on a terminal, read f
 session as it is written — the fields of the old native loop's line, and the last tool call:
 
 ```
-  ollama · qwen3.8:27b | turn 9 | model… | ctx 57k/131k | 4m 12s | read RouteStage.scala
+  ollama · qwen3.8:27b | turn 9 | thinking 8k chars | ctx 57k/131k | 4m 12s | last: read RouteStage.scala
   ollama · qwen3.8:27b | turn 8 | grep isWelcomeDone… | ctx 64k/131k | 11m 42s | no answer for 6m 50s
 ```
 
-The phase is `model…` while the model answers — `model… 12k chars` once its answer streams —
-or the tool call while its tools run. `ctx` is
+The phase is the model's turn or the tool call while its tools run. The model's turn is
+`reading context` until anything streams (it reads the whole context again first: minutes of
+silence on a local model), then `thinking 8k chars` for its reasoning and `writing 3k chars`
+for its answer, counted apart by ai-guard. The last field is the tool call before that turn,
+so it says `last:` and stays put while the model works. `ctx` is
 the last turn's prompt (each turn sends the whole context again) over the model's window from
 pi's config: how close the run is to being cut. On a narrow terminal the last tool goes first,
 then the phase is cut, then the model's name; the turn, the context and the time stay. After

@@ -20,9 +20,11 @@
  *   which the toolkit shows under the run line and gives as the reason of an empty answer:
  *   granite's run ended at 1436 s, not at 1080, and its log could not say why. Still
  *   running 30 s after the abort: pi is ended.
- * - Pulse: with AI_GUARD_PULSE (a file), how much of the current answer has streamed, written
- *   at most once a second. pi writes the session file only when an answer is whole, so a
- *   model writing one long answer looked like a provider gone quiet ("no answer for 6m").
+ * - Pulse: with AI_GUARD_PULSE (a file), how much of the current answer has streamed, as
+ *   "THINKING TEXT" (characters of reasoning, then of the answer), written at most once a
+ *   second. pi writes the session file only when an answer is whole, so a model writing one
+ *   long answer looked like a provider gone quiet ("no answer for 6m"). The two apart tell
+ *   the live line whether the model still thinks or already writes.
  * AI_GUARD_MAX_TURNS=0 / AI_GUARD_TIMEOUT=0 turn that limit off.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -81,6 +83,8 @@ export default function aiGuard(pi: ExtensionAPI) {
 	let spent = "";
 	let turnsAfter = 0;
 	let aborted = false;
+	// Characters of the current answer: its reasoning, and its text
+	let thought = 0;
 	let streamed = 0;
 	let pulsedAt = 0;
 	const t0 = Date.now();
@@ -134,18 +138,24 @@ export default function aiGuard(pi: ExtensionAPI) {
 	});
 
 	pi.on("message_start", (event) => {
-		if (event.message.role === "assistant") streamed = 0;
+		if (event.message.role === "assistant") {
+			thought = 0;
+			streamed = 0;
+		}
 	});
 
 	pi.on("message_update", (event) => {
 		const e = event.assistantMessageEvent;
-		if ("delta" in e && typeof e.delta === "string") streamed += e.delta.length;
+		if ("delta" in e && typeof e.delta === "string") {
+			if (e.type === "thinking_delta") thought += e.delta.length;
+			else streamed += e.delta.length;
+		}
 		const now = Date.now();
 		streamedAt = now;
 		if (!pulse || now - pulsedAt < 1000) return;
 		pulsedAt = now;
 		try {
-			writeFileSync(pulse, `${streamed}\n`);
+			writeFileSync(pulse, `${thought} ${streamed}\n`);
 		} catch {
 			// the dir is gone: the run is ending
 		}
