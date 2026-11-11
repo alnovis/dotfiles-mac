@@ -14,7 +14,7 @@ runner gets: --think-level low
 == config, --no-think
 runner gets: --no-think
 == config, review + verify
-verify provider=ollama model=default-model think=low (prompt: meta-verify.md + first-pass findings + code: 280 lines)
+verify provider=ollama model=default-model think=low (prompt: meta-verify.md + first-pass findings + code: 281 lines)
 == bad value
 Error: --verify-think takes false, low, medium, high or xhigh (got: 'lots')
 [exit 1]

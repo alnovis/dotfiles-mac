@@ -356,405 +356,406 @@ index ed0f276..4879904 100644
 
 # Full content of the changed files (context beyond the diff)
 These are the complete files as of the reviewed change. Use them to reason about code the diff does not show (surrounding methods, fields, config). Do not review unchanged lines as if they were introduced here.
+Each line starts with its line number in the file and two spaces: cite these numbers, do not count lines. The number is not part of the code — quote code without it.
 
 ## Brewfile
 ```
-tap "charmbracelet/tap"
-tap "coursier/formulas"
-tap "hudochenkov/sshpass"
-tap "sdkman/tap", "https://github.com/SDKMAN/homebrew-tap"
-# Asciicast to GIF converter
-brew "agg"
-# Record and share terminal sessions
-brew "asciinema"
-# Light UNIX download accelerator
-brew "axel"
-# Clone of cat(1) with syntax highlighting and Git integration
-brew "bat"
-# Implementation of the DNS protocols
-brew "bind"
-# Cross-platform make
-brew "cmake"
-# Distributed, open source, package manager for C/C++
-brew "conan"
-# GNU File, Shell, and Text utilities
-brew "coreutils"
-# Get a file from an HTTP, HTTPS or FTP server
-brew "curl"
-# Console tool to analyze DNS traffic
-brew "dnstop"
-# Utilities for the ext2, ext3, and ext4 file systems
-brew "e2fsprogs"
-# Simple, fast and user-friendly alternative to find
-brew "fd"
-# User-friendly command-line shell for UNIX-like operating systems
-brew "fish"
-# GitHub command-line tool
-brew "gh"
-# Distributed revision control system
-brew "git"
-# Open-source GitLab command-line tool
-brew "glab"
-# Render markdown on the CLI
-brew "glow"
-# GNU Privacy Guard (OpenPGP)
-brew "gnupg"
-# Image format providing lossless and lossy compression for web images
-brew "webp"
-# Reformats Java source code to comply with Google Java Style
-brew "google-java-format"
-# HTTP load generator, ApacheBench (ab) replacement
-brew "hey"
-# Improved top (interactive process viewer)
-brew "htop"
-# Tools and libraries to manipulate images in select formats
-brew "imagemagick"
-# Lightweight and flexible command-line JSON processor
-brew "jq"
-# Modern load testing tool, using Go and JavaScript
-brew "k6"
-# Open-source distributed event streaming platform
-brew "kafka"
-# Generic command-line non-JVM Apache Kafka producer and consumer
-brew "kcat"
-# Simple terminal UI for git commands
-brew "lazygit"
-# Postgres C API library
-brew "libpq", link: true
-# Next-gen compiler infrastructure
-brew "llvm"
-# Next-gen compiler infrastructure
-brew "llvm@21"
-# Sudoless performance monitoring for Apple Silicon processors
-brew "macmon"
-# Open-source, cross-platform JavaScript runtime environment
-brew "node"
-# CLI for Node.js style checker and lint tool for Markdown files
-brew "markdownlint-cli"
-# Show markdown documents on text terminals
-brew "mdcat"
-# Provides a formatted and highlighted view of Markdown files in Terminal
-brew "mdless"
-# Terminal-based visual file manager
-brew "midnight-commander"
-# Minimalist GNU for Windows and GCC cross-compilers
-brew "mingw-w64"
-# Incremental parsing library
-brew "tree-sitter"
-# Ambitious Vim-fork focused on extensibility and agility
-brew "neovim"
-# Small build system for use with gyp or CMake
-brew "ninja"
-# Create, run, and share large language models (LLMs)
-brew "ollama"
-# Search tool like grep and The Silver Searcher
-brew "ripgrep"
-# AI coding agent, built for the terminal
-brew "opencode"
-# Open client for Cisco AnyConnect VPN
-brew "openconnect"
-# AI agent toolkit
-brew "pi-coding-agent"
-# Package compiler and linker metadata toolkit
-brew "pkgconf"
-# Fast, disk space efficient package manager
-brew "pnpm", link: false
-# Pluggable multi-language version manager
-brew "proto"
-# Protocol buffers (Google's data interchange format)
-brew "protobuf"
-# Password generator
-brew "pwgen"
-# Python library for creating static, animated, and interactive visualizations
-brew "python-matplotlib"
-# Cross-platform application and UI framework
-brew "qt"
-# Persistent key-value database, with built-in net interface
-brew "redis"
-# Organize software neatly under a single directory tree (e.g. /usr/local)
-brew "stow"
-# Terminal multiplexer
-brew "tmux"
-# Lightweight BitTorrent client
-brew "transmission-cli"
-# Display directories as trees (with optional color/HTML output)
-brew "tree"
-# HTTP load testing tool and library
-brew "vegeta"
-# Executes a program periodically, showing output fullscreen
-brew "watch"
-# Internet file retriever
-brew "wget"
-# Platform for building proxies to bypass network restrictions
-brew "xray"
-# VPN for privacy and security
-cask "adguard-vpn@nightly"
-# Application uninstaller
-cask "appcleaner"
-# Terminal-based AI coding assistant
-cask "claude-code"
-# Column-oriented database management system
-cask "clickhouse"
-# OpenAI's coding agent that runs in your terminal
-cask "codex"
-# Write, edit, and chat about your code with AI
-cask "cursor"
-# Web browser
-cask "firefox"
-# Privacy-focused Firefox-based browser
-cask "floorp"
-cask "font-jetbrains-mono"
-# Web browser
-cask "google-chrome"
-# Java IDE by JetBrains
-cask "intellij-idea"
-# JetBrains tools manager
-cask "jetbrains-toolbox"
-# Electronics design automation suite
-cask "kicad"
-# GPU-based terminal emulator
-cask "kitty"
-# Java heap analyzer
-cask "memoryanalyzer"
-# XMPP chat client
-cask "monal"
-# Knowledge base that works on top of a local folder of plain text Markdown files
-cask "obsidian"
-# Replacement for Docker Desktop
-cask "orbstack"
-# Tool to create and manage Outline servers, powered by Shadowsocks
-cask "outline-manager"
-# Move and resize windows using keyboard shortcuts or snap areas
-cask "rectangle"
-# Rust IDE
-cask "rustrover"
-# Music streaming service
-cask "spotify"
-# Text editor for code, markup and prose
-cask "sublime-text"
-# Multiplayer code editor
-cask "zed"
-vscode "anysphere.remote-containers"
-vscode "anysphere.remote-ssh"
-cargo "cargo-audit"
-cargo "cargo-watch"
-cargo "rustlings"
-npm "@mermaid-js/mermaid-cli"
-npm "cline"
-npm "dockerfile-language-server-nodejs"
-npm "pnpm"
-npm "svg-term-cli"
+    1  tap "charmbracelet/tap"
+    2  tap "coursier/formulas"
+    3  tap "hudochenkov/sshpass"
+    4  tap "sdkman/tap", "https://github.com/SDKMAN/homebrew-tap"
+    5  # Asciicast to GIF converter
+    6  brew "agg"
+    7  # Record and share terminal sessions
+    8  brew "asciinema"
+    9  # Light UNIX download accelerator
+   10  brew "axel"
+   11  # Clone of cat(1) with syntax highlighting and Git integration
+   12  brew "bat"
+   13  # Implementation of the DNS protocols
+   14  brew "bind"
+   15  # Cross-platform make
+   16  brew "cmake"
+   17  # Distributed, open source, package manager for C/C++
+   18  brew "conan"
+   19  # GNU File, Shell, and Text utilities
+   20  brew "coreutils"
+   21  # Get a file from an HTTP, HTTPS or FTP server
+   22  brew "curl"
+   23  # Console tool to analyze DNS traffic
+   24  brew "dnstop"
+   25  # Utilities for the ext2, ext3, and ext4 file systems
+   26  brew "e2fsprogs"
+   27  # Simple, fast and user-friendly alternative to find
+   28  brew "fd"
+   29  # User-friendly command-line shell for UNIX-like operating systems
+   30  brew "fish"
+   31  # GitHub command-line tool
+   32  brew "gh"
+   33  # Distributed revision control system
+   34  brew "git"
+   35  # Open-source GitLab command-line tool
+   36  brew "glab"
+   37  # Render markdown on the CLI
+   38  brew "glow"
+   39  # GNU Privacy Guard (OpenPGP)
+   40  brew "gnupg"
+   41  # Image format providing lossless and lossy compression for web images
+   42  brew "webp"
+   43  # Reformats Java source code to comply with Google Java Style
+   44  brew "google-java-format"
+   45  # HTTP load generator, ApacheBench (ab) replacement
+   46  brew "hey"
+   47  # Improved top (interactive process viewer)
+   48  brew "htop"
+   49  # Tools and libraries to manipulate images in select formats
+   50  brew "imagemagick"
+   51  # Lightweight and flexible command-line JSON processor
+   52  brew "jq"
+   53  # Modern load testing tool, using Go and JavaScript
+   54  brew "k6"
+   55  # Open-source distributed event streaming platform
+   56  brew "kafka"
+   57  # Generic command-line non-JVM Apache Kafka producer and consumer
+   58  brew "kcat"
+   59  # Simple terminal UI for git commands
+   60  brew "lazygit"
+   61  # Postgres C API library
+   62  brew "libpq", link: true
+   63  # Next-gen compiler infrastructure
+   64  brew "llvm"
+   65  # Next-gen compiler infrastructure
+   66  brew "llvm@21"
+   67  # Sudoless performance monitoring for Apple Silicon processors
+   68  brew "macmon"
+   69  # Open-source, cross-platform JavaScript runtime environment
+   70  brew "node"
+   71  # CLI for Node.js style checker and lint tool for Markdown files
+   72  brew "markdownlint-cli"
+   73  # Show markdown documents on text terminals
+   74  brew "mdcat"
+   75  # Provides a formatted and highlighted view of Markdown files in Terminal
+   76  brew "mdless"
+   77  # Terminal-based visual file manager
+   78  brew "midnight-commander"
+   79  # Minimalist GNU for Windows and GCC cross-compilers
+   80  brew "mingw-w64"
+   81  # Incremental parsing library
+   82  brew "tree-sitter"
+   83  # Ambitious Vim-fork focused on extensibility and agility
+   84  brew "neovim"
+   85  # Small build system for use with gyp or CMake
+   86  brew "ninja"
+   87  # Create, run, and share large language models (LLMs)
+   88  brew "ollama"
+   89  # Search tool like grep and The Silver Searcher
+   90  brew "ripgrep"
+   91  # AI coding agent, built for the terminal
+   92  brew "opencode"
+   93  # Open client for Cisco AnyConnect VPN
+   94  brew "openconnect"
+   95  # AI agent toolkit
+   96  brew "pi-coding-agent"
+   97  # Package compiler and linker metadata toolkit
+   98  brew "pkgconf"
+   99  # Fast, disk space efficient package manager
+  100  brew "pnpm", link: false
+  101  # Pluggable multi-language version manager
+  102  brew "proto"
+  103  # Protocol buffers (Google's data interchange format)
+  104  brew "protobuf"
+  105  # Password generator
+  106  brew "pwgen"
+  107  # Python library for creating static, animated, and interactive visualizations
+  108  brew "python-matplotlib"
+  109  # Cross-platform application and UI framework
+  110  brew "qt"
+  111  # Persistent key-value database, with built-in net interface
+  112  brew "redis"
+  113  # Organize software neatly under a single directory tree (e.g. /usr/local)
+  114  brew "stow"
+  115  # Terminal multiplexer
+  116  brew "tmux"
+  117  # Lightweight BitTorrent client
+  118  brew "transmission-cli"
+  119  # Display directories as trees (with optional color/HTML output)
+  120  brew "tree"
+  121  # HTTP load testing tool and library
+  122  brew "vegeta"
+  123  # Executes a program periodically, showing output fullscreen
+  124  brew "watch"
+  125  # Internet file retriever
+  126  brew "wget"
+  127  # Platform for building proxies to bypass network restrictions
+  128  brew "xray"
+  129  # VPN for privacy and security
+  130  cask "adguard-vpn@nightly"
+  131  # Application uninstaller
+  132  cask "appcleaner"
+  133  # Terminal-based AI coding assistant
+  134  cask "claude-code"
+  135  # Column-oriented database management system
+  136  cask "clickhouse"
+  137  # OpenAI's coding agent that runs in your terminal
+  138  cask "codex"
+  139  # Write, edit, and chat about your code with AI
+  140  cask "cursor"
+  141  # Web browser
+  142  cask "firefox"
+  143  # Privacy-focused Firefox-based browser
+  144  cask "floorp"
+  145  cask "font-jetbrains-mono"
+  146  # Web browser
+  147  cask "google-chrome"
+  148  # Java IDE by JetBrains
+  149  cask "intellij-idea"
+  150  # JetBrains tools manager
+  151  cask "jetbrains-toolbox"
+  152  # Electronics design automation suite
+  153  cask "kicad"
+  154  # GPU-based terminal emulator
+  155  cask "kitty"
+  156  # Java heap analyzer
+  157  cask "memoryanalyzer"
+  158  # XMPP chat client
+  159  cask "monal"
+  160  # Knowledge base that works on top of a local folder of plain text Markdown files
+  161  cask "obsidian"
+  162  # Replacement for Docker Desktop
+  163  cask "orbstack"
+  164  # Tool to create and manage Outline servers, powered by Shadowsocks
+  165  cask "outline-manager"
+  166  # Move and resize windows using keyboard shortcuts or snap areas
+  167  cask "rectangle"
+  168  # Rust IDE
+  169  cask "rustrover"
+  170  # Music streaming service
+  171  cask "spotify"
+  172  # Text editor for code, markup and prose
+  173  cask "sublime-text"
+  174  # Multiplayer code editor
+  175  cask "zed"
+  176  vscode "anysphere.remote-containers"
+  177  vscode "anysphere.remote-ssh"
+  178  cargo "cargo-audit"
+  179  cargo "cargo-watch"
+  180  cargo "rustlings"
+  181  npm "@mermaid-js/mermaid-cli"
+  182  npm "cline"
+  183  npm "dockerfile-language-server-nodejs"
+  184  npm "pnpm"
+  185  npm "svg-term-cli"
 ```
 
 ## fish/.config/fish/functions/gbranch.fish
 ```fish
-function gbranch --description "Show branch overview: commits and diff stat vs base branch"
-    argparse 'h/help' 'no-color' 'stat=' -- $argv; or return 1
-
-    if set -q _flag_help
-        echo "Usage: gbranch [OPTIONS] [BASE]"
-        echo ""
-        echo "Show commits and diff stat of current branch vs base branch."
-        echo "Auto-detects the nearest base among develop/main/master/release/stage"
-        echo "(override the list with \$GBRANCH_BASES) or specify manually."
-        echo ""
-        echo "Options:"
-        echo "      --stat=N     Set stat output width (default: terminal width)"
-        echo "      --no-color   Disable colored output"
-        echo "  -h, --help       Show this help"
-        echo ""
-        echo "Examples:"
-        echo "  gbranch           Compare with auto-detected base"
-        echo "  gbranch main      Compare with main"
-        return 0
-    end
-
-    set -l color_flag --color=always
-    if set -q _flag_no_color
-        set color_flag --color=never
-    end
-
-    set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
-    if test $status -ne 0
-        echo "Not a git repository"
-        return 1
-    end
-
-    set -l repo_name (basename $repo_root)
-    set -l branch (git branch --show-current)
-
-    # Determine base branch: explicit arg, or the nearest long-lived branch
-    # (fewest commits base..HEAD) — a branch cut from release must not be
-    # measured against develop, or every release merge shows up as "ahead"
-    set -l base
-    if test (count $argv) -eq 1
-        set base $argv[1]
-    else
-        set -l candidates develop main master release stage
-        if set -q GBRANCH_BASES
-            set candidates $GBRANCH_BASES
-        end
-        if contains -- "$branch" $candidates
-            set base $branch
-        else
-            set -l best_count
-            for c in $candidates
-                set -l ref
-                if git show-ref --verify --quiet refs/remotes/origin/$c
-                    set ref origin/$c
-                else if git show-ref --verify --quiet refs/heads/$c
-                    set ref $c
-                else
-                    continue
-                end
-                set -l n (git rev-list --count $ref..HEAD 2>/dev/null); or continue
-                if test -z "$best_count"; or test $n -lt $best_count
-                    set best_count $n
-                    set base $c
-                end
-            end
-        end
-        if test -z "$base"
-            echo "No base branch found, specify manually: gbranch <branch>"
-            return 1
-        end
-    end
-
-    if test "$branch" = "$base"
-        echo "Repository: $repo_name ($branch)"
-        set_color yellow
-        echo "Already on $base — showing unpushed commits"
-        set_color normal
-
-        set -l unpushed (git rev-list --count origin/$base..HEAD 2>/dev/null; or echo 0)
-        if test "$unpushed" -eq 0
-            echo "---"
-            echo "Up to date with origin/$base"
-            return 0
-        end
-
-        echo ""
-        set_color green
-        echo "Commits:"
-        set_color normal
-        git log --oneline $color_flag origin/$base..HEAD | while read -l line
-            echo "  $line"
-        end
-
-        set -l stat_flag --stat
-        if set -q _flag_stat
-            set stat_flag --stat=$_flag_stat
-        else if test -n "$COLUMNS"
-            set stat_flag --stat=$COLUMNS
-        end
-
-        echo ""
-        set_color yellow
-        echo "Files:"
-        set_color normal
-        set -l diff_stat (git diff $color_flag $stat_flag origin/$base..HEAD | string collect)
-        if test -n "$diff_stat"
-            echo "$diff_stat"
-        end
-
-        set -l nums (git diff --numstat origin/$base..HEAD | string match -rv '^\s*$')
-        set -l total_add 0
-        set -l total_del 0
-        set -l total_files 0
-        for line in $nums
-            set -l parts (string split \t $line)
-            if test "$parts[1]" != "-"
-                set total_add (math $total_add + $parts[1])
-                set total_del (math $total_del + $parts[2])
-            end
-            set total_files (math $total_files + 1)
-        end
-
-        echo "---"
-        set -l summary "$unpushed unpushed commit(s), $total_files file(s)"
-        if test $total_add -gt 0
-            set summary "$summary, "(set_color green)"+$total_add"(set_color normal)
-        end
-        if test $total_del -gt 0
-            set summary "$summary, "(set_color red)"-$total_del"(set_color normal)
-        end
-        echo $summary
-        return 0
-    end
-
-    # Find merge base
-    set -l merge_base (git merge-base origin/$base HEAD 2>/dev/null)
-    if test -z "$merge_base"
-        set merge_base (git merge-base $base HEAD 2>/dev/null)
-        if test -z "$merge_base"
-            echo "Cannot find common ancestor with $base"
-            return 1
-        end
-    end
-
-    set -l ahead (git rev-list --count $merge_base..HEAD)
-
-    echo "Repository: $repo_name ($branch)"
-    set_color cyan
-    echo "Base: $base ($ahead commit(s) ahead)"
-    set_color normal
-
-    if test "$ahead" -eq 0
-        echo "---"
-        echo "No commits ahead of $base"
-        return 0
-    end
-
-    # Commits
-    echo ""
-    set_color green
-    echo "Commits:"
-    set_color normal
-    git log --oneline $color_flag $merge_base..HEAD | while read -l line
-        echo "  $line"
-    end
-
-    # Diff stat
-    set -l stat_flag --stat
-    if set -q _flag_stat
-        set stat_flag --stat=$_flag_stat
-    else if test -n "$COLUMNS"
-        set stat_flag --stat=$COLUMNS
-    end
-
-    echo ""
-    set_color yellow
-    echo "Files:"
-    set_color normal
-    set -l diff_stat (git diff $color_flag $stat_flag $merge_base..HEAD | string collect)
-    if test -n "$diff_stat"
-        echo "$diff_stat"
-    end
-
-    # Summary
-    set -l nums (git diff --numstat $merge_base..HEAD | string match -rv '^\s*$')
-    set -l total_add 0
-    set -l total_del 0
-    set -l total_files 0
-
-    for line in $nums
-        set -l parts (string split \t $line)
-        if test "$parts[1]" != "-"
-            set total_add (math $total_add + $parts[1])
-            set total_del (math $total_del + $parts[2])
-        end
-        set total_files (math $total_files + 1)
-    end
-
-    echo "---"
-    set -l summary "$ahead commit(s), $total_files file(s)"
-    if test $total_add -gt 0
-        set summary "$summary, "(set_color green)"+$total_add"(set_color normal)
-    end
-    if test $total_del -gt 0
-        set summary "$summary, "(set_color red)"-$total_del"(set_color normal)
-    end
-    echo $summary
-end
+    1  function gbranch --description "Show branch overview: commits and diff stat vs base branch"
+    2      argparse 'h/help' 'no-color' 'stat=' -- $argv; or return 1
+    3  
+    4      if set -q _flag_help
+    5          echo "Usage: gbranch [OPTIONS] [BASE]"
+    6          echo ""
+    7          echo "Show commits and diff stat of current branch vs base branch."
+    8          echo "Auto-detects the nearest base among develop/main/master/release/stage"
+    9          echo "(override the list with \$GBRANCH_BASES) or specify manually."
+   10          echo ""
+   11          echo "Options:"
+   12          echo "      --stat=N     Set stat output width (default: terminal width)"
+   13          echo "      --no-color   Disable colored output"
+   14          echo "  -h, --help       Show this help"
+   15          echo ""
+   16          echo "Examples:"
+   17          echo "  gbranch           Compare with auto-detected base"
+   18          echo "  gbranch main      Compare with main"
+   19          return 0
+   20      end
+   21  
+   22      set -l color_flag --color=always
+   23      if set -q _flag_no_color
+   24          set color_flag --color=never
+   25      end
+   26  
+   27      set -l repo_root (git rev-parse --show-toplevel 2>/dev/null)
+   28      if test $status -ne 0
+   29          echo "Not a git repository"
+   30          return 1
+   31      end
+   32  
+   33      set -l repo_name (basename $repo_root)
+   34      set -l branch (git branch --show-current)
+   35  
+   36      # Determine base branch: explicit arg, or the nearest long-lived branch
+   37      # (fewest commits base..HEAD) — a branch cut from release must not be
+   38      # measured against develop, or every release merge shows up as "ahead"
+   39      set -l base
+   40      if test (count $argv) -eq 1
+   41          set base $argv[1]
+   42      else
+   43          set -l candidates develop main master release stage
+   44          if set -q GBRANCH_BASES
+   45              set candidates $GBRANCH_BASES
+   46          end
+   47          if contains -- "$branch" $candidates
+   48              set base $branch
+   49          else
+   50              set -l best_count
+   51              for c in $candidates
+   52                  set -l ref
+   53                  if git show-ref --verify --quiet refs/remotes/origin/$c
+   54                      set ref origin/$c
+   55                  else if git show-ref --verify --quiet refs/heads/$c
+   56                      set ref $c
+   57                  else
+   58                      continue
+   59                  end
+   60                  set -l n (git rev-list --count $ref..HEAD 2>/dev/null); or continue
+   61                  if test -z "$best_count"; or test $n -lt $best_count
+   62                      set best_count $n
+   63                      set base $c
+   64                  end
+   65              end
+   66          end
+   67          if test -z "$base"
+   68              echo "No base branch found, specify manually: gbranch <branch>"
+   69              return 1
+   70          end
+   71      end
+   72  
+   73      if test "$branch" = "$base"
+   74          echo "Repository: $repo_name ($branch)"
+   75          set_color yellow
+   76          echo "Already on $base — showing unpushed commits"
+   77          set_color normal
+   78  
+   79          set -l unpushed (git rev-list --count origin/$base..HEAD 2>/dev/null; or echo 0)
+   80          if test "$unpushed" -eq 0
+   81              echo "---"
+   82              echo "Up to date with origin/$base"
+   83              return 0
+   84          end
+   85  
+   86          echo ""
+   87          set_color green
+   88          echo "Commits:"
+   89          set_color normal
+   90          git log --oneline $color_flag origin/$base..HEAD | while read -l line
+   91              echo "  $line"
+   92          end
+   93  
+   94          set -l stat_flag --stat
+   95          if set -q _flag_stat
+   96              set stat_flag --stat=$_flag_stat
+   97          else if test -n "$COLUMNS"
+   98              set stat_flag --stat=$COLUMNS
+   99          end
+  100  
+  101          echo ""
+  102          set_color yellow
+  103          echo "Files:"
+  104          set_color normal
+  105          set -l diff_stat (git diff $color_flag $stat_flag origin/$base..HEAD | string collect)
+  106          if test -n "$diff_stat"
+  107              echo "$diff_stat"
+  108          end
+  109  
+  110          set -l nums (git diff --numstat origin/$base..HEAD | string match -rv '^\s*$')
+  111          set -l total_add 0
+  112          set -l total_del 0
+  113          set -l total_files 0
+  114          for line in $nums
+  115              set -l parts (string split \t $line)
+  116              if test "$parts[1]" != "-"
+  117                  set total_add (math $total_add + $parts[1])
+  118                  set total_del (math $total_del + $parts[2])
+  119              end
+  120              set total_files (math $total_files + 1)
+  121          end
+  122  
+  123          echo "---"
+  124          set -l summary "$unpushed unpushed commit(s), $total_files file(s)"
+  125          if test $total_add -gt 0
+  126              set summary "$summary, "(set_color green)"+$total_add"(set_color normal)
+  127          end
+  128          if test $total_del -gt 0
+  129              set summary "$summary, "(set_color red)"-$total_del"(set_color normal)
+  130          end
+  131          echo $summary
+  132          return 0
+  133      end
+  134  
+  135      # Find merge base
+  136      set -l merge_base (git merge-base origin/$base HEAD 2>/dev/null)
+  137      if test -z "$merge_base"
+  138          set merge_base (git merge-base $base HEAD 2>/dev/null)
+  139          if test -z "$merge_base"
+  140              echo "Cannot find common ancestor with $base"
+  141              return 1
+  142          end
+  143      end
+  144  
+  145      set -l ahead (git rev-list --count $merge_base..HEAD)
+  146  
+  147      echo "Repository: $repo_name ($branch)"
+  148      set_color cyan
+  149      echo "Base: $base ($ahead commit(s) ahead)"
+  150      set_color normal
+  151  
+  152      if test "$ahead" -eq 0
+  153          echo "---"
+  154          echo "No commits ahead of $base"
+  155          return 0
+  156      end
+  157  
+  158      # Commits
+  159      echo ""
+  160      set_color green
+  161      echo "Commits:"
+  162      set_color normal
+  163      git log --oneline $color_flag $merge_base..HEAD | while read -l line
+  164          echo "  $line"
+  165      end
+  166  
+  167      # Diff stat
+  168      set -l stat_flag --stat
+  169      if set -q _flag_stat
+  170          set stat_flag --stat=$_flag_stat
+  171      else if test -n "$COLUMNS"
+  172          set stat_flag --stat=$COLUMNS
+  173      end
+  174  
+  175      echo ""
+  176      set_color yellow
+  177      echo "Files:"
+  178      set_color normal
+  179      set -l diff_stat (git diff $color_flag $stat_flag $merge_base..HEAD | string collect)
+  180      if test -n "$diff_stat"
+  181          echo "$diff_stat"
+  182      end
+  183  
+  184      # Summary
+  185      set -l nums (git diff --numstat $merge_base..HEAD | string match -rv '^\s*$')
+  186      set -l total_add 0
+  187      set -l total_del 0
+  188      set -l total_files 0
+  189  
+  190      for line in $nums
+  191          set -l parts (string split \t $line)
+  192          if test "$parts[1]" != "-"
+  193              set total_add (math $total_add + $parts[1])
+  194              set total_del (math $total_del + $parts[2])
+  195          end
+  196          set total_files (math $total_files + 1)
+  197      end
+  198  
+  199      echo "---"
+  200      set -l summary "$ahead commit(s), $total_files file(s)"
+  201      if test $total_add -gt 0
+  202          set summary "$summary, "(set_color green)"+$total_add"(set_color normal)
+  203      end
+  204      if test $total_del -gt 0
+  205          set summary "$summary, "(set_color red)"-$total_del"(set_color normal)
+  206      end
+  207      echo $summary
+  208  end
 ```
 [exit 0]

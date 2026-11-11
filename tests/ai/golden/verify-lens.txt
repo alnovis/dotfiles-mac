@@ -4,7 +4,7 @@ The review was run with the lens(es) below. Use them as domain knowledge while y
 Scala lens. The language and its standard library, Futures included. The language changed under the same name — 2.11, 2.12, 2.13 and 3 differ in collections, implicits and syntax — and models often read Scala as Java, or one version as another. So this lens is as much about what NOT to report as what to report. Libraries have their own lenses, used on top of this one: `akka` (Akka / Pekko), `cats`, `cats-effect`, `zio`.
 FINDINGS FROM THE FIRST PASS (verify each):
 == review + verify: the flow hands the lens on
-verify provider=ollama model=default-model (prompt: meta-verify.md + lens(es) scala,akka + first-pass findings + code: 280 lines)
+verify provider=ollama model=default-model (prompt: meta-verify.md + lens(es) scala,akka + first-pass findings + code: 281 lines)
 == unknown lens
 Error: unknown lens 'nosuch'. Available: …
 [exit 0]

@@ -17,7 +17,7 @@ You have no tools: the code above and the code under review are all you can see.
   note         no diff — the verifier sees the code the findings cite but not the old code, so it
                cannot tell a regression from a pre-existing problem. Pass --range BASE..HEAD (or --file DIFF).
 == review + verify
-verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 280 lines + the code the findings cite, read from the repository; no tools)
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 281 lines + the code the findings cite, read from the repository; no tools)
 == bad value
 Error: --verify-context takes assembled (got: 'agentic')
 [exit 1]

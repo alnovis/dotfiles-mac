@@ -289,193 +289,194 @@ index db5d5b9..e413331 100644
 
 # Full content of the changed files (context beyond the diff)
 These are the complete files as of the reviewed change. Use them to reason about code the diff does not show (surrounding methods, fields, config). Do not review unchanged lines as if they were introduced here.
+Each line starts with its line number in the file and two spaces: cite these numbers, do not count lines. The number is not part of the code — quote code without it.
 
 ## Brewfile
 ```
-tap "charmbracelet/tap"
-tap "coursier/formulas"
-tap "hudochenkov/sshpass"
-tap "sdkman/tap", "https://github.com/SDKMAN/homebrew-tap"
-# Asciicast to GIF converter
-brew "agg"
-# Record and share terminal sessions
-brew "asciinema"
-# Light UNIX download accelerator
-brew "axel"
-# Clone of cat(1) with syntax highlighting and Git integration
-brew "bat"
-# Implementation of the DNS protocols
-brew "bind"
-# Cross-platform make
-brew "cmake"
-# Distributed, open source, package manager for C/C++
-brew "conan"
-# GNU File, Shell, and Text utilities
-brew "coreutils"
-# Get a file from an HTTP, HTTPS or FTP server
-brew "curl"
-# Console tool to analyze DNS traffic
-brew "dnstop"
-# Utilities for the ext2, ext3, and ext4 file systems
-brew "e2fsprogs"
-# Simple, fast and user-friendly alternative to find
-brew "fd"
-# User-friendly command-line shell for UNIX-like operating systems
-brew "fish"
-# GitHub command-line tool
-brew "gh"
-# Distributed revision control system
-brew "git"
-# Open-source GitLab command-line tool
-brew "glab"
-# Render markdown on the CLI
-brew "glow"
-# GNU Privacy Guard (OpenPGP)
-brew "gnupg"
-# Image format providing lossless and lossy compression for web images
-brew "webp"
-# Reformats Java source code to comply with Google Java Style
-brew "google-java-format"
-# HTTP load generator, ApacheBench (ab) replacement
-brew "hey"
-# Improved top (interactive process viewer)
-brew "htop"
-# Tools and libraries to manipulate images in select formats
-brew "imagemagick"
-# Lightweight and flexible command-line JSON processor
-brew "jq"
-# Modern load testing tool, using Go and JavaScript
-brew "k6"
-# Open-source distributed event streaming platform
-brew "kafka"
-# Generic command-line non-JVM Apache Kafka producer and consumer
-brew "kcat"
-# Simple terminal UI for git commands
-brew "lazygit"
-# Postgres C API library
-brew "libpq", link: true
-# Next-gen compiler infrastructure
-brew "llvm"
-# Next-gen compiler infrastructure
-brew "llvm@21"
-# Sudoless performance monitoring for Apple Silicon processors
-brew "macmon"
-# Open-source, cross-platform JavaScript runtime environment
-brew "node"
-# CLI for Node.js style checker and lint tool for Markdown files
-brew "markdownlint-cli"
-# Show markdown documents on text terminals
-brew "mdcat"
-# Provides a formatted and highlighted view of Markdown files in Terminal
-brew "mdless"
-# Terminal-based visual file manager
-brew "midnight-commander"
-# Minimalist GNU for Windows and GCC cross-compilers
-brew "mingw-w64"
-# Incremental parsing library
-brew "tree-sitter"
-# Ambitious Vim-fork focused on extensibility and agility
-brew "neovim"
-# Small build system for use with gyp or CMake
-brew "ninja"
-# Create, run, and share large language models (LLMs)
-brew "ollama"
-# Search tool like grep and The Silver Searcher
-brew "ripgrep"
-# AI coding agent, built for the terminal
-brew "opencode"
-# Open client for Cisco AnyConnect VPN
-brew "openconnect"
-# AI agent toolkit
-brew "pi-coding-agent"
-# Package compiler and linker metadata toolkit
-brew "pkgconf"
-# Fast, disk space efficient package manager
-brew "pnpm", link: false
-# Pluggable multi-language version manager
-brew "proto"
-# Protocol buffers (Google's data interchange format)
-brew "protobuf"
-# Password generator
-brew "pwgen"
-# Python library for creating static, animated, and interactive visualizations
-brew "python-matplotlib"
-# Cross-platform application and UI framework
-brew "qt"
-# Persistent key-value database, with built-in net interface
-brew "redis"
-# Organize software neatly under a single directory tree (e.g. /usr/local)
-brew "stow"
-# Terminal multiplexer
-brew "tmux"
-# Lightweight BitTorrent client
-brew "transmission-cli"
-# Display directories as trees (with optional color/HTML output)
-brew "tree"
-# HTTP load testing tool and library
-brew "vegeta"
-# Executes a program periodically, showing output fullscreen
-brew "watch"
-# Internet file retriever
-brew "wget"
-# Platform for building proxies to bypass network restrictions
-brew "xray"
-# VPN for privacy and security
-cask "adguard-vpn@nightly"
-# Application uninstaller
-cask "appcleaner"
-# Terminal-based AI coding assistant
-cask "claude-code"
-# Column-oriented database management system
-cask "clickhouse"
-# OpenAI's coding agent that runs in your terminal
-cask "codex"
-# Write, edit, and chat about your code with AI
-cask "cursor"
-# Web browser
-cask "firefox"
-# Privacy-focused Firefox-based browser
-cask "floorp"
-cask "font-jetbrains-mono"
-# Web browser
-cask "google-chrome"
-# Java IDE by JetBrains
-cask "intellij-idea"
-# JetBrains tools manager
-cask "jetbrains-toolbox"
-# Electronics design automation suite
-cask "kicad"
-# GPU-based terminal emulator
-cask "kitty"
-# Java heap analyzer
-cask "memoryanalyzer"
-# XMPP chat client
-cask "monal"
-# Knowledge base that works on top of a local folder of plain text Markdown files
-cask "obsidian"
-# Replacement for Docker Desktop
-cask "orbstack"
-# Tool to create and manage Outline servers, powered by Shadowsocks
-cask "outline-manager"
-# Move and resize windows using keyboard shortcuts or snap areas
-cask "rectangle"
-# Rust IDE
-cask "rustrover"
-# Music streaming service
-cask "spotify"
-# Text editor for code, markup and prose
-cask "sublime-text"
-# Multiplayer code editor
-cask "zed"
-vscode "anysphere.remote-containers"
-vscode "anysphere.remote-ssh"
-cargo "cargo-audit"
-cargo "cargo-watch"
-cargo "rustlings"
-npm "@mermaid-js/mermaid-cli"
-npm "cline"
-npm "dockerfile-language-server-nodejs"
-npm "pnpm"
-npm "svg-term-cli"
+    1  tap "charmbracelet/tap"
+    2  tap "coursier/formulas"
+    3  tap "hudochenkov/sshpass"
+    4  tap "sdkman/tap", "https://github.com/SDKMAN/homebrew-tap"
+    5  # Asciicast to GIF converter
+    6  brew "agg"
+    7  # Record and share terminal sessions
+    8  brew "asciinema"
+    9  # Light UNIX download accelerator
+   10  brew "axel"
+   11  # Clone of cat(1) with syntax highlighting and Git integration
+   12  brew "bat"
+   13  # Implementation of the DNS protocols
+   14  brew "bind"
+   15  # Cross-platform make
+   16  brew "cmake"
+   17  # Distributed, open source, package manager for C/C++
+   18  brew "conan"
+   19  # GNU File, Shell, and Text utilities
+   20  brew "coreutils"
+   21  # Get a file from an HTTP, HTTPS or FTP server
+   22  brew "curl"
+   23  # Console tool to analyze DNS traffic
+   24  brew "dnstop"
+   25  # Utilities for the ext2, ext3, and ext4 file systems
+   26  brew "e2fsprogs"
+   27  # Simple, fast and user-friendly alternative to find
+   28  brew "fd"
+   29  # User-friendly command-line shell for UNIX-like operating systems
+   30  brew "fish"
+   31  # GitHub command-line tool
+   32  brew "gh"
+   33  # Distributed revision control system
+   34  brew "git"
+   35  # Open-source GitLab command-line tool
+   36  brew "glab"
+   37  # Render markdown on the CLI
+   38  brew "glow"
+   39  # GNU Privacy Guard (OpenPGP)
+   40  brew "gnupg"
+   41  # Image format providing lossless and lossy compression for web images
+   42  brew "webp"
+   43  # Reformats Java source code to comply with Google Java Style
+   44  brew "google-java-format"
+   45  # HTTP load generator, ApacheBench (ab) replacement
+   46  brew "hey"
+   47  # Improved top (interactive process viewer)
+   48  brew "htop"
+   49  # Tools and libraries to manipulate images in select formats
+   50  brew "imagemagick"
+   51  # Lightweight and flexible command-line JSON processor
+   52  brew "jq"
+   53  # Modern load testing tool, using Go and JavaScript
+   54  brew "k6"
+   55  # Open-source distributed event streaming platform
+   56  brew "kafka"
+   57  # Generic command-line non-JVM Apache Kafka producer and consumer
+   58  brew "kcat"
+   59  # Simple terminal UI for git commands
+   60  brew "lazygit"
+   61  # Postgres C API library
+   62  brew "libpq", link: true
+   63  # Next-gen compiler infrastructure
+   64  brew "llvm"
+   65  # Next-gen compiler infrastructure
+   66  brew "llvm@21"
+   67  # Sudoless performance monitoring for Apple Silicon processors
+   68  brew "macmon"
+   69  # Open-source, cross-platform JavaScript runtime environment
+   70  brew "node"
+   71  # CLI for Node.js style checker and lint tool for Markdown files
+   72  brew "markdownlint-cli"
+   73  # Show markdown documents on text terminals
+   74  brew "mdcat"
+   75  # Provides a formatted and highlighted view of Markdown files in Terminal
+   76  brew "mdless"
+   77  # Terminal-based visual file manager
+   78  brew "midnight-commander"
+   79  # Minimalist GNU for Windows and GCC cross-compilers
+   80  brew "mingw-w64"
+   81  # Incremental parsing library
+   82  brew "tree-sitter"
+   83  # Ambitious Vim-fork focused on extensibility and agility
+   84  brew "neovim"
+   85  # Small build system for use with gyp or CMake
+   86  brew "ninja"
+   87  # Create, run, and share large language models (LLMs)
+   88  brew "ollama"
+   89  # Search tool like grep and The Silver Searcher
+   90  brew "ripgrep"
+   91  # AI coding agent, built for the terminal
+   92  brew "opencode"
+   93  # Open client for Cisco AnyConnect VPN
+   94  brew "openconnect"
+   95  # AI agent toolkit
+   96  brew "pi-coding-agent"
+   97  # Package compiler and linker metadata toolkit
+   98  brew "pkgconf"
+   99  # Fast, disk space efficient package manager
+  100  brew "pnpm", link: false
+  101  # Pluggable multi-language version manager
+  102  brew "proto"
+  103  # Protocol buffers (Google's data interchange format)
+  104  brew "protobuf"
+  105  # Password generator
+  106  brew "pwgen"
+  107  # Python library for creating static, animated, and interactive visualizations
+  108  brew "python-matplotlib"
+  109  # Cross-platform application and UI framework
+  110  brew "qt"
+  111  # Persistent key-value database, with built-in net interface
+  112  brew "redis"
+  113  # Organize software neatly under a single directory tree (e.g. /usr/local)
+  114  brew "stow"
+  115  # Terminal multiplexer
+  116  brew "tmux"
+  117  # Lightweight BitTorrent client
+  118  brew "transmission-cli"
+  119  # Display directories as trees (with optional color/HTML output)
+  120  brew "tree"
+  121  # HTTP load testing tool and library
+  122  brew "vegeta"
+  123  # Executes a program periodically, showing output fullscreen
+  124  brew "watch"
+  125  # Internet file retriever
+  126  brew "wget"
+  127  # Platform for building proxies to bypass network restrictions
+  128  brew "xray"
+  129  # VPN for privacy and security
+  130  cask "adguard-vpn@nightly"
+  131  # Application uninstaller
+  132  cask "appcleaner"
+  133  # Terminal-based AI coding assistant
+  134  cask "claude-code"
+  135  # Column-oriented database management system
+  136  cask "clickhouse"
+  137  # OpenAI's coding agent that runs in your terminal
+  138  cask "codex"
+  139  # Write, edit, and chat about your code with AI
+  140  cask "cursor"
+  141  # Web browser
+  142  cask "firefox"
+  143  # Privacy-focused Firefox-based browser
+  144  cask "floorp"
+  145  cask "font-jetbrains-mono"
+  146  # Web browser
+  147  cask "google-chrome"
+  148  # Java IDE by JetBrains
+  149  cask "intellij-idea"
+  150  # JetBrains tools manager
+  151  cask "jetbrains-toolbox"
+  152  # Electronics design automation suite
+  153  cask "kicad"
+  154  # GPU-based terminal emulator
+  155  cask "kitty"
+  156  # Java heap analyzer
+  157  cask "memoryanalyzer"
+  158  # XMPP chat client
+  159  cask "monal"
+  160  # Knowledge base that works on top of a local folder of plain text Markdown files
+  161  cask "obsidian"
+  162  # Replacement for Docker Desktop
+  163  cask "orbstack"
+  164  # Tool to create and manage Outline servers, powered by Shadowsocks
+  165  cask "outline-manager"
+  166  # Move and resize windows using keyboard shortcuts or snap areas
+  167  cask "rectangle"
+  168  # Rust IDE
+  169  cask "rustrover"
+  170  # Music streaming service
+  171  cask "spotify"
+  172  # Text editor for code, markup and prose
+  173  cask "sublime-text"
+  174  # Multiplayer code editor
+  175  cask "zed"
+  176  vscode "anysphere.remote-containers"
+  177  vscode "anysphere.remote-ssh"
+  178  cargo "cargo-audit"
+  179  cargo "cargo-watch"
+  180  cargo "rustlings"
+  181  npm "@mermaid-js/mermaid-cli"
+  182  npm "cline"
+  183  npm "dockerfile-language-server-nodejs"
+  184  npm "pnpm"
+  185  npm "svg-term-cli"
 ```
 [exit 0]

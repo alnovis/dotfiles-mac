@@ -8,12 +8,13 @@ function _ai_review_context_block --description "Emit full content of the given 
 
     echo "# Full content of the changed files (context beyond the diff)"
     echo "These are the complete files as of the reviewed change. Use them to reason about code the diff does not show (surrounding methods, fields, config). Do not review unchanged lines as if they were introduced here."
+    echo "Each line starts with its line number in the file and two spaces: cite these numbers, do not count lines. The number is not part of the code — quote code without it."
     for path in $paths
         set -l content (git show "$tip:$path" 2>/dev/null | string collect)
         test -z "$content"; and continue
         set -l ext ""
         string match -q '*.*' -- $path; and set ext (string match -r '[^.]+$' -- $path)
         set -l fence (_ai_md_fence "$content")
-        printf '\n## %s\n%s%s\n%s\n%s\n' $path $fence $ext "$content" $fence
+        printf '\n## %s\n%s%s\n%s\n%s\n' $path $fence $ext (printf '%s\n' "$content" | _ai_number_lines | string collect) $fence
     end
 end

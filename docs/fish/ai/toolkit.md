@@ -209,7 +209,7 @@ ai review .                          target: current project
 | `--lens NAME[,NAME...]` | Add specialist checklist(s) — see [Lenses](#lenses---lens) |
 | `--agentic` | Embed only the diff / target file and let the model explore the repo read-only (claude via its CLI, other providers via the runner). Default: everything embedded, no tools |
 | `--no-think` | Fast pass: disable a thinking model's reasoning (native ollama) |
-| `--context-lines N` | Line budget for embedding whole files: the changed files in git mode (config key `context_lines`, default 2000), a directory's files in target mode (`dir_context_lines`, default 10000). `0` = none. Precedence: flag > config key (project → global) > default |
+| `--context-lines N` | Line budget for embedding whole files: the changed files in git mode (config key `context_lines`, default 2000), a directory's files in target mode (`dir_context_lines`, default 10000). `0` = none. Precedence: flag > config key (project → global) > default. Each line goes in with its number (`  104  code`, as verify's assembled code): bare, the models counted lines themselves in their reasoning — 215 lines of `103: (blank)` in one qwen3.8 run, which then ran out of `max_tokens` |
 | `--dry-run` | Print the assembled prompt without invoking the model |
 | `-h`, `--help` | Show help |
 
