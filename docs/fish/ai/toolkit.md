@@ -748,6 +748,13 @@ What else the run line says about an agentic run:
   `<|END_THINKING|><|START_TEXT|>` only the text after the last `<|START_TEXT|>` is kept (one
   run held three drafts and its reasoning before it, numbered into 179 "findings").
 
+A run that exits non-zero leaves no answer, whatever it printed: the claude CLI writes its API
+errors to stdout (`API Error: … safeguards flagged this message`, exit 1), and kept, one became
+the verify file the comments were built from. Now the run line names that error as the reason,
+the last lines of the output (the request id with them) go under it, and the file is left
+empty — so verify reads `failed: API Error: …` in the Saved block and the comments `skipped:
+verify failed`.
+
 In the Saved block, `verify runs … 3/3 answered, 1 with numbered verdicts` says when a run
 answered but gave the vote nothing: verdicts written without their `[Fn]`, which leaves every
 finding "only 1 of 3 runs judged it".

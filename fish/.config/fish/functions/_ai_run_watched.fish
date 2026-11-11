@@ -183,10 +183,22 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     else if test "$rc" -ne 0
         set -l why $guard
         test -n "$why"; or set why (_ai_failure_reason <$errlog)
+        # A failed run's stdout is no answer. The claude CLI prints its API errors there
+        # ("API Error: … safeguards flagged this message", exit 1); kept, one became the
+        # verify file and the comments were built from it. Its last lines go under the run
+        # line (the request id is there), and the file is left empty, as a run that answered
+        # nothing. Only the API error line is a reason: a partial answer mentions "error" too
+        set -l out_tail
+        if test -s $outfile
+            set out_tail (tail -n 15 $outfile | string match -v -r '^\s*$')
+            : >$outfile
+            test -n "$why"; or set why (string match -r -- '^API Error: .*' $out_tail | string replace -r ' \(https?://.*' '' | string shorten -m 160)[1]
+        end
         test -n "$why"; or set why "exit $rc"
         set -g __ai_last_failure $why
         _ai_run_watched_row "$name" FAILED $total $why >&2
         test -s $errlog; and _ai_runner_errors <$errlog | string replace -r '^' '    ' >&2
+        set -q out_tail[1]; and printf '%s\n' $out_tail | _ai_runner_errors | string replace -r '^' '    ' >&2
     else
         set -l file $dest
         test "$dest" = "(terminal)"; and set file ""

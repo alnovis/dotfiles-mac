@@ -1,0 +1,13 @@
+== one run: the error is the reason, the file stays empty
+  FAILED <t>  API Error: Opus 5.5's safeguards flagged this message
+    API Error: Opus 5.5's safeguards flagged this message (https://www.anthropic.com/legal/aup). This sometimes happens.
+    Request ID: req_x
+file bytes: 0
+== review, then verify fails: no comments from it
+  FAILED <t>  API Error: Opus 5.5's safeguards flagged this message
+  verify       on (claude)
+  comments     on (MR line comments from the verdicts)
+  verify       failed: API Error: Opus 5.5's safeguards flagged this message
+  comments     skipped: verify failed
+no verify file
+[exit 0]

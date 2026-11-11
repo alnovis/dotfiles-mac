@@ -235,6 +235,7 @@ function _ai_review_verify_flow --description "Two-pass review: first-pass revie
             test $rc3 -ne 0; and set com_note "failed: "(test -n "$com_why"; and echo $com_why; or echo "see the error above")
         else
             set com_note "skipped: no verdicts to build them from"
+            test $rc2 -ne 0; and set com_note "skipped: verify failed"
             set rc3 1
         end
     end
