@@ -42,7 +42,7 @@ function _ai_review_comments --description "Third review stage: line comments fo
         end >&2
         set -l arr (mktemp)
         echo '[]' >$arr
-        _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
+        _ai_review_comments_anchor $arr "$_flag_range" $root $runs $_flag_verdicts >$json
         rm -f $arr
         _ai_review_comments_md $json $_flag_verdicts >$md
         _ai_lessons_register $md $json
@@ -90,7 +90,7 @@ VERDICTS ON THEM:
     end
     rm -f $raw
 
-    _ai_review_comments_anchor $arr "$_flag_range" $root $runs >$json
+    _ai_review_comments_anchor $arr "$_flag_range" $root $runs $_flag_verdicts >$json
     rm -f $arr
     _ai_review_comments_md $json $_flag_verdicts >$md
     # Remembered, so ai lessons finds it for the marks without a path

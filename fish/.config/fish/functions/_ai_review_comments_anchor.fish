@@ -1,5 +1,8 @@
-function _ai_review_comments_anchor --description "Anchor extracted comments (JSON array file) to real lines: prints the comments JSON for GitLab/GitHub" --argument-names comments_file range root runs
+function _ai_review_comments_anchor --description "Anchor extracted comments (JSON array file) to real lines: prints the comments JSON for GitLab/GitHub" --argument-names comments_file range root runs verdicts
     test -n "$runs"; or set runs 1
+    # VERDICTS: the verify file the comments came from, kept in the JSON — ai lessons credits
+    # verify by it; a rebuild from another verify file (--verdicts) is not <review>.verify.md
+    test -n "$verdicts"; and set verdicts (realpath -- $verdicts 2>/dev/null; or echo $verdicts)
     # No model here. A model's line numbers are often off, so the line is found again by
     # the quote: first in the new version of the file, then in the old one (removed code).
     # The model's number only breaks ties. in_diff says whether the line sits inside a
@@ -143,7 +146,7 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
     # saying the same. One with no finding numbers is kept.
     # The body only in characters typed on a keyboard (_ai_keyboard_jq): the prompt asks for
     # that, and models still wrote arrows.
-    jq -s --arg base "$base" --arg head "$head" --argjson runs $runs --arg top "$top" --arg origin "$origin" \
+    jq -s --arg base "$base" --arg head "$head" --argjson runs $runs --arg top "$top" --arg origin "$origin" --arg verdicts "$verdicts" \
         (_ai_keyboard_jq | string collect)'
         map(.body |= keyboard)
          | map(. + {order: [(if .file_level then 0 elif .side == "new" then 1 elif .side == "old" then 2 else 3 end),
@@ -156,6 +159,7 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
          | {base_sha: (if $base == "" then null else $base end), head_sha: (if $head == "" then null else $head end),
             start_sha: (if $base == "" then null else $base end), runs: $runs,
             repo: (if $top == "" then null else {root: $top, origin: (if $origin == "" then null else $origin end)} end),
+            verdicts: (if $verdicts == "" then null else $verdicts end),
             comments: .}' $out
     rm -f $out
 end

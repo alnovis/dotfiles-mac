@@ -40,4 +40,12 @@ Refuted, but real  the last 1
 == run lines
 ollama/qwen3.8:27b
 litellm/qwen/qwen3.8-27b
+== the run number after the model: one model
+litellm/qwen/qwen3.8-27b
+== claude names no model
+claude
+== a vote file: the models of its runs
+litellm/qwen/qwen3.8-27b
+== no runs at all: nothing
+[]
 [exit 0]

@@ -157,7 +157,10 @@ function _ai_lessons_mark --description "Append the filled Outcome marks of a co
     set -l dir (_ai_lessons_dir $where); or return 1
     set -l log $dir/outcomes.jsonl
     set -l review $stem.md
-    set -l verify (_ai_verify_output_path $review)
+    # The verify file the comments were built from, as the JSON records it: a rebuild with
+    # --verdicts uses another one than <review>.verify.md
+    set -l verify (jq -r '.verdicts // empty' $json 2>/dev/null)
+    test -f "$verify"; or set verify (_ai_verify_output_path $review)
     set -l range ""
     test -s $json; and set range (jq -r 'if .base_sha then "\(.base_sha[0:7])..\(.head_sha[0:7])" else "" end' $json 2>/dev/null)
     # Who reviewed and verified: the Run: lines at the end of each file
@@ -376,8 +379,20 @@ end
 
 function _ai_lessons_run_model --description "provider/model of a review or verify file, from its Run: lines (several runs: each once)" --argument-names file stage
     test -f "$file"; or return 0
-    string match -r -g -- "^Run: (?:\[[^\]]*\] )?$stage(?: ×\d+)?(?: run \d+/\d+)? - (.+?) - (.+?) \|" <$file \
-        | paste - - | string replace \t / | sort -u | string join ', '
+    # "Run: [1/3] Review ×3 - litellm - selectel/qwen/qwen3.8-27b run 1/3 | 71s | …": the run
+    # number follows the model, and claude names no model ("Review - claude | 118s")
+    set -l re "^Run: (?:\[[^\]]*\] )?$stage(?: ×\d+)? - (.+?)(?: run \d+/\d+)? \|"
+    set -l models (string match -r -g -- $re <$file)
+    # A majority-vote verify file has no Run: line of its own; its runs (<base>.runK.md) do
+    if not set -q models[1]
+        set -l base (string replace -r '\.[^./]+$' '' -- $file)
+        # set, not a command argument: a glob with no match is empty here, not an error
+        set -l runs $base.run*.md
+        for f in $runs
+            set -a models (string match -r -g -- $re <$f)
+        end
+    end
+    string replace -- ' - ' / $models | sort -u | string join ', '
     return 0
 end
 
