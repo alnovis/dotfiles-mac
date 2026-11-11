@@ -165,6 +165,11 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
     if test "$rc" -eq 0; and not test -s $outfile
         set rc 1
         set -l stop (jq -r '.agent.last_stop // empty' $ufile 2>/dev/null)
+        # An empty usage file gives jq nothing to print: 0 then
+        set -l nerr (jq -r '.agent.errors // 0' $ufile 2>/dev/null)
+        test -n "$nerr"; or set nerr 0
+        set -l nok (jq -r '.agent.turns // 0' $ufile 2>/dev/null)
+        test -n "$nok"; or set nok 0
         set -l hint
         if test -n "$guard"
             set -g __ai_last_failure $guard
@@ -175,6 +180,9 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
         else if test "$stop" = length
             set -g __ai_last_failure "no answer: max_tokens reached"
             set hint "The last turn hit max_tokens"(jq -r '" (\(.agent.last_output) output tokens, reasoning \(.agent.last_reasoning))"' $ufile 2>/dev/null)": raise maxTokens for the model in the runner config, or turn its thinking down."
+        else if test "$nerr" -gt 0; and test "$nok" = 0
+            # Not one request came back: the provider's error is the reason, not the model
+            set -g __ai_last_failure "no answer: all $nerr request(s) failed ("(jq -r '.agent.last_error // "no message"' $ufile 2>/dev/null)")"
         else if test -n "$stop"
             set -g __ai_last_failure "no answer: the model ended its turn empty (stop: $stop)"
         else
@@ -241,6 +249,12 @@ function _ai_run_watched --description "Run a provider (via _ai_run) into a file
             test -n "$cut"; and set line "$line | cut off at max_tokens"
             printf '\n---\n%s\n' $line >>$outfile
         end
+    end
+    # pi's own idle timeout: a local model reading a big prompt sends nothing for minutes, and
+    # pi dropped each attempt at 5 min ("Request timed out.") while the line said "reading"
+    if test "$rc" -ne 0; and test $agentic -eq 1
+        and string match -qi '*timed out*' -- (jq -r '.agent.last_error // empty' $ufile 2>/dev/null)
+        printf '    %s\n' "pi drops a request after httpIdleTimeoutMs with no byte from the provider (default 300000 ms); a local model reading a big prompt sends none for minutes. Raise \"httpIdleTimeoutMs\" in ~/.pi/agent/settings.json (1800000 is 30 min)." >&2
     end
     # A failed agentic run's session beside its report: <base>.session.jsonl
     if test -n "$keep"

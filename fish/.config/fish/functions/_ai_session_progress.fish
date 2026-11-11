@@ -14,9 +14,21 @@ function _ai_session_progress --description "Where an agentic pi run is, from it
     # like a hang. pi writes an answer to the session only once it is whole, so the session
     # alone said "no answer for 6m" of a model writing one long answer. A pulse newer than
     # the session is this answer's: it is then the idle time too. Empty while a tool runs.
+    # A request pi gave up on (stopReason "error": "Request timed out." after httpIdleTimeoutMs
+    # with no byte, a local model still reading its prompt) is no turn; pi retries it. While it
+    # does, ACTIVITY is "retry N MESSAGE": the line read "turn 2 | reading context" of a run
+    # looping on its first request.
     set -l f (path filter -f $argv[1]/*.jsonl)[1]
     test -n "$f"; or return 1
-    set -l turns (grep -c '"role":"assistant"' $f)
+    set -l stops (grep '"role":"assistant"' $f | jq -r '.message.stopReason // ""' 2>/dev/null)
+    set -l turns (count (string match -v -- error $stops))
+    # The failed requests since the last answered one
+    set -l retry 0
+    set -l i (count $stops)
+    while test $i -gt 0; and test "$stops[$i]" = error
+        set retry (math $retry + 1)
+        set i (math $i - 1)
+    end
     set -l call (grep '"type":"toolCall"' $f | tail -1 | jq -r '
         [.message.content[]? | select(.type == "toolCall")] | last
         | .name + " " + ((.arguments.path // .arguments.pattern // "") | tostring | split("/") | last | .[0:40])
@@ -32,6 +44,10 @@ function _ai_session_progress --description "Where an agentic pi run is, from it
     set -l idle (path mtime --relative $f)
     set -l activity ""
     test "$phase" = model; and set activity reading
+    if test "$phase" = model; and test $retry -gt 0
+        set -l why (grep '"role":"assistant"' $f | tail -1 | jq -r '.message.errorMessage // "failed"' 2>/dev/null)
+        set activity "retry $retry "(string shorten -m 40 -c ... -- "$why")
+    end
     set -l pulse $argv[1]/pulse
     # Newer by a second at least: the last pulse of an answer and the answer itself land in
     # the session in the same second

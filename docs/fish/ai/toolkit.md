@@ -748,7 +748,12 @@ session as it is written — the fields of the old native loop's line, and the l
 The phase is the model's turn or the tool call while its tools run. The model's turn is
 `reading context` until anything streams (it reads the whole context again first: minutes of
 silence on a local model), then `thinking 8k chars` for its reasoning and `writing 3k chars`
-for its answer, counted apart by ai-guard. The last field is the tool call before that turn,
+for its answer, counted apart by ai-guard. A request pi gave up on is no turn: while pi sends
+it again the phase reads `reading context, retry 2 (Request timed out.)`. pi drops a request
+after `httpIdleTimeoutMs` (its setting, default 300000 ms) with no byte from the provider, and a
+local model reading a big prompt sends none for minutes; a run where every request failed says
+so (`no answer: all 3 request(s) failed (Request timed out.)`) with a hint to raise it in
+`~/.pi/agent/settings.json`. The last field is the tool call before that turn,
 so it says `last:` and stays put while the model works. `ctx` is
 the last turn's prompt (each turn sends the whole context again) over the model's window from
 pi's config: how close the run is to being cut. On a narrow terminal the last tool goes first,

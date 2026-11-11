@@ -32,6 +32,9 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
         switch "$act[1]"
             case reading
                 set phase "reading context"
+            case retry
+                # pi gave up on the request and sends it again: the model reads the prompt anew
+                set phase "reading context, retry $act[2] ($act[3..])"
             case thinking writing
                 set phase "$act[1] "(_ai_k $act[2])" chars"
         end

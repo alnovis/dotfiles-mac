@@ -1,4 +1,6 @@
-session: 4|read b.scala|testcloud/cloud-model|9500|model|reading
+session: 3|read b.scala|testcloud/cloud-model|9500|model|reading
+pi retrying a timed-out request: 0|model|retry 2 Request timed out.
+  ollama · qwen3.8:27b | turn 1 | reading context, retry 2 (Request timed out.) | 10m 40s
 streaming: idle by the pulse, writing 12345 chars
 reasoning only: thinking 800
 then the answer: writing 150

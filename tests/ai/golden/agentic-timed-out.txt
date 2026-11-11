@@ -1,0 +1,4 @@
+  FAILED <t>  no answer: all 2 request(s) failed (Request timed out.)
+      0 turns    0 tools  model    0s          0/0 tokens  2 failed, 600s (Request timed out.)
+    pi drops a request after httpIdleTimeoutMs with no byte from the provider (default 300000 ms); a local model reading a big prompt sends none for minutes. Raise "httpIdleTimeoutMs" in ~/.pi/agent/settings.json (1800000 is 30 min).
+[exit 0]
