@@ -1,6 +1,6 @@
 function _ai_review_git --description "AI review of git changes (branch, last N, or specific commit)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' 'o/output=' 'lens=' 'no-lens' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'dry-run' \
+    argparse 'h/help' 'model=' 'provider=' 'file=' 'brief' 'lang=' 'lang-all=' 'last=?' 'commit=' 'o/output=' 'lens=' 'no-lens' 'max-lines=' 'context=' 'context-lines=' 'agentic' 'no-think' 'dry-run' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-runs=' 'verify-context=' 'verify-think=' 'comments' 'comments-lang=' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
@@ -40,6 +40,14 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     if test -z "$model"
         set model (_ai_default_model review $provider)
     end
+
+    # What the review sees: --context (or --agentic) > review_context (scoped) > embedded.
+    # Checked outside (...) first: stderr inside it skips the caller's redirect
+    _ai_review_context_mode $provider "$model" "$_flag_context" "$(set -q _flag_agentic; and echo 1)" >/dev/null; or return 1
+    set -l rctx (_ai_review_context_mode $provider "$model" "$_flag_context" "$(set -q _flag_agentic; and echo 1)" | string split \t)
+    # The rest of the review and verify's default read --agentic, as they did
+    set -e _flag_agentic
+    test "$rctx[1]" = agentic; and set -l _flag_agentic 1
 
     # How many review runs, and how they go (scoped config, see _ai_review_setting)
     set -l plan (_ai_review_runs_plan $provider "$model" "$_flag_runs" "$(set -q _flag_parallel; and echo 1)" \
@@ -223,6 +231,8 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
     test -n "$file_filter"; and _ai_ui_kv file $file_filter
     _ai_ui_kv provider $provider
     test -n "$model"; and _ai_ui_kv model $model
+    # The mode, when the config chose it: a flag is on the command line
+    string match -q 'config *' -- $rctx[2]; and _ai_ui_kv mode "$rctx[1] ($rctx[2])"
     if set -q _flag_lens
         if set -q _flag_brief
             set_color yellow

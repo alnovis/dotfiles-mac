@@ -175,6 +175,8 @@ function _ai_config_do_status
     set_color normal
     begin
         printf '%s\t%s\n' prompt (_ai_review_prompt_mode --origin $rp)
+        set -l rc (_ai_review_context_mode $rp "$rm" "" "" 2>/dev/null | string split \t)
+        test -n "$rc[1]"; and printf '%s\t%s\n' context "$rc[1] ($rc[2])"
         set -l r (_ai_review_runs_count $rp "$rm" "" 2>/dev/null | string split \t)
         test -n "$r[1]"; and printf '%s\t%s\n' runs "$r[1] ($r[2])"
         set -l m (_ai_review_parallel_mode $rp "$rm" "" 2>/dev/null | string split \t)
@@ -185,8 +187,8 @@ function _ai_config_do_status
         set -l vmd (_ai_default_model verify $vp 2>/dev/null)
         set -l v (_ai_verify_runs_count $vp "$vmd" "" 2>/dev/null | string split \t)
         test -n "$v[1]"; and printf '%s\t%s\n' "verify runs" "$v[1] ($v[2])"
-        # As for a review without --agentic; an --agentic review makes the default agentic
-        set -l c (_ai_verify_context_mode $vp "$vmd" "" "" 2>/dev/null | string split \t)
+        # As the review's mode above makes it, when no flag is given
+        set -l c (_ai_verify_context_mode $vp "$vmd" "" "$(test "$rc[1]" = agentic; and echo 1)" 2>/dev/null | string split \t)
         test -n "$c[1]"; and printf '%s\t%s\n' "verify context" "$c[1] ($c[2])"
         set -l l (_ai_review_lens_choice "" "" | string split \t)
         if test -n "$l[1]"

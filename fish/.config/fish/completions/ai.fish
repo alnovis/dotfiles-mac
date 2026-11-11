@@ -104,7 +104,8 @@ complete -c ai -n "__fish_seen_subcommand_from review" -l model -d "Override mod
 complete -c ai -n "__fish_seen_subcommand_from review" -l provider -d "Override provider" -x -a "(_ai_providers)"
 complete -c ai -n "__fish_seen_subcommand_from review" -s o -l output -d "Save output to file" -rF
 complete -c ai -n "__fish_seen_subcommand_from review" -l brief -d "Short summary"
-complete -c ai -n "__fish_seen_subcommand_from review" -l agentic -d "Embed only the diff/file; the model explores the repo read-only"
+complete -c ai -n "__fish_seen_subcommand_from review" -l context -d "What the reviewer sees" -x -a "embedded agentic"
+complete -c ai -n "__fish_seen_subcommand_from review" -l agentic -d "Same as --context agentic: the model explores the repo read-only"
 complete -c ai -n "__fish_seen_subcommand_from review" -l no-think -d "Fast pass: disable a thinking model's reasoning (think:false) — trades depth for speed"
 complete -c ai -n "__fish_seen_subcommand_from review" -l context-lines -d "Line budget for embedding whole files (git 2000, dir 10000; 0=none)" -x
 complete -c ai -n "__fish_seen_subcommand_from review" -l lens -d "Specialist checklist(s): security, quality, Rust, Scala, Java, shell, data/messaging" -x -a "(_ai_complete_lens)"

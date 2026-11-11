@@ -207,7 +207,8 @@ ai review .                          target: current project
 | `-o`, `--output FILE` | Save output to file (shows a live progress line instead of streaming) |
 | `--brief` | Short 3–5 bullet summary; `--lens` and `--verify` are ignored with a note |
 | `--lens NAME[,NAME...]` | Add specialist checklist(s) — see [Lenses](#lenses---lens) |
-| `--agentic` | Embed only the diff / target file and let the model explore the repo read-only (claude via its CLI, other providers via the runner). Default: everything embedded, no tools |
+| `--context MODE` | What the reviewer sees. `embedded`: the diff and the changed files within `--context-lines` (a path: the file, or the directory's files), no tools. `agentic`: only the diff / target file, and the model explores the repo read-only (claude via its CLI, other providers via the runner). Default: config `review_context` (scoped like `review_runs`: `review_context@claude=agentic`), else `embedded`. `assembled` is a verify mode only: a review has no findings to assemble code for. Verify follows this mode unless `--verify-context` says otherwise |
+| `--agentic` | Same as `--context agentic`; with `--context embedded` it is an error |
 | `--no-think` | Fast pass: disable a thinking model's reasoning (native ollama) |
 | `--context-lines N` | Line budget for embedding whole files: the changed files in git mode (config key `context_lines`, default 2000), a directory's files in target mode (`dir_context_lines`, default 10000). `0` = none. Precedence: flag > config key (project → global) > default. Each line goes in with its number (`  104  code`, as verify's assembled code): bare, the models counted lines themselves in their reasoning — 215 lines of `103: (blank)` in one qwen3.8 run, which then ran out of `max_tokens` |
 | `--dry-run` | Print the assembled prompt without invoking the model |
@@ -447,8 +448,9 @@ review's runs are joined by union, because there a finding one run saw is still 
 | `agentic` | the minimum, and reads the rest itself; skill `ai-verify` | read-only |
 
 Precedence: the flag, then `verify_context` scoped by the verify provider/model like
-`verify_runs` (`verify_context@ollama=assembled`), then the review's mode: an `--agentic`
-review gets an agentic verify, any other an embedded one. So `--agentic` alone keeps both
+`verify_runs` (`verify_context@ollama=assembled`), then the review's mode (`--context`,
+`--agentic` or `review_context`): an agentic review gets an agentic verify, any other an
+embedded one. So `--agentic` alone keeps both
 passes agentic, and `--agentic --verify-context assembled` is an agentic review with an
 assembled verify. The flag turns verify on; the config key does not (as `verify_runs`). With
 `--verify-only` there is no review: `--agentic` is the verify mode unless `--verify-context`
@@ -1192,6 +1194,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
 | `review_prompt` | by hand | Review prompt depth: `auto` (default: full for claude, lean for every other model), `full`, `lean` |
 | `review_runs` | by hand | How many review runs to join before verify (default 1); scoped: `review_runs@PROVIDER`, `review_runs@PROVIDER/MODEL` |
+| `review_context` | by hand | What the reviewer sees: `embedded` (default) or `agentic`; scoped like `review_runs`; `--context` / `--agentic` override; verify follows it unless `verify_context` or `--verify-context` say otherwise |
 | `review_parallel` | by hand | Those runs: `auto` (default: cloud in parallel, ollama one at a time), `on`, `off`; scoped like `review_runs` |
 | `verify_runs` | by hand | How many verify runs, joined by majority per finding (default 1); scoped by the verify provider/model like `review_runs` |
 | `verify_context` | by hand | What the verifier sees: `embedded`, `assembled` or `agentic` (default: agentic for an `--agentic` review, else embedded); scoped like `verify_runs`; `--verify-context` overrides |

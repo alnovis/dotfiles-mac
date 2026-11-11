@@ -27,7 +27,7 @@ function _ai_review --description "AI code review — project state (path target
     set -l orig_argv $argv
 
     argparse 'h/help' 'model=' 'provider=' 'lang=' 'lang-all=' 'o/output=' 'brief' 'dry-run' \
-             'last=?' 'commit=' 'file=' 'max-lines=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' 'no-lens' \
+             'last=?' 'commit=' 'file=' 'max-lines=' 'context=' 'context-lines=' 'agentic' 'no-think' 'with-project-context' 'lens=' 'no-lens' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-only=' 'verify-runs=' 'verify-context=' 'verify-think=' \
              'comments' 'comments-lang=' 'range=' 'verdicts=' 'runs=' 'parallel' 'no-parallel' -- $argv
     or return 1
@@ -55,6 +55,12 @@ function _ai_review --description "AI code review — project state (path target
 
     # --verify-only short-circuits both modes: re-verify an existing review file,
     # running no review pass at all.
+    if set -q _flag_verify_only; and set -q _flag_context
+        set_color red
+        echo "Error: --context is the review's, and --verify-only runs no review: use --verify-context" >&2
+        set_color normal
+        return 1
+    end
     if set -q _flag_verify_only
         _ai_review_verify_only $orig_argv
         return $status
@@ -123,10 +129,16 @@ function _ai_review_print_help
     echo "                          with verify, the verifier gets them too. Default: config"
     echo "                          review_lens (project .ai/config, then global), else none"
     echo "  --no-lens               No lens this time, whatever review_lens says"
-    echo "  --agentic               Embed only the diff / target file and let the model"
-    echo "                          explore the repo read-only (claude via its CLI, other"
-    echo "                          providers via the runner, config key: agent)."
-    echo "                          Default: everything embedded, no tools."
+    echo "  --context MODE          What the reviewer sees:"
+    echo "                          embedded: the diff and the changed files within"
+    echo "                          --context-lines (a path: the file or the directory's"
+    echo "                          files), no tools"
+    echo "                          agentic: only the diff / target file, and the model"
+    echo "                          explores the repo read-only (claude via its CLI, other"
+    echo "                          providers via the runner, config key: agent)"
+    echo "                          Default: config review_context (scoped like review_runs),"
+    echo "                          else embedded. Verify follows it (see --verify-context)"
+    echo "  --agentic               Same as --context agentic"
     echo "  --no-think              Fast pass: disable a thinking model's reasoning"
     echo "  --context-lines N       Line budget for embedding whole files: the changed files"
     echo "                          in git mode (config key context_lines, default 2000), a"

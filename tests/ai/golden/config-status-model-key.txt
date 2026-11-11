@@ -15,6 +15,7 @@ Resolved per task:
 
 Review (ollama / review-model):
   prompt          lean (auto: not claude)
+  context         embedded (default)
   runs            1 (default)
   parallel        sequential (auto: a local model)
   verify runs     1 (default)

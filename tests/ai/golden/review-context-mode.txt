@@ -1,0 +1,24 @@
+== --context agentic: as --agentic
+--- dry-run: prompt that would be sent to ollama via pi (profile read), skill ai-review ---
+== --context embedded
+--- dry-run: prompt that would be sent to ollama (native) ---
+== target mode
+--- dry-run: prompt that would be sent to ollama via pi (profile read), skill ai-review ---
+== from the config, scoped by provider: the review and its verify
+--- dry-run: prompt that would be sent to ollama via pi (profile read), skill ai-review ---
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 65 lines + read-only tools, skill ai-verify)
+  mode         agentic (config project review_context@ollama)
+  context         agentic (config project review_context@ollama)
+  verify context  agentic (the review's mode)
+== the flag wins over the config
+--- dry-run: prompt that would be sent to ollama (native) ---
+verify provider=ollama model=default-model (prompt: meta-verify.md + first-pass findings + code: 281 lines)
+== --verify-only runs no review
+Error: --context is the review's, and --verify-only runs no review: use --verify-context
+== --agentic and --context embedded
+Error: --agentic is --context agentic, and --context says embedded
+== assembled is a verify context
+Error: assembled is a verify context (the code the findings cite: a review has no findings yet); the review takes embedded or agentic (got it from --context)
+== bad value
+Error: review context takes embedded or agentic (got 'tools' from --context)
+[exit 1]

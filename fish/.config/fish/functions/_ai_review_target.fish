@@ -1,6 +1,6 @@
 function _ai_review_target --description "AI review of a project directory or single file (state-based, no git)"
     # Called by _ai_review dispatcher after mode detection.
-    argparse 'h/help' 'provider=' 'model=' 'lang=' 'o/output=' 'with-project-context' 'lens=' 'no-lens' 'brief' 'dry-run' 'agentic' 'no-think' 'context-lines=' \
+    argparse 'h/help' 'provider=' 'model=' 'lang=' 'o/output=' 'with-project-context' 'lens=' 'no-lens' 'brief' 'dry-run' 'agentic' 'no-think' 'context=' 'context-lines=' \
              'verify' 'no-verify' 'verify-provider=' 'verify-model=' 'verify-output=' 'verify-runs=' 'verify-context=' 'verify-think=' 'comments' 'comments-lang=' 'runs=' 'parallel' 'no-parallel' -- $argv; or return 1
     # Lenses: --lens, else review_lens from the project's (or the global) config; --no-lens: none
     if set -q _flag_lens; and set -q _flag_no_lens
@@ -59,6 +59,14 @@ function _ai_review_target --description "AI review of a project directory or si
     # How many review runs, and how they go (scoped config, see _ai_review_setting)
     set -l plan_model $_flag_model
     test -n "$plan_model"; or set plan_model (_ai_default_model review $provider)
+
+    # What the review sees: --context (or --agentic) > review_context (scoped) > embedded.
+    # Checked outside (...) first: stderr inside it skips the caller's redirect
+    _ai_review_context_mode $provider "$plan_model" "$_flag_context" "$(set -q _flag_agentic; and echo 1)" >/dev/null; or return 1
+    set -l rctx (_ai_review_context_mode $provider "$plan_model" "$_flag_context" "$(set -q _flag_agentic; and echo 1)" | string split \t)
+    # The rest of the review and verify's default read --agentic, as they did
+    set -e _flag_agentic
+    test "$rctx[1]" = agentic; and set -l _flag_agentic 1
     set -l plan (_ai_review_runs_plan $provider "$plan_model" "$_flag_runs" "$(set -q _flag_parallel; and echo 1)" \
         "$(set -q _flag_no_parallel; and echo 1)" "$(set -q _flag_brief; and echo 1)" "$(set -q _flag_no_verify; and echo 1)")
     or return 1
@@ -117,6 +125,8 @@ $prompt"
     end
     _ai_ui_kv provider $provider
     set -q _flag_model; and _ai_ui_kv model $_flag_model
+    # The mode, when the config chose it: a flag is on the command line
+    string match -q 'config *' -- $rctx[2]; and _ai_ui_kv mode "$rctx[1] ($rctx[2])"
     _ai_ui_kv language $lang_full
     if set -q _flag_lens
         if set -q _flag_brief

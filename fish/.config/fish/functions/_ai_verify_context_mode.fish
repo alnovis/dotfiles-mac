@@ -18,8 +18,9 @@ function _ai_verify_context_mode --description "What the verify pass sees, for t
             set mode $s[1]
             set origin "config $s[2]"
         else if test "$agentic" = 1
+            # --agentic, --context agentic or review_context: the review's mode, whichever
             set mode agentic
-            set origin "--agentic"
+            set origin "the review's mode"
         else
             set mode embedded
             set origin default
