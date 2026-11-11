@@ -651,9 +651,11 @@ On pi the instruction is also enforced: an unattended read-only run loads the ex
 `~/.config/fish/pi/ai-guard.ts` (`_ai_agent_pi`, not in `ai code` / `ai chat`):
 - `read`, `grep`, `find`, `ls` reach only the working directory (symlinks and `..` resolved);
   a path outside is refused with the reason, and the model goes on;
-- after `agent_max_turns` turns (default 30) or `agent_timeout` seconds (default 900) the tools
-  are switched off and the model is told to answer from what it has read. A bare cap (the old
-  native loop) ended a wandering run with no answer at all. Still no answer three turns later,
+- after `agent_max_turns` turns (default 30) or `agent_timeout` seconds (default 900) every
+  tool call is refused and the model is told to answer from what it has read. The tools stay
+  in the request: their definitions open the prompt, and removing them made a local model lose
+  its prompt cache and read ~60k tokens again (10 minutes) before it could answer. A bare cap
+  (the old native loop) ended a wandering run with no answer at all. Still no answer three turns later,
   or nothing streamed (no reasoning, no answer) for the grace after the timeout, the run is
   aborted; pi still running 30 s after that is ended. The grace is half of `agent_timeout`, at
   least 180 s: a fixed 180 s killed a local 27B model that still had to read the whole
@@ -1203,7 +1205,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `<task>_model` | `ai models use T MODEL` | Model for one task, used only while the provider in use is the task's provider |
 | `model` | `ai models use MODEL` | Default ollama model. No fallback if unset |
 | `agent` | by hand | Runner for non-claude providers: `pi` (default) or `opencode` |
-| `agent_max_turns` | by hand | Unattended read-only pi runs (agentic review, verify): turns before the tools are switched off and the model must answer (default 30; 0 = no limit) |
+| `agent_max_turns` | by hand | Unattended read-only pi runs (agentic review, verify): turns before tool calls are refused and the model must answer (default 30; 0 = no limit) |
 | `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); then the run is aborted after half that (at least 180 s) with nothing streamed, and at twice the budget in any case (0 = no limit) |
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
 | `request_idle_timeout` | by hand | Native drivers (ollama, OpenAI-compatible): seconds without a single byte before the request is ended (default 900; the prompt is read before the first token, so keep it generous) |

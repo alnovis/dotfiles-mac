@@ -6,10 +6,12 @@
  *   directory, or AI_GUARD_ROOT). The tools take any path, and on the eval a review read a
  *   sibling checkout holding the fix (../s1) and grepped all of ~/work for its rules file. A
  *   path outside is refused with the reason, so the model learns it and goes on.
- * - Turns: after AI_GUARD_MAX_TURNS turns (default 30) the tools are switched off and the model
+ * - Turns: after AI_GUARD_MAX_TURNS turns (default 30) every tool call is refused and the model
  *   is told to answer from what it has read. A bare cap (the old native loop) ended a wandering
  *   run with no answer at all; here the last turns go to the answer. Still no answer a few
- *   turns later: the run is aborted.
+ *   turns later: the run is aborted. The tools stay in the request, refused, not removed: their
+ *   definitions open the prompt, and removing them changed its start, so a local model lost its
+ *   whole prompt cache and read ~60k tokens again (10 min) before the answer it was asked for.
  * - Time: after AI_GUARD_TIMEOUT seconds (default 900) the same switch to answering; then the
  *   run is aborted once the model has been silent (no reasoning, no answer streamed) for the
  *   grace, AI_GUARD_GRACE seconds (default half the budget, at least 180). A provider that
@@ -106,8 +108,7 @@ export default function aiGuard(pi: ExtensionAPI) {
 	const spend = (why: string) => {
 		if (spent) return;
 		spent = why;
-		pi.setActiveTools([]);
-		note(`${why} at ${elapsed()}s: tools off, the model is told to answer`);
+		note(`${why} at ${elapsed()}s: tool calls refused, the model is told to answer`);
 	};
 	const abort = (ctx: { abort(): void }, why: string) => {
 		if (aborted) return;
@@ -203,7 +204,7 @@ export default function aiGuard(pi: ExtensionAPI) {
 				{
 					type: "custom_message",
 					customType: "ai-guard",
-					content: `${spent}. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.`,
+					content: `${spent}. No more tool calls: any call is refused. Write the final answer now, in the format the rules ask for, from what you have already read.`,
 					display: false,
 				},
 			],

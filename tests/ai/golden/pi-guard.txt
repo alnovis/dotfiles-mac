@@ -12,27 +12,27 @@ bash {"command":"git log"} -> allowed
 == turn budget 3
 turn 1: tools [read,grep,find,ls] -
 turn 2: tools [read,grep,find,ls] -
-  stderr: ai-guard: the turn budget (3) is spent at 0s: tools off, the model is told to answer
-turn 3: tools [] told: the turn budget (3) is spent. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.
+  stderr: ai-guard: the turn budget (3) is spent at 0s: tool calls refused, the model is told to answer
+turn 3: tools [read,grep,find,ls] told: the turn budget (3) is spent. No more tool calls: any call is refused. Write the final answer now, in the format the rules ask for, from what you have already read.
   a call after it -> blocked: the turn budget (3) is spent: no more tools — write the final answer now from what you have read
-turn 4: tools [] -
-turn 5: tools [] -
+turn 4: tools [read,grep,find,ls] -
+turn 5: tools [read,grep,find,ls] -
   stderr: ai-guard: aborted at 0s: no answer 3 turns after the turn budget (3) is spent
-turn 6: tools [] - ABORTED
+turn 6: tools [read,grep,find,ls] - ABORTED
 == time budget
 before: tools [read,grep,find,ls]
-  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
-after: tools []
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tool calls refused, the model is told to answer
+after: tools [read,grep,find,ls]
 a call -> blocked: the time budget (0.05s) is spent: no more tools — write the final answer now from what you have read
-turn 1: told: the time budget (0.05s) is spent. The tools are switched off: write the final answer now, in the format the rules ask for, from what you have already read.
+turn 1: told: the time budget (0.05s) is spent. No more tool calls: any call is refused. Write the final answer now, in the format the rules ask for, from what you have already read.
 == after the time budget: aborted on silence, not while the answer streams
-  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tool calls refused, the model is told to answer
 streaming: running
-  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tool calls refused, the model is told to answer
   stderr: ai-guard: aborted at 0s: nothing streamed for 0.25s after the time budget (0.05s)
 silent: ABORTED
 == the ceiling: aborted even while streaming
-  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tools off, the model is told to answer
+  stderr: ai-guard: the time budget (0.05s) is spent at 0s: tool calls refused, the model is told to answer
   stderr: ai-guard: aborted at 0s: the run reached its ceiling (0.3s: the time budget and twice the grace)
 streaming 0.8 s: ABORTED
 == pulse
