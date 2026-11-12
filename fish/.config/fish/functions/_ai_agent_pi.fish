@@ -56,8 +56,11 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
     set -q _flag_skill; and set -a args --append-system-prompt $_flag_skill
     # An unattended read-only run (ai review --agentic, verify) gets the ai-guard extension:
     # reads only inside the working directory, a turn and a time budget that end in an answer
-    # (pi/ai-guard.ts). Config: agent_max_turns (default 30), agent_timeout seconds (900); 0
-    # turns a limit off. Not in a session a person watches.
+    # (pi/ai-guard.ts). Config: agent_max_turns (default 30), agent_timeout seconds (900),
+    # agent_context_budget percent of the model's window (75); 0 turns a limit off. Each may
+    # be scoped like review_runs (agent_max_turns@ollama/laguna-xs-2.1=45) for an experiment;
+    # none is by default: the context budget fits every model by itself. Not in a session a
+    # person watches.
     set -l guard_env
     set -l guarded 0
     if not set -q _flag_interactive; and contains -- "$_flag_tools" read ''
@@ -66,10 +69,16 @@ function _ai_agent_pi --description "Runner: pi (any provider in pi's own config
             set guarded 1
             set -a args --extension $guard
             # Only a value that is set: an empty one would read as 0, the limit off
-            set -l v (_ai_config_read agent_max_turns)
+            set -l v (_ai_review_setting agent_max_turns $_flag_provider "$_flag_model" | string split \t)[1]
             test -n "$v"; and set -a guard_env AI_GUARD_MAX_TURNS=$v
-            set v (_ai_config_read agent_timeout)
+            set v (_ai_review_setting agent_timeout $_flag_provider "$_flag_model" | string split \t)[1]
             test -n "$v"; and set -a guard_env AI_GUARD_TIMEOUT=$v
+            set v (_ai_review_setting agent_context_budget $_flag_provider "$_flag_model" | string split \t)[1]
+            test -n "$v"; and set -a guard_env AI_GUARD_CONTEXT_BUDGET=$v
+            # The model's window from pi's config, for the context budget: without it that
+            # budget is off and only the turns and the time limit the run
+            set v (_ai_agent_pi_endpoint $_flag_provider "$_flag_model" 2>/dev/null)[4]
+            string match -qr '^[1-9][0-9]*$' -- "$v"; and set -a guard_env AI_GUARD_WINDOW=$v
         end
     end
     set -l sdir

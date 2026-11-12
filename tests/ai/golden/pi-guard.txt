@@ -19,6 +19,15 @@ turn 4: tools [read,grep,find,ls] -
 turn 5: tools [read,grep,find,ls] -
   stderr: ai-guard: aborted at 0s: no answer 3 turns after the turn budget (3) is spent
 turn 6: tools [read,grep,find,ls] - ABORTED
+== context budget: 75% of a 1000-token window
+turn 1, 400 tokens: -
+turn 2, 700 tokens: -
+  stderr: ai-guard: the context budget (75% of 1000 tokens) is spent with 760 at 0s: tool calls refused, the model is told to answer
+turn 3, 760 tokens: told: the context budget (75% of 1000 tokens) is spent with 760. No more tool calls: any call is refused. Write the final answer now, in the format the rules ask for, from what you have already read.
+a call after it -> blocked: the context budget (75% of 1000 tokens) is spent with 760: no more tools — write the final answer now from what you have read
+  stderr: ai-guard: the context budget (50% of 1000 tokens) is spent with 600 at 0s: tool calls refused, the model is told to answer
+budget 50%, 600 tokens: told to answer
+no window, 999999 tokens: -
 == time budget
 before: tools [read,grep,find,ls]
   stderr: ai-guard: the time budget (0.05s) is spent at 0s: tool calls refused, the model is told to answer

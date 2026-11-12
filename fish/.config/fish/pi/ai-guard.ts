@@ -6,7 +6,13 @@
  *   directory, or AI_GUARD_ROOT). The tools take any path, and on the eval a review read a
  *   sibling checkout holding the fix (../s1) and grepped all of ~/work for its rules file. A
  *   path outside is refused with the reason, so the model learns it and goes on.
- * - Turns: after AI_GUARD_MAX_TURNS turns (default 30) every tool call is refused and the model
+ * - Context: once a turn has used AI_GUARD_CONTEXT_BUDGET percent (default 75) of the model's
+ *   window, AI_GUARD_WINDOW tokens (from pi's config), the same switch to answering: the rest
+ *   is the answer's. Past the window the start of the conversation is cut, the rules and the
+ *   diff with it. One rule for every model: a fast MoE reading small files gets many turns, a
+ *   model reading big ones stops sooner. No window given: off.
+ * - Turns: after AI_GUARD_MAX_TURNS turns (default 60, a backstop against a loop now that the
+ *   context leads) every tool call is refused and the model
  *   is told to answer from what it has read. A bare cap (the old native loop) ended a wandering
  *   run with no answer at all; here the last turns go to the answer. Still no answer a few
  *   turns later: the run is aborted. The tools stay in the request, refused, not removed: their
@@ -77,8 +83,14 @@ function pathsOf(toolName: string, input: Record<string, unknown>): string[] {
 }
 
 export default function aiGuard(pi: ExtensionAPI) {
-	const maxTurns = Number(process.env.AI_GUARD_MAX_TURNS ?? 30);
+	// The context budget leads: tool calls are refused once the context fills this share of
+	// the model's window, the rest left for the answer. The turns are a backstop against a
+	// loop, high enough not to cut a run that fits (laguna was cut at 30 turns while it still
+	// read). No window given: the context budget is off.
+	const maxTurns = Number(process.env.AI_GUARD_MAX_TURNS ?? 60);
 	const timeoutS = Number(process.env.AI_GUARD_TIMEOUT ?? 900);
+	const windowTokens = Number(process.env.AI_GUARD_WINDOW ?? 0);
+	const contextBudget = Number(process.env.AI_GUARD_CONTEXT_BUDGET ?? 75);
 	const graceS = Number(process.env.AI_GUARD_GRACE ?? Math.max(MIN_GRACE_S, timeoutS / 2));
 	const pulse = process.env.AI_GUARD_PULSE ?? "";
 	// When the model last streamed anything, reasoning or answer
@@ -191,6 +203,15 @@ export default function aiGuard(pi: ExtensionAPI) {
 	});
 
 	pi.on("turn_end", async (event, ctx) => {
+		// The context this turn used: the prompt it was sent (cached or not) and its answer; the
+		// tool results it asked for come on top in the next turn, inside the budget's headroom
+		const u = (event as { message?: { usage?: Record<string, number> } }).message?.usage;
+		if (!spent && windowTokens > 0 && contextBudget > 0 && u) {
+			const used = (u.input ?? 0) + (u.cacheRead ?? 0) + (u.cacheWrite ?? 0) + (u.output ?? 0);
+			if (used >= (windowTokens * contextBudget) / 100) {
+				spend(`the context budget (${contextBudget}% of ${windowTokens} tokens) is spent with ${used}`);
+			}
+		}
 		if (!spent && maxTurns > 0 && event.turnIndex + 1 >= maxTurns) spend(`the turn budget (${maxTurns}) is spent`);
 		if (!spent) return undefined;
 		turnsAfter++;

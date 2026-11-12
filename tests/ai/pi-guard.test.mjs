@@ -38,7 +38,7 @@ function standIn() {
 }
 
 function load(env) {
-	for (const k of ["AI_GUARD_MAX_TURNS", "AI_GUARD_TIMEOUT", "AI_GUARD_ROOT", "AI_GUARD_PULSE"]) delete process.env[k];
+	for (const k of ["AI_GUARD_MAX_TURNS", "AI_GUARD_TIMEOUT", "AI_GUARD_ROOT", "AI_GUARD_PULSE", "AI_GUARD_GRACE", "AI_GUARD_WINDOW", "AI_GUARD_CONTEXT_BUDGET"]) delete process.env[k];
 	Object.assign(process.env, env);
 	const s = standIn();
 	aiGuard(s.pi);
@@ -80,6 +80,32 @@ console.log("== turn budget 3");
 		if (i === 2) console.log(`  a call after it -> ${verdict(await emit("tool_call", { toolName: "read", input: { path: "src/a.scala" } }))}`);
 		if (ctx.aborted) break;
 	}
+}
+
+console.log("== context budget: 75% of a 1000-token window");
+{
+	const { emit } = load({ AI_GUARD_WINDOW: "1000", AI_GUARD_TIMEOUT: "0" });
+	await emit("session_start", {});
+	const uses = [400, 700, 760];
+	for (let i = 0; i < uses.length; i++) {
+		// the prompt mostly from the cache, as a local model's turns are
+		const usage = { input: 50, cacheRead: uses[i] - 100, cacheWrite: 0, output: 50 };
+		const r = await emit("turn_end", { turnIndex: i, message: { role: "assistant", usage } });
+		console.log(`turn ${i + 1}, ${uses[i]} tokens: ${r?.entries?.[0]?.content ? `told: ${r.entries[0].content}` : "-"}`);
+	}
+	console.log(`a call after it -> ${verdict(await emit("tool_call", { toolName: "read", input: { path: "src/a.scala" } }))}`);
+	await emit("session_shutdown", {});
+}
+{
+	// the share from the config; no window: no context budget
+	const a = load({ AI_GUARD_WINDOW: "1000", AI_GUARD_CONTEXT_BUDGET: "50", AI_GUARD_TIMEOUT: "0" });
+	await a.emit("session_start", {});
+	const r = await a.emit("turn_end", { turnIndex: 0, message: { role: "assistant", usage: { input: 600 } } });
+	console.log(`budget 50%, 600 tokens: ${r?.entries?.[0]?.content ? "told to answer" : "-"}`);
+	const b = load({ AI_GUARD_TIMEOUT: "0" });
+	await b.emit("session_start", {});
+	const r2 = await b.emit("turn_end", { turnIndex: 0, message: { role: "assistant", usage: { input: 999999 } } });
+	console.log(`no window, 999999 tokens: ${r2?.entries?.[0]?.content ? "told to answer" : "-"}`);
 }
 
 console.log("== time budget");

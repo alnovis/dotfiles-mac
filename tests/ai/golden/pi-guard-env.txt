@@ -1,0 +1,9 @@
+== defaults: the window from the pi config, nothing else
+AI_GUARD_WINDOW=1000
+== a key scoped to the model, and one for all
+AI_GUARD_CONTEXT_BUDGET=60
+AI_GUARD_MAX_TURNS=45
+AI_GUARD_WINDOW=1000
+== another model: the scoped key does not reach it
+AI_GUARD_CONTEXT_BUDGET=60
+[exit 0]

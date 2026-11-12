@@ -651,7 +651,9 @@ On pi the instruction is also enforced: an unattended read-only run loads the ex
 `~/.config/fish/pi/ai-guard.ts` (`_ai_agent_pi`, not in `ai code` / `ai chat`):
 - `read`, `grep`, `find`, `ls` reach only the working directory (symlinks and `..` resolved);
   a path outside is refused with the reason, and the model goes on;
-- after `agent_max_turns` turns (default 30) or `agent_timeout` seconds (default 900) every
+- once a turn has used `agent_context_budget` percent (default 75) of the model's window (its
+  `contextWindow` in pi's config), or after `agent_max_turns` turns (default 60, a backstop
+  against a loop), or `agent_timeout` seconds (default 900), every
   tool call is refused and the model is told to answer from what it has read. The tools stay
   in the request: their definitions open the prompt, and removing them made a local model lose
   its prompt cache and read ~60k tokens again (10 minutes) before it could answer. A bare cap
@@ -1212,8 +1214,9 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `<task>_model` | `ai models use T MODEL` | Model for one task, used only while the provider in use is the task's provider |
 | `model` | `ai models use MODEL` | Default ollama model. No fallback if unset |
 | `agent` | by hand | Runner for non-claude providers: `pi` (default) or `opencode` |
-| `agent_max_turns` | by hand | Unattended read-only pi runs (agentic review, verify): turns before tool calls are refused and the model must answer (default 30; 0 = no limit) |
-| `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); then the run is aborted after half that (at least 180 s) with nothing streamed, and at twice the budget in any case (0 = no limit) |
+| `agent_context_budget` | by hand | Unattended read-only pi runs (agentic review, verify): percent of the model's window (pi's `contextWindow`) a turn may use before tool calls are refused and the model must answer (default 75; 0 = off). The main limit: one rule for every model, the rest of the window left for the answer |
+| `agent_max_turns` | by hand | The same runs: turns before tool calls are refused (default 60, a backstop against a loop; 0 = no limit) |
+| `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); then the run is aborted after half that (at least 180 s) with nothing streamed, and at twice the budget in any case (0 = no limit). All three `agent_*` keys may be scoped like `review_runs` for an experiment (`agent_max_turns@ollama/laguna-xs-2.1=45`); none is by default |
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
 | `request_idle_timeout` | by hand | Native drivers (ollama, OpenAI-compatible): seconds without a single byte before the request is ended (default 900; the prompt is read before the first token, so keep it generous) |
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
