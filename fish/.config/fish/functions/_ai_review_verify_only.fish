@@ -102,7 +102,11 @@ function _ai_review_verify_only --description "Run ONLY the verify pass over an 
     set -l diff_tmp
     if not set -q _flag_file; and set -q _flag_range
         set diff_tmp (mktemp)
-        if not git diff $_flag_range >$diff_tmp 2>/dev/null; or not test -s $diff_tmp
+        # Numbered as the review's prompt shows it (_ai_number_diff)
+        set -l diff_text (git diff $_flag_range 2>/dev/null | string collect)
+        set -l diff_rc $pipestatus[1]
+        test $diff_rc -eq 0; and test -n "$diff_text"; and printf '%s\n' "$diff_text" | _ai_number_diff >$diff_tmp
+        if test $diff_rc -ne 0; or not test -s $diff_tmp
             rm -f $diff_tmp
             set_color red
             echo "Error: --range $_flag_range gives no diff here (run it from the repo, check the range)" >&2

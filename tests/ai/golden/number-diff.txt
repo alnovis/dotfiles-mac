@@ -1,0 +1,20 @@
+diff --git a/f b/f
+index 1..2 100644
+--- a/f
++++ b/f
+@@ -10,4 +10,5 @@ fn
+   10   ten
+       -old eleven
+   11  +new eleven
+   12  +new twelve
+   13   thirteen
+@@ -40,2 +41,2 @@
+       -gone
+   41  +came
+       \ No newline at end of file
+diff --git a/g b/g
+--- a/g
++++ b/g
+@@ -0,0 +1,1 @@
+    1  +first
+[exit 0]

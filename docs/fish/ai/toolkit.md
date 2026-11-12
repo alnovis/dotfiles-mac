@@ -251,6 +251,11 @@ ai review .                          target: current project
   `--context-lines` budget, reported under Changes as `context  N lines across M files (budget B)`. Over
   budget: on a terminal you are asked `[1] diff-only (default) [2] embed all`; otherwise diff-only
   with a note. Skipped with `--brief` and `--agentic`.
+- **Line numbers.** The prompt asks for `file:line`, so the code in it comes numbered: each line of
+  a full file (`_ai_number_lines`), and each line of a hunk with its line in the new file, a
+  removed line blank (`_ai_number_diff`, `'%5d  line'`). The diff headers (`diff --git`, `+++ b/`,
+  `@@`) stay as they are. With only the `@@` headers to count from, a cloud qwen3.8 on a diff-only
+  2.9k-line review spent its whole `max_tokens` (32768) counting lines and wrote no answer.
 
 ### Target mode
 

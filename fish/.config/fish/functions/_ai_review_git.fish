@@ -216,6 +216,11 @@ function _ai_review_git --description "AI review of git changes (branch, last N,
         # missing rest for code the change removed
         set diff_header "Diff (cut at $max_lines of $diff_lines lines: the rest of the change is not shown, do not review what is missing from it):"
     end
+    # Each hunk line with its line in the new file (_ai_number_diff): with only the @@
+    # headers to count from, a model spent its whole max_tokens counting lines
+    set diff_content (printf '%s\n' "$diff_content" | _ai_number_diff | string collect)
+    set diff_header "$diff_header
+Each line of a hunk starts with its line number in the new file and two spaces; a removed line (-) has none. Cite these numbers, do not count lines. The number is not part of the code: quote code without it."
 
     # Header: the same blocks as the stages and the Saved list (_ai_ui_heading, _ai_ui_kv)
     # A detached HEAD (a worktree at a commit) has no branch: no empty "()"
