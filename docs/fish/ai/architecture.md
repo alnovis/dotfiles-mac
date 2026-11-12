@@ -317,8 +317,14 @@ within seconds.
 
 **The time a read takes** (`_ai_ollama_prefill`). ollama sends nothing while it reads the prompt,
 so a long read and a hang look the same. Each answer's last record has `prompt_eval_count` and
-`prompt_eval_duration`. The rate of the last read of 4000 tokens or more is kept per model in
-`~/.cache/ai/prefill.json` (qwen3.8:27b: ~114 tok/s). The next read is expected from it:
+`prompt_eval_duration`. Reads of 4000 tokens or more are kept per model in
+`~/.cache/ai/prefill.json`, the last 8, one per size (a read within 10% of a kept one replaces
+it). A token costs more the longer the prompt before it: qwen3.8:27b read 10.5k tokens at
+147 tok/s and 32k at 114. So the time per token is fitted as `a + b * n` over the kept reads, and
+a read of n tokens takes `n * (a + b * n)`. For 121k tokens that is ~34 min, where one rate said
+18 and a run timed out mid-read. One read, reads of about one size (the largest under 1.5 times
+the smallest), or a fit with `b < 0`: the rate of the read nearest in size. The next read is
+expected from it:
 
 - the idle limit is the expected read half as long again, at least 300 s. If no read was
   measured, it is 900 s. The config key `request_idle_timeout` sets it for every request;

@@ -3,6 +3,8 @@
 == the read expected to take 1140 s, 363 s into it
 reading 1140
   ollama · qwen3.8:27b | reading context 6m 03s of ~19m | ctx 58k/65.5k | 6m 40s
+== and 35 s into it
+  ollama · qwen3.8:27b | reading context 35s of ~19m | ctx 58k/65.5k | 40s
 == reasoning: thinking
 thinking 22
 == then the answer: writing

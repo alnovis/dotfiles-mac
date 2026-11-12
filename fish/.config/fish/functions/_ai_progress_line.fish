@@ -38,14 +38,20 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
         set phase model…
         # What the model does in its turn, and how much it has streamed so far
         test -n "$argv[10]"; and set phase (_ai_activity_text $argv[10])
-        # How long this read has taken, from a minute on: "reading context 6m 03s"
-        test $reading -eq 1; and test -n "$argv[6]"; and test "$argv[6]" -ge 60
-        and set phase "$phase "(_ai_ui_duration $argv[6])
-        # and how long it is expected to take (a native driver's "reading SECONDS"):
-        # "reading context 6m 03s of ~19m"
+        # How long this read has taken, from a minute on: "reading context 6m 03s"; with how
+        # long it is expected to take (a native driver's "reading SECONDS"), from the start:
+        # "reading context 35s of ~19m"
         set -l act (string split ' ' -- "$argv[10]")
+        set -l expect
         test "$act[1]" = reading; and string match -qr '^[0-9]+$' -- "$act[2]"
-        and set phase "$phase of ~"(math "max(1, ceil($act[2] / 60))")m
+        and set expect (math "max(1, ceil($act[2] / 60))")
+        if test $reading -eq 1; and test -n "$argv[6]"
+            if test -n "$expect"
+                set phase "$phase "(_ai_ui_duration $argv[6])" of ~$expect"m
+            else if test "$argv[6]" -ge 60
+                set phase "$phase "(_ai_ui_duration $argv[6])
+            end
+        end
         string match -q 'tool *' -- "$argv[9]"; and set phase (string sub -s 6 -- $argv[9])…
         if test -n "$argv[8]"; and test "$argv[8]" -gt 0
             set -l ctx "ctx "(_ai_k $argv[8])

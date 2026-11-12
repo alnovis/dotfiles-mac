@@ -1,0 +1,7 @@
+never measured: []
+a short read is not kept: []
+one read, its rate: 121515 tokens in 1063 s
+two reads, a + b * n: 121515 in 2047 s, 10517 in 72 s
+a read of about the same size replaces the older: [{"n":32237,"s":282},{"n":11000,"s":60}]
+slower per token on the shorter read (b < 0): the nearest rate, 240 s
+[exit 0]
