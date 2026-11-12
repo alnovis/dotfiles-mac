@@ -651,6 +651,9 @@ On pi the instruction is also enforced: an unattended read-only run loads the ex
 `~/.config/fish/pi/ai-guard.ts` (`_ai_agent_pi`, not in `ai code` / `ai chat`):
 - `read`, `grep`, `find`, `ls` reach only the working directory (symlinks and `..` resolved);
   a path outside is refused with the reason, and the model goes on;
+- a first turn that ends in an answer with no tool call is not taken, once: the model is told to
+  read the changed files, their callers and tests, and goes on (gemma4, gpt-oss and qwen3.6
+  reviewed the diff alone, though the skill asks for that reading);
 - once a turn has used `agent_context_budget` percent (default 75) of the model's window (its
   `contextWindow` in pi's config), or after `agent_max_turns` turns (default 60, a backstop
   against a loop), or `agent_timeout` seconds (default 900), every

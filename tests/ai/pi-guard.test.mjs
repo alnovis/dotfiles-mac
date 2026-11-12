@@ -38,7 +38,7 @@ function standIn() {
 }
 
 function load(env) {
-	for (const k of ["AI_GUARD_MAX_TURNS", "AI_GUARD_TIMEOUT", "AI_GUARD_ROOT", "AI_GUARD_PULSE", "AI_GUARD_GRACE", "AI_GUARD_WINDOW", "AI_GUARD_CONTEXT_BUDGET"]) delete process.env[k];
+	for (const k of ["AI_GUARD_MAX_TURNS", "AI_GUARD_TIMEOUT", "AI_GUARD_ROOT", "AI_GUARD_PULSE", "AI_GUARD_GRACE", "AI_GUARD_WINDOW", "AI_GUARD_CONTEXT_BUDGET", "AI_GUARD_REQUIRE_READ"]) delete process.env[k];
 	Object.assign(process.env, env);
 	const s = standIn();
 	aiGuard(s.pi);
@@ -80,6 +80,21 @@ console.log("== turn budget 3");
 		if (i === 2) console.log(`  a call after it -> ${verdict(await emit("tool_call", { toolName: "read", input: { path: "src/a.scala" } }))}`);
 		if (ctx.aborted) break;
 	}
+}
+
+console.log("== read first: an answer on the first turn with no tool call is sent back, once");
+{
+	const { emit } = load({ AI_GUARD_TIMEOUT: "0" });
+	await emit("session_start", {});
+	const show = (r) => (r?.continue ? `sent back: ${r.entries[0].content}` : "taken");
+	console.log(`turn 1, no tools: ${show(await emit("turn_end", { turnIndex: 0, outcome: "completed", toolResults: [] }))}`);
+	console.log(`turn 2, no tools again: ${show(await emit("turn_end", { turnIndex: 1, outcome: "completed", toolResults: [] }))}`);
+	const b = load({ AI_GUARD_TIMEOUT: "0" });
+	await b.emit("session_start", {});
+	console.log(`turn 1 with a tool call: ${show(await b.emit("turn_end", { turnIndex: 0, outcome: "completed", toolResults: [{}] }))}`);
+	const c = load({ AI_GUARD_TIMEOUT: "0", AI_GUARD_REQUIRE_READ: "0" });
+	await c.emit("session_start", {});
+	console.log(`turned off: ${show(await c.emit("turn_end", { turnIndex: 0, outcome: "completed", toolResults: [] }))}`);
 }
 
 console.log("== context budget: 75% of a 1000-token window");

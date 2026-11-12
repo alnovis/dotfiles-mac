@@ -18,6 +18,10 @@
  *   turns later: the run is aborted. The tools stay in the request, refused, not removed: their
  *   definitions open the prompt, and removing them changed its start, so a local model lost its
  *   whole prompt cache and read ~60k tokens again (10 min) before the answer it was asked for.
+ * - Read first: a first turn that ends in an answer with no tool call is not taken, once: the
+ *   model is told to read the changed files, their callers and tests, and goes on. gemma4,
+ *   gpt-oss and qwen3.6 reviewed the diff alone though the skill asks for that reading.
+ *   AI_GUARD_REQUIRE_READ=0 turns it off.
  * - Time: after AI_GUARD_TIMEOUT seconds (default 900) the same switch to answering; then the
  *   run is aborted once the model has been silent (no reasoning, no answer streamed) for the
  *   grace, AI_GUARD_GRACE seconds (default half the budget, at least 180). A provider that
@@ -91,6 +95,9 @@ export default function aiGuard(pi: ExtensionAPI) {
 	const timeoutS = Number(process.env.AI_GUARD_TIMEOUT ?? 900);
 	const windowTokens = Number(process.env.AI_GUARD_WINDOW ?? 0);
 	const contextBudget = Number(process.env.AI_GUARD_CONTEXT_BUDGET ?? 75);
+	// A first answer with no tool call is sent back once to read the repository; 0 turns it off
+	const requireRead = process.env.AI_GUARD_REQUIRE_READ !== "0";
+	let nudged = false;
 	const graceS = Number(process.env.AI_GUARD_GRACE ?? Math.max(MIN_GRACE_S, timeoutS / 2));
 	const pulse = process.env.AI_GUARD_PULSE ?? "";
 	// When the model last streamed anything, reasoning or answer
@@ -213,6 +220,26 @@ export default function aiGuard(pi: ExtensionAPI) {
 			}
 		}
 		if (!spent && maxTurns > 0 && event.turnIndex + 1 >= maxTurns) spend(`the turn budget (${maxTurns}) is spent`);
+		// An answer on the first turn with no tool call at all: the model reviewed the diff
+		// alone, though the skill asks it to read the files, the callers and the tests (gemma4,
+		// gpt-oss and qwen3.6 did, laguna read). Not taken, once: it is told to read first.
+		const e = event as { toolResults?: unknown[]; outcome?: string };
+		if (!spent && requireRead && !nudged && event.turnIndex === 0 && e.outcome === "completed" && (e.toolResults?.length ?? 0) === 0) {
+			nudged = true;
+			note(`no tool call in the first turn at ${elapsed()}s: the answer is not taken, the model is told to read the repository first`);
+			return {
+				entries: [
+					{
+						type: "custom_message",
+						customType: "ai-guard",
+						content:
+							"You answered without reading the repository. Before you answer, read the changed files in full, and grep for the callers and the tests of the functions they change. Then write the review again, in the format the rules ask for.",
+						display: false,
+					},
+				],
+				continue: true,
+			};
+		}
 		if (!spent) return undefined;
 		turnsAfter++;
 		if (turnsAfter > GRACE_TURNS) {

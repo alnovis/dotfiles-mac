@@ -19,6 +19,12 @@ turn 4: tools [read,grep,find,ls] -
 turn 5: tools [read,grep,find,ls] -
   stderr: ai-guard: aborted at 0s: no answer 3 turns after the turn budget (3) is spent
 turn 6: tools [read,grep,find,ls] - ABORTED
+== read first: an answer on the first turn with no tool call is sent back, once
+  stderr: ai-guard: no tool call in the first turn at 0s: the answer is not taken, the model is told to read the repository first
+turn 1, no tools: sent back: You answered without reading the repository. Before you answer, read the changed files in full, and grep for the callers and the tests of the functions they change. Then write the review again, in the format the rules ask for.
+turn 2, no tools again: taken
+turn 1 with a tool call: taken
+turned off: taken
 == context budget: 75% of a 1000-token window
 turn 1, 400 tokens: -
 turn 2, 700 tokens: -
