@@ -18,6 +18,33 @@ function ai --description "AI toolkit: chat, code, review, lessons, gen, config,
         return
     end
 
+    # A word that is another command's subcommand, unquoted, is a typo in the command, not a
+    # question: "ai show gemma4:26b" (for ai models show) went to the model as a prompt, and
+    # the model explained that Gemma 4 does not exist. A quoted prompt is one argument with
+    # spaces and passes; so does one that starts with an option.
+    if set -q argv[1]; and not string match -q -- '-*' $argv[1]; and not string match -q -- '* *' $argv[1]
+        set -l parent
+        switch $argv[1]
+            case show info list install rm use update prune running try keep drop label search
+                set parent models
+            case commit summary
+                set parent gen
+            case mark stats open edit
+                set parent lessons
+            case status set reset move
+                set parent config
+            case ls check
+                set parent providers
+        end
+        if test -n "$parent"
+            set_color red
+            echo "ai: no command '$argv[1]'. Did you mean: ai $parent $argv" >&2
+            set_color normal
+            echo "    To ask the model, quote the prompt: ai \"$argv\"" >&2
+            return 1
+        end
+    end
+
     # No subcommand → chat/prompt mode (also handles top-level --provider/--model/--think)
     _ai_run $argv
 end

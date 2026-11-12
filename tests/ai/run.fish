@@ -198,6 +198,7 @@ set -g golden_cases \
     'gen-summary-ollama|fixture|ai gen summary leetcode --dry-run' \
     'gen-summary-claude|fixture|ai gen summary leetcode --provider claude --dry-run' \
     'run-prompt|fixture|ai --dry-run hello' \
+    'run-command-typo|fixture|echo "== a subcommand of another command: an error with the command meant"; ai show gemma4:26b; echo "rc $status"; ai commit; echo "rc $status"; echo "== quoted, it is a prompt"; ai "show gemma4:26b" --dry-run 2>&1 | string match -e -r "^--- dry-run|^show gemma4"' \
     'run-pipe|fixture|printf "context line\n" | ai --dry-run question' \
     'run-claude|fixture|ai --provider claude --dry-run hello' \
     'run-runner|fixture|ai --provider testcloud --dry-run hello' \

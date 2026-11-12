@@ -1,0 +1,11 @@
+== a subcommand of another command: an error with the command meant
+ai: no command 'show'. Did you mean: ai models show gemma4:26b
+    To ask the model, quote the prompt: ai "show gemma4:26b"
+rc 1
+ai: no command 'commit'. Did you mean: ai gen commit
+    To ask the model, quote the prompt: ai "commit"
+rc 1
+== quoted, it is a prompt
+--- dry-run: prompt that would be sent to ollama (native) ---
+show gemma4:26b
+[exit 0]
