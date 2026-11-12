@@ -1,0 +1,19 @@
+== changed files: lines, path, whole in the diff
+32	src/Big.java	0
+2	src/NewHelper.java	1
+4	src/OldService.java	0
+3	src/Scanner.java	0
+3	test/OldServiceTest.java	0
+== the rest within 10 lines: code naming other changed files first, tests last
+take	3	src/Scanner.java
+take	4	src/OldService.java
+take	3	test/OldServiceTest.java
+out	32	src/Big.java
+== the block header
+# Full content of the changed files (context beyond the diff)
+These are the complete files as of the reviewed change. Use them to reason about code the diff does not show (surrounding methods, fields, config). Do not review unchanged lines as if they were introduced here.
+Each line starts with its line number in the file and two spaces: cite these numbers, do not count lines. The number is not part of the code — quote code without it.
+Not repeated here, as the diff shows them whole (added by the change): src/NewHelper.java.
+Not shown (over the context budget; you see only their hunks in the diff): src/Big.java. What they hold beyond the hunks is unknown, not absent.
+
+[exit 0]

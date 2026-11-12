@@ -246,11 +246,22 @@ ai review .                          target: current project
   The header lists the commits under review. File contents for the context come from the last
   commit (`git show TIP:path`), so an old range needs no checkout — except with `--agentic`,
   where the agent reads the working tree.
-- **Full changed files.** Besides the diff, the complete content of every changed file (as of the
-  reviewed tip; deleted and binary files skipped) is embedded when the total fits the
-  `--context-lines` budget, reported under Changes as `context  N lines across M files (budget B)`. Over
-  budget: on a terminal you are asked `[1] diff-only (default) [2] embed all`; otherwise diff-only
-  with a note. Skipped with `--brief` and `--agentic`.
+- **Full changed files.** Besides the diff, the complete content of the changed files (as of the
+  reviewed tip) is embedded, reported under Changes as `context  N lines across M files (budget B)`.
+  Deleted and binary files are skipped. So is a file the change adds: the diff shows it whole, and
+  the prompt names it as not repeated. Within the `--context-lines` budget every other file goes in.
+  Over it, the files that fit go in, in order (`_ai_review_context_pick`):
+  - code before tests;
+  - a file that names more of the other changed files first, since those are the callers of the
+    new code;
+  - a smaller one first.
+
+  The prompt names the files left out, as not shown rather than absent. On a terminal you are
+  asked `[1] K of N files ... callers first (default) [2] embed all`; otherwise a note. On
+  RF-37307 (19 files, 3842 lines, budget 1500) this embeds the scheduler and the service that
+  calls the new code (1312 lines, ~64k tokens with the diff) instead of a choice between the diff
+  alone (40k) and every file (121k). The diff alone missed the main bug, which the callers make
+  visible. Skipped with `--brief` and `--agentic`.
 - **Line numbers.** The prompt asks for `file:line`, so the code in it comes numbered: each line of
   a full file (`_ai_number_lines`), and each line of a hunk with its line in the new file, a
   removed line blank (`_ai_number_diff`, `'%5d  line'`). The diff headers (`diff --git`, `+++ b/`,

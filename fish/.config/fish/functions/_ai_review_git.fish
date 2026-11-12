@@ -281,36 +281,67 @@ Each line of a hunk starts with its line number in the new file and two spaces; 
     set -l ctx_budget (_ai_review_context_budget git $_flag_context_lines); or return 1
 
     if not set -q _flag_brief; and not set -q _flag_agentic; and test $ctx_budget -gt 0
-        set -l files
+        # A file the change adds is whole in the diff already: not embedded again
+        set -l rows
+        set -l whole
         set -l window 0
         for row in (_ai_review_changed_files "$range" "$tip" "$file_filter")
             set -l parts (string split \t -- $row)
-            set window (math $window + $parts[1])
-            set -a files $parts[2]
+            if test "$parts[3]" = 1
+                set -a whole $parts[2]
+            else
+                set -a rows (printf '%s\t%s' $parts[1] $parts[2])
+                set window (math $window + $parts[1])
+            end
         end
 
-        if test (count $files) -gt 0
-            _ai_ui_kv context "$window lines across "(count $files)" files (budget $ctx_budget)" >&2
-
-            set -l embed 0
-            if test $window -le $ctx_budget
-                set embed 1
-            else if isatty stdin; and isatty stderr
+        if set -q rows[1]
+            # Over the budget, the files that fit go in, the callers of the new code first
+            # (_ai_review_context_pick); the rest is named in the prompt as not shown
+            set -l picked (printf '%s\n' $rows | _ai_review_context_pick "$tip" $ctx_budget)
+            set -l files
+            set -l left_out
+            set -l lines 0
+            for row in $picked
+                set -l parts (string split \t -- $row)
+                if test $parts[1] = take
+                    set -a files $parts[3]
+                    set lines (math $lines + $parts[2])
+                else
+                    set -a left_out $parts[3]
+                end
+            end
+            if set -q left_out[1]; and isatty stdin; and isatty stderr
                 set_color yellow >&2
                 echo "Changed files ($window lines) exceed the context budget ($ctx_budget)." >&2
-                echo "  [1] diff-only (default)    [2] embed all $window lines" >&2
+                echo "  [1] "(count $files)" of "(count $rows)" files, $lines lines, callers first (default)    [2] embed all $window lines" >&2
                 set_color normal >&2
                 read -l -P "Choose [1/2]: " choice
-                test "$choice" = 2; and set embed 1
-            else
+                if test "$choice" = 2
+                    set files (printf '%s\n' $picked | string split -f3 \t)
+                    set left_out
+                    set lines $window
+                end
+            end
+            set -l extra ""
+            set -q whole[1]; and set extra "$extra; "(count $whole)" added whole are in the diff"
+            set -q left_out[1]; and set extra "$extra; left out "(count $left_out)" over the budget"
+            _ai_ui_kv context "$lines lines across "(count $files)" files (budget $ctx_budget)$extra" >&2
+            if set -q left_out[1]; and not isatty stdin
                 set_color yellow >&2
-                _ai_ui_kv note "changed files ($window lines) exceed budget ($ctx_budget) — using diff-only. Pass --context-lines $window (or set config key context_lines) to embed all." >&2
+                _ai_ui_kv note "changed files ($window lines) exceed budget ($ctx_budget): "(count $left_out)" left out. Pass --context-lines $window (or set config key context_lines) to embed all." >&2
                 set_color normal >&2
             end
-
-            if test $embed -eq 1
-                set context_block (_ai_review_context_block "$tip" $files | string collect)
+            set -l block_args
+            for p in $whole
+                set -a block_args --whole $p
             end
+            for p in $left_out
+                set -a block_args --left-out $p
+            end
+            set -q files[1]; and set context_block (_ai_review_context_block $block_args "$tip" $files | string collect)
+        else if set -q whole[1]
+            _ai_ui_kv context "every changed file is added whole: the diff shows them all" >&2
         end
     end
 
