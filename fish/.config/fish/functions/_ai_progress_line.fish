@@ -41,6 +41,11 @@ function _ai_progress_line --description "The live line of an agentic run: MODEL
         # How long this read has taken, from a minute on: "reading context 6m 03s"
         test $reading -eq 1; and test -n "$argv[6]"; and test "$argv[6]" -ge 60
         and set phase "$phase "(_ai_ui_duration $argv[6])
+        # and how long it is expected to take (a native driver's "reading SECONDS"):
+        # "reading context 6m 03s of ~19m"
+        set -l act (string split ' ' -- "$argv[10]")
+        test "$act[1]" = reading; and string match -qr '^[0-9]+$' -- "$act[2]"
+        and set phase "$phase of ~"(math "max(1, ceil($act[2] / 60))")m
         string match -q 'tool *' -- "$argv[9]"; and set phase (string sub -s 6 -- $argv[9])…
         if test -n "$argv[8]"; and test "$argv[8]" -gt 0
             set -l ctx "ctx "(_ai_k $argv[8])

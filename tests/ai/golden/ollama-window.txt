@@ -1,0 +1,12 @@
+== model m, a prompt of 2 chars, ollama gave m a 16384 window
+rc 0, requests (prompt chars, num_ctx): 3 16384
+== model m, a prompt of 30000 chars, ollama gave m a 16384 window
+ollama: m is loaded with a 16384-token window, 20480 needed: loading it again
+rc 1, requests (prompt chars, num_ctx): 0 null, 0 20480
+ollama: m got a 16384-token window, not 20480: the prompt (~10000 tokens) and the answer do not fit. Use a smaller --context-lines or --max-lines
+== model other, a prompt of 30000 chars, ollama gave m a 16384 window
+rc 0, requests (prompt chars, num_ctx): 0 20480, 30001 20480
+== model stuck, a prompt of 2 chars, ollama gave m a 16384 window
+ollama: stuck did not load in 180 s: its runner is still busy with another request (ollama ps)
+rc 1, requests (prompt chars, num_ctx): 0 12288
+[exit 1]

@@ -18,6 +18,9 @@ function _ai_stream_activity --description "What a native driver's model does, f
     else if test "$n[1]" -gt 0 2>/dev/null
         echo "thinking $n[1]"
     else
-        echo reading
+        # With the seconds the read is expected to take, when the driver knows them (the
+        # third field of DIR/ctx, from _ai_ollama_prefill)
+        set -l ctx (string split ' ' -- (string trim <$argv[1]/ctx 2>/dev/null))
+        echo reading $ctx[3]
     end
 end

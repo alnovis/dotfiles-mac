@@ -292,6 +292,39 @@ ollama: prompt ~200000 tokens needs ~208896 context, over the 131072 ceiling. A 
 
 (With reserve = floor = 8192 the floor never binds; the smallest window is 12288.)
 
+**The window of a loaded model** (`_ai_ollama_window MODEL NUM_CTX`). A loaded model keeps its
+window: ollama (0.40, mlx runner) runs a request with another `num_ctx` in the window the model
+was loaded with, without a word. A prompt longer than that window is still read whole, then the
+answer is empty (`done_reason: "length"`). Measured: 32k tokens sent to a model loaded at 16384
+were read for 282 s and answered nothing. A 121k-token review sent after a verify had loaded the
+model at 73728 read in silence until `request_idle_timeout` and failed as "no data". So before
+the request the driver asks `/api/ps`:
+
+- loaded with a window at least `num_ctx`: that window is used as it is. The window only grows,
+  so the stages of one review (review 131072, verify 73728) do not load the model again, and the
+  prompt cache stays;
+- loaded with a smaller one: unloaded (`keep_alive: 0`) and loaded with `num_ctx` (an empty
+  prompt), within 180 s each. A load that does not finish names the cause: the runner is busy
+  with another request;
+- not loaded: loaded with `num_ctx`.
+
+Then it reads `context_length` again and refuses when it is still smaller than `num_ctx`.
+Unknown (an old server, the model not listed): the request goes as sized.
+
+`Stopping...` in `ollama ps` is not a hang: it shows a keep_alive that ran out while a long
+request is still in work. A request dropped by its client (curl killed) stops the runner's work
+within seconds.
+
+**The time a read takes** (`_ai_ollama_prefill`). ollama sends nothing while it reads the prompt,
+so a long read and a hang look the same. Each answer's last record has `prompt_eval_count` and
+`prompt_eval_duration`. The rate of the last read of 4000 tokens or more is kept per model in
+`~/.cache/ai/prefill.json` (qwen3.8:27b: ~114 tok/s). The next read is expected from it:
+
+- the idle limit is the expected read half as long again, at least 300 s. If no read was
+  measured, it is 900 s. The config key `request_idle_timeout` sets it for every request;
+- the live line shows the estimate: `reading context 6m 03s of ~19m`. The driver writes it as the
+  third field of `AI_STREAM_DIR/ctx`.
+
 **Thinking quarantine.** The driver always sends an explicit `think` boolean. Omitting the field
 lets a thinking-capable model reason straight into `.response` (the "reasoning leaks into the
 review" bug). Capability comes from `ollama show`:

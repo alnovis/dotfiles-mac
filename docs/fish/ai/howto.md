@@ -276,7 +276,9 @@ ai review --context-lines 0                                   diff-only: smalles
 ```
 
 If the native driver says `over the 131072 ceiling`, drop to `--context-lines 0`, use
-`--agentic`, or raise `ollama_max_ctx` if you have the RAM.
+`--agentic`, or raise `ollama_max_ctx` if you have the RAM. If it says `got a N-token window`,
+ollama gave a smaller window than the prompt needs: shrink it the same way. If it says
+`did not load in 180 s`, another request holds the model: wait for it to end.
 
 ### Use the skills by hand
 

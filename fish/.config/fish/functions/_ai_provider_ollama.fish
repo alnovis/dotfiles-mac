@@ -52,7 +52,6 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     # Size the window to this prompt (_ai_ollama_num_ctx owns the formula and the ceiling)
     set -l sized (_ai_ollama_num_ctx (string length -- "$prompt")); or return 1
     set -l num_ctx $sized[1]
-    echo "ollama: num_ctx=$num_ctx (prompt ~$sized[2] tokens, model $model)" >&2
 
     # Thinking policy. A thinking-capable model reasons by DEFAULT (deeper reviews —
     # the whole point of picking a reasoner), but that reasoning is routed through
@@ -90,6 +89,19 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
 
     set -l host (_ai_ollama_host)
 
+    # The window: the loaded model's when it is big enough, else the model is loaded first
+    # (_ai_ollama_window). A smaller window than asked would cut the prompt's beginning, the
+    # rules: refused. Unknown (an old server, no /api/ps): sent as sized
+    set -l window (_ai_ollama_window $model $num_ctx); or return 1
+    if string match -qr '^[0-9]+$' -- "$window"
+        if test $window -lt $num_ctx
+            echo "ollama: $model got a $window-token window, not $num_ctx: the prompt (~$sized[2] tokens) and the answer do not fit. Use a smaller --context-lines or --max-lines" >&2
+            return 1
+        end
+        set num_ctx $window
+    end
+    echo "ollama: num_ctx=$num_ctx (prompt ~$sized[2] tokens, model $model)" >&2
+
     # Always send an EXPLICIT think boolean — never omit the field. Omitting it lets a
     # thinking-capable model (laguna, qwen3.x, …) default to reasoning straight INTO
     # .response: the "thinking leaks into the review output" bug. think:false quarantines
@@ -108,6 +120,8 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
     # A caller's live line (_ai_run_watched, _ai_stream_activity): the stream goes to its dir
     # as it arrives, with the model and the prompt size, and curl's pid to follow
     set -l keep_raw 0
+    # How long the model reads this prompt, from its last long read (_ai_ollama_prefill)
+    set -l expect (_ai_ollama_prefill $model $sized[2])
     # curl, or curl leaving its pid for the live line (sh writes its own pid and execs curl)
     set -l fetch curl
     if set -q AI_STREAM_DIR; and test -d "$AI_STREAM_DIR"
@@ -115,15 +129,19 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
         set raw $AI_STREAM_DIR/stream
         set keep_raw 1
         echo "ollama/$model" >$AI_STREAM_DIR/model
-        echo "$sized[2] $num_ctx" >$AI_STREAM_DIR/ctx
+        echo "$sized[2] $num_ctx $expect" >$AI_STREAM_DIR/ctx
         set fetch sh -c 'echo $$ >"$AI_STREAM_DIR/pid"; exec curl "$@"' curl
     end
     printf '%s' "$prompt" >$pfile
-    # Nothing at all for request_idle_timeout seconds (default 900) ends the request: with
-    # no timeout a stalled server held the run until Ctrl-C. Generous, as a big prompt is
-    # read for minutes before the first token arrives.
+    # Nothing at all for this long ends the request: with no timeout a stalled server held
+    # the run until Ctrl-C. Nothing comes while the model reads the prompt, so the limit is
+    # the expected read half as long again (at least 5 min); never measured, 900 s. The
+    # config key request_idle_timeout sets it for every request.
     set -l idle (_ai_config_read request_idle_timeout)
-    string match -qr '^[1-9][0-9]*$' -- "$idle"; or set idle 900
+    if not string match -qr '^[1-9][0-9]*$' -- "$idle"
+        set idle 900
+        test -n "$expect"; and set idle (math "max(300, ceil($expect * 1.5))")
+    end
     jq -cn --arg m $model --rawfile p $pfile --argjson ctx $num_ctx --argjson think $think \
         '{model:$m, prompt:$p, stream:true, think:$think, options:{num_ctx:$ctx}}' \
         | $fetch -sS --no-buffer --connect-timeout 10 --speed-limit 1 --speed-time $idle $host/api/generate -d @- 2>$raw.err \
@@ -157,6 +175,9 @@ function _ai_provider_ollama --description "AI provider plugin: Ollama (per-run 
         set rc 1
     end
     rm -f $raw.err
+    # The read this answer took, for the next one's expected time
+    set -l read (jq -r 'select(.done == true and .prompt_eval_count) | "\(.prompt_eval_count) \(.prompt_eval_duration // 0)"' $raw 2>/dev/null | tail -1 | string split ' ')
+    test $rc -eq 0; and set -q read[2]; and _ai_ollama_prefill --record $model $read
     test -n "$_flag_thinking_output"; and jq -j '.thinking // empty' $raw >$_flag_thinking_output 2>/dev/null
     if test -n "$_flag_usage_output"
         jq -c 'select(.done == true and .eval_count)

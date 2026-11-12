@@ -1221,7 +1221,7 @@ Plain `key=value` lines in `~/.config/ai/config` or a project `.ai/config` (proj
 | `agent_max_turns` | by hand | The same runs: turns before tool calls are refused (default 60, a backstop against a loop; 0 = no limit) |
 | `agent_timeout` | by hand | The same runs: seconds before that switch (default 900); then the run is aborted after half that (at least 180 s) with nothing streamed, and at twice the budget in any case (0 = no limit). All three `agent_*` keys may be scoped like `review_runs` for an experiment (`agent_max_turns@ollama/laguna-xs-2.1=45`); none is by default |
 | `ollama_max_ctx` | by hand | Ceiling for the native driver's `num_ctx` (default 131072) |
-| `request_idle_timeout` | by hand | Native drivers (ollama, OpenAI-compatible): seconds without a single byte before the request is ended (default 900; the prompt is read before the first token, so keep it generous) |
+| `request_idle_timeout` | by hand | Native drivers (ollama, OpenAI-compatible): seconds without a single byte before the request is ended (the prompt is read before the first token, so keep it generous). Unset: 900, and for ollama the model's expected read half as long again (at least 300) once a read was measured (`~/.cache/ai/prefill.json`) |
 | `context_lines` | by hand | Git review: line budget for embedding the changed files (default 2000); `--context-lines` overrides |
 | `dir_context_lines` | by hand | Directory review: line budget for embedding the directory's files (default 10000); `--context-lines` overrides |
 | `review_prompt` | by hand | Review prompt depth: `auto` (default: full for claude, lean for every other model), `full`, `lean` |
@@ -1332,6 +1332,18 @@ The `agents` stow package isn't installed: `./install.sh` (or `mkdir -p ~/.agent
 The native driver refuses to truncate. Shrink the prompt (`--context-lines 0`, `--file`, a
 smaller range), use `--agentic`, or raise `ollama_max_ctx` / `AI_OLLAMA_MAX_CTX` if you have the
 RAM.
+
+**`ollama: M is loaded with a N-token window, K needed: loading it again`**
+Not an error. A loaded model keeps its window, whatever `num_ctx` a request asks for, so the driver
+unloads a model loaded with a smaller one and loads it again. `ollama ps` shows the window of a
+loaded model (column CONTEXT).
+
+**`ollama: M did not load in 180 s: its runner is still busy with another request`**
+Another request (another run, a chat) holds the model, and it cannot be loaded again with a
+bigger window until that request ends. Wait for it, or end it.
+
+**`ollama: M got a N-token window, not K`**
+ollama loaded the model with a smaller window than asked. Shrink the prompt as above.
 
 **`Error: ollama at HOST is not reachable`** / **`Error: Ollama failed to start`**
 A remote `OLLAMA_HOST` is down (it is never started for you), or a local `ollama serve` didn't come
