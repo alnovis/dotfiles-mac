@@ -22,7 +22,7 @@ Cover (in this order, skip empty sections):
 2. Critical issues — bugs introduced, regressions, security holes, data corruption risk
 3. Important issues — design smells, missed edge cases, missing error handling, breaking API changes
 4. Tests — a bullet for each gap: the case that should be tested and isn't, and what would break unnoticed. What the tests do cover is one plain sentence, not a bullet
-5. Removed code — a bullet for each deletion worth a second look whose impact you could not establish. A deletion that loses a behaviour or guarantee the code relied on is a regression: put it in Critical or Important by its impact, not here. Deletions that are safe (moved, replaced by an equivalent) are one plain sentence, not a bullet
+5. Removed code — a bullet for each deletion worth a second look whose impact you could not establish. A deletion that loses a behaviour or guarantee the code relied on is a regression: put it in Critical or Important by its impact, not here. A call the old code made on every pass (each scan, request or event) is kept only if the new code still makes it on every pass: a new guard, dedup or cache that skips it on later passes drops that behaviour, even when the call itself moved intact. Deletions that are safe (moved, replaced by an equivalent) are one plain sentence, not a bullet
 6. Nits — naming, formatting, micro-refactors
 
 Before flagging a Critical or Important issue, gate it — drop it if any check fails:

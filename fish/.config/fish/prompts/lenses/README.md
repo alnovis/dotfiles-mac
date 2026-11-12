@@ -71,7 +71,9 @@ skill are adapted from its `sibling-instances` and `code-exploration` skills.
 - License: Apache License 2.0, © 2026 Visa, Inc.
 
 Wording has been condensed and re-framed for a general code-review command. The
-first four retain VVAH's structure and item set; `injection`, `ssrf` and
+first four retain VVAH's structure and item set; `logic-bug` adds, as this
+repository's own, a correctness half of its gate (a production trigger instead of a
+trust boundary, as no attacker is needed) and the item on state that outlives a call; `injection`, `ssrf` and
 `sensitive-data` (v1.5 skills) keep its hard gates, with the checklists cut down
 and retargeted at JVM / Rust stacks (`sensitive-data` also takes the
 secrets-in-logs class of VVAH's `log-injection`, and `injection` its log forging).

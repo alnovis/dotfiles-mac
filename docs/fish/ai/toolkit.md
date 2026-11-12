@@ -327,7 +327,7 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 |---|---|---|
 | Security (adapted from Visa's VVAH) | `crypto` | JWT alg confusion, nonce/IV reuse, non-constant-time compares, weak randomness, TLS verification off, hardcoded keys |
 | | `access-control` | IDOR/BOLA, missing authorization checks, privilege escalation, mass assignment, tenant leakage |
-| | `logic-bug` | TOCTOU, concurrency on half-initialized state, overflow/narrowing, state-machine confusion |
+| | `logic-bug` | TOCTOU, concurrency on half-initialized state, overflow/narrowing, state-machine confusion; state that outlives a call (a dedup that skips what the old code did every time, a map that only grows) |
 | | `deserialization` | Untrusted-input deserialization leading to RCE (JVM: `ObjectInputStream`, Jackson default typing, SnakeYAML, …) |
 | | `injection` | SQL/shell built from input, XXE, path traversal / Zip-Slip, CRLF and log forging, ReDoS |
 | | `ssrf` | Outbound fetches with a caller-controlled URL; redirects, DNS rebinding, deny-list bypasses |
@@ -431,7 +431,11 @@ comments.
 
 A deletion that loses behaviour the code relied on is a regression and goes in Critical or
 Important by its impact; Removed code keeps what deserves a second look without an established
-impact. The comments take their severity from the section, so a regression the model still put
+impact. A call moved intact is not kept if a new guard now skips it: the prompt counts a call the
+old code made on every pass (each scan, request or event) as kept only when the new code still
+makes it on every pass. On a real work change a local model wrote "No behaviour or guarantee is
+lost" over a dedup that dropped a repeated item from every later report: it had checked only
+that the code moved. The comments take their severity from the section, so a regression the model still put
 under Removed code is "important" there — it came out a "nit" once, the one tier a reader
 skips. Tests and FP style are "nit".
 
