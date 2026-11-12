@@ -10,6 +10,5 @@ Where to look first (non-exhaustive — reason beyond this list):
 - Half-authenticated or half-initialized sessions observable under concurrency.
 - Integer overflow or narrowing casts producing id collisions or size miscalculations.
 - Protocol/state-machine confusion: an operation accepted in a state where it should be rejected.
-- Cache keys missing a tenant / user / role dimension → cross-principal data served.
 - Sentinel-return misuse: `indexOf`/`find` returning `-1`/`null` used directly as an offset or trusted result.
 - State that outlives one call (a map, a cache, a dedup set, a flag on a singleton bean): what does the second call, scan or event do differently from the first? A new guard that skips work the old code did on every pass (a reminder, a notification, a retry) changes behaviour: report it unless the change shows the skip is wanted. State that only grows (no eviction, no TTL, keyed by ids that keep coming) is unbounded memory.

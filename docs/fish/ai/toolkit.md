@@ -326,7 +326,7 @@ finding gate and severity rules of `meta-review*.md` still apply. Lenses stack
 | Group | Lens | Hunts for |
 |---|---|---|
 | Security (adapted from Visa's VVAH) | `crypto` | JWT alg confusion, nonce/IV reuse, non-constant-time compares, weak randomness, TLS verification off, hardcoded keys |
-| | `access-control` | IDOR/BOLA, missing authorization checks, privilege escalation, mass assignment, tenant leakage |
+| | `access-control` | IDOR/BOLA, missing authorization checks, a check on another id than the one used or after the effect, privilege escalation, mass assignment, tenant leakage (also through a cache), webhooks and message consumers as entry points; a check counts only where it is seen |
 | | `logic-bug` | TOCTOU, concurrency on half-initialized state, overflow/narrowing, state-machine confusion; state that outlives a call (a dedup that skips what the old code did every time, a map that only grows) |
 | | `deserialization` | Untrusted-input deserialization leading to RCE (JVM: `ObjectInputStream`, Jackson default typing, SnakeYAML, …) |
 | | `injection` | SQL/shell built from input, XXE, path traversal / Zip-Slip, CRLF and log forging, ReDoS |
