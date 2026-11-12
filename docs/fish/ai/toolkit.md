@@ -257,8 +257,8 @@ ai review .                          target: current project
   - a smaller one first.
 
   The prompt names the files left out, as not shown rather than absent. On a terminal you are
-  asked `[1] K of N files ... callers first (default) [2] embed all`; otherwise a note. On
-  RF-37307 (19 files, 3842 lines, budget 1500) this embeds the scheduler and the service that
+  asked `[1] K of N files ... callers first (default) [2] embed all`; otherwise a note. On a
+  real work change (19 files, 3842 lines, budget 1500) this embeds the scheduler and the service that
   calls the new code (1312 lines, ~64k tokens with the diff) instead of a choice between the diff
   alone (40k) and every file (121k). The diff alone missed the main bug, which the callers make
   visible. Skipped with `--brief` and `--agentic`.
@@ -627,7 +627,7 @@ ai review --verify-only review.md --verdicts review.verify.md --comments --range
      each with its confidence and its `why:` — read straight from the verify file, not as
      comments and not in the JSON. Verify is a filter, not a referee: on a real work change it
      refuted the very race fixed a commit later, calling the regression pre-existing. On
-     RF-37307 it refuted the main bug, a dedup that drops repeated MRs from every later digest,
+     another it refuted the main bug, a dedup that drops repeated MRs from every later digest,
      as "intended deduplication": the method's name was the only evidence. Since then
      `meta-verify.md` asks for evidence of intent (a comment, a test, the old code doing the
      same) before it refutes as intended. A behaviour the old code gave and the new one drops,

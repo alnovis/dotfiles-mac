@@ -1,0 +1,3 @@
+rc: 0
+{"path":"","line":null,"in_diff":false,"anchored":false,"file_level":false}
+[exit 0]

@@ -35,8 +35,10 @@ function _ai_review_comments_anchor --description "Anchor extracted comments (JS
         set -l want (printf '%s' $c | jq -r '.line // 0')
         set -l quote (printf '%s' $c | jq -r '.quote // ""' | string trim)
 
-        # The path as cited; else the one file with that name ("src/.../X.java" is common)
-        if not contains -- $path $files_at_head
+        # The path as cited; else the one file with that name ("src/.../X.java" is common).
+        # No path (a test gap names no file): no name to look for, and an empty $name_re
+        # would drop the whole pattern word ("string match: missing argument")
+        if test -n "$path"; and not contains -- $path $files_at_head
             set -l name (path basename -- $path)
             set -l name_re (string escape --style=regex -- $name)
             set -l by_name (printf '%s\n' $files_at_head | string match -r --entire -- '(?:^|/)'$name_re'$')
