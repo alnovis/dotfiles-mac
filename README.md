@@ -184,7 +184,7 @@ All functions support `-h/--help`.
 
 **How it runs a model** — two kinds of executor, picked per call:
 - **native ollama driver** — single-shot calls to local models; sizes `num_ctx` to each prompt
-- **runners** — agent CLIs behind one contract: **pi** or **opencode** (config key `agent`, default pi) for every non-claude provider, local or cloud; the **claude** CLI for `--provider claude`. Providers and their keys live in the runner's own config (pi `~/.pi/agent/models.json`, opencode `~/.config/opencode/config.json`) — `ai` keeps no registry
+- **runners** — agent CLIs behind one contract: **pi** or **opencode** (config key `agent`, default pi) for every non-claude provider, local or cloud; the **claude** CLI for `--provider claude`. Providers and their keys live in the runner's own config (pi `~/.pi/agent/models.json`, opencode `~/.config/opencode/opencode.json`) — `ai` keeps no registry
 - What goes into the prompt depends on the mode, not the provider: by default everything is embedded (diff + changed files, or file / tree / README); with `--agentic` only the diff or the file, and the executor explores the repo read-only with the `ai-review` / `ai-verify` skill injected
 
 **Core / chat / code:**

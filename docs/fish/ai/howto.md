@@ -316,8 +316,10 @@ OpenAI-compatible gateway (here called `litellm`) in pi.
 ```
 
 The reachability probe reads `baseUrl` from this file. For opencode the provider goes into
-`~/.config/opencode/config.json` under `provider.litellm` (the probe reads
-`provider.litellm.options.baseURL`), and the config needs `agent=opencode`.
+`~/.config/opencode/opencode.json` under `provider.litellm` (the probe reads
+`provider.litellm.options.baseURL`), and the config needs `agent=opencode`. opencode 2.x
+reads only `opencode.json` from `~/.config/opencode/`: a `config.json` there is silently
+ignored, so `opencode models` would not list the provider.
 
 ### 2. Check it
 

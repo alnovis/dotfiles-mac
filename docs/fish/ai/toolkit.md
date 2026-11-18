@@ -879,7 +879,7 @@ Usage: ai providers [ls]       List providers (no network)
 
 A read-only view. ollama is served by the native driver, claude by the claude CLI, every other
 provider by the runner, which also owns its configuration: add or change providers in pi
-(`~/.pi/agent/models.json`) or opencode (`~/.config/opencode/config.json`).
+(`~/.pi/agent/models.json`) or opencode (`~/.config/opencode/opencode.json`).
 
 `ai providers` (alias `ls`, `list`) — real output from the test sandbox (installed-model cache
 with 3 tags, pi config with an `ollama` and a `testcloud` provider):
@@ -1116,7 +1116,7 @@ transfers) shows `unknown`, never a guess.
 `try` pulls a model and records the trial date; `keep` clears the mark; `drop` removes every tag
 of the model and its metadata. `try` and `drop` take `-y` / `--yes` to skip the confirmation.
 Once a model is gone, `rm` and `drop` look for it in the runners' configs (pi
-`~/.pi/agent/models.json`, opencode `~/.config/opencode/config.json`): a runner would still
+`~/.pi/agent/models.json`, opencode `~/.config/opencode/opencode.json`): a runner would still
 offer it, and a call would fail. They name the files and ask (`drop -y`: no question); each
 file changed keeps its previous version as `<file>.bak`. A tag matches as written and without
 `:latest`.
@@ -1305,7 +1305,7 @@ back to a short inline prompt.
 | `~/.claude/skills/{ai-review,ai-verify}` | The same skills for claude |
 | `~/.config/opencode/agents/ai-{none,read,edit}.md` | opencode profiles for the runner |
 | `~/.pi/agent/models.json` | pi's providers and models (pi's file, not in dotfiles) |
-| `~/.config/opencode/config.json` | opencode's providers (opencode's file, not in dotfiles) |
+| `~/.config/opencode/opencode.json` | opencode's providers (opencode's file, not in dotfiles) |
 | `<report>.verify.<ext>` | Verify output next to a review written with `--verify -o` or by `--verify-only` |
 | `<report>.thinking.<ext>` | Reasoning sidecar (native ollama, thinking models) |
 

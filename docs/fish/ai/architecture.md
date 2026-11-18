@@ -95,7 +95,7 @@ and the single calls the OpenAI driver cannot serve (a non-OpenAI API, or `cloud
 
 - `--provider claude` always means the claude CLI directly; pi and opencode are never involved.
 - **Providers and keys belong to the runner** — pi `~/.pi/agent/models.json`, opencode
-  `~/.config/opencode/config.json`. `ai` keeps no registry and no copy of a key; it passes a
+  `~/.config/opencode/opencode.json`. `ai` keeps no registry and no copy of a key; it passes a
   `provider` and `model` name. A provider the runner doesn't know is an error that names the
   runner.
 
@@ -565,7 +565,7 @@ the executor, and starts it with `--interactive`. `--dry-run` prints
 | `~/.cache/ai/model-caps.json` | capabilities per digest (never stale: a digest's content doesn't change) |
 | `~/.cache/ai/model-arch.json` | architecture per digest (`MoE U/N`, `MoE`, `dense`; same never-stale rule) |
 | `~/.cache/ai/prices-<provider>.json` | a litellm gateway's `/model/info` (prices only), refreshed after a day |
-| `~/.pi/agent/models.json`, `~/.config/opencode/config.json` | the runners' own provider config (not ours, not in dotfiles) |
+| `~/.pi/agent/models.json`, `~/.config/opencode/opencode.json` | the runners' own provider config (not ours, not in dotfiles) |
 
 ## Design invariants
 
