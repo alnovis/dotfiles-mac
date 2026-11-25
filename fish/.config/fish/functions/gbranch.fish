@@ -51,6 +51,7 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
         else
             set -l best_count
             set -l contains_head
+            set -l head_sha (git rev-parse HEAD)
             for c in $candidates
                 set -l ref
                 if git show-ref --verify --quiet refs/remotes/origin/$c
@@ -64,6 +65,13 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
                 # for QA) would win with 0 and hide the branch's commits — keep it
                 # only as a fallback for a branch with no commits of its own
                 if git merge-base --is-ancestor HEAD $ref 2>/dev/null
+                    # HEAD on the base's own first-parent line: the branch was just cut
+                    # from it (no commits yet), so that base is exact. A branch merged
+                    # into stage reaches it only through a merge's second parent
+                    if git rev-list --first-parent $ref | string match -q -- $head_sha
+                        set base $c
+                        break
+                    end
                     test -z "$contains_head"; and set contains_head $c
                     continue
                 end
@@ -160,7 +168,17 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
     echo "Base: $base ($ahead commit(s) ahead)"
     set_color normal
 
+    # Staged/unstaged work is part of the branch too, but not in any commit yet
+    set -l uncommitted (git -c color.status=(string replace -- --color= '' $color_flag) status --short | string collect)
+
     if test "$ahead" -eq 0
+        if test -n "$uncommitted"
+            echo ""
+            set_color magenta
+            echo "Uncommitted:"
+            set_color normal
+            echo "$uncommitted" | string replace -r '^' '  '
+        end
         echo "---"
         echo "No commits ahead of $base"
         return 0
@@ -205,6 +223,14 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
             set total_del (math $total_del + $parts[2])
         end
         set total_files (math $total_files + 1)
+    end
+
+    if test -n "$uncommitted"
+        echo ""
+        set_color magenta
+        echo "Uncommitted:"
+        set_color normal
+        echo "$uncommitted" | string replace -r '^' '  '
     end
 
     echo "---"
