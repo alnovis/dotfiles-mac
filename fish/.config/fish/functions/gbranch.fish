@@ -7,7 +7,8 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
         echo "Show commits and diff stat of current branch vs base branch."
         echo "Auto-detects the base with the fewest commits ahead among"
         echo "develop/main/master/release/stage, skipping one that already contains"
-        echo "HEAD (override the list with \$GBRANCH_BASES) or specify manually."
+        echo "HEAD (override the list with \$GBRANCH_BASES), then prefers a nearer"
+        echo "feature branch this one was cut from, or specify manually."
         echo ""
         echo "Options:"
         echo "      --stat=N     Set stat output width (default: terminal width)"
@@ -50,6 +51,7 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
             set base $branch
         else
             set -l best_count
+            set -l best_ref
             set -l contains_head
             set -l head_sha (git rev-parse HEAD)
             for c in $candidates
@@ -78,7 +80,47 @@ function gbranch --description "Show branch overview: commits and diff stat vs b
                 set -l n (git rev-list --count $ref..HEAD 2>/dev/null); or continue
                 if test -z "$best_count"; or test $n -lt $best_count
                     set best_count $n
+                    set best_ref $ref
                     set base $c
+                end
+            end
+            # A branch cut from another feature branch: the long-lived base counts
+            # the parent's unmerged commits as ours. A nearer parent holds our first
+            # commit past that base, so only those refs are worth measuring. The
+            # graph can't tell a parent from a child cut from us (same commit, or
+            # cut before our latest commits): a parent is the older one, by reflog
+            set -l self_born (_gbranch_born $branch)
+            if test -n "$best_count"; and test $best_count -gt 0; and test -n "$self_born"
+                set -l mb (git merge-base $best_ref HEAD)
+                set -l first (git rev-list --first-parent --reverse $mb..HEAD)[1]
+                set -l near_count $best_count
+                set -l near_behind
+                for r in (git for-each-ref --contains $first --format='%(refname:short)' refs/heads refs/remotes)
+                    set -l name (string replace -r '^origin/' '' -- $r)
+                    if test "$name" = "$branch"; or test "$r" = origin; or string match -q -- '*/HEAD' $r
+                        continue
+                    end
+                    contains -- $name $candidates; and continue
+                    set -l born (_gbranch_born $name); or continue
+                    test $born -lt $self_born; or continue
+                    set -l lr (string split \t -- (git rev-list --left-right --count $r...HEAD))
+                    set -l behind $lr[1]
+                    set -l n $lr[2]
+                    # Contains HEAD: a parent only if HEAD is on its own line, not a
+                    # branch that merged ours in
+                    if test $n -eq 0
+                        git rev-list --first-parent $mb..$r | string match -q -- $head_sha; or continue
+                    end
+                    # Siblings cut from the same parent tie on ahead: the nearer
+                    # relative has fewer commits of its own
+                    if test $n -lt $near_count
+                        or begin
+                            test $n -eq $near_count; and test -n "$near_behind"; and test $behind -lt $near_behind
+                        end
+                        set near_count $n
+                        set near_behind $behind
+                        set base $name
+                    end
                 end
             end
             test -z "$base"; and set base $contains_head
